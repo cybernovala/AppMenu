@@ -19,7 +19,7 @@
   <h1>TODO EN UNO</h1>
   <p id="info-mesa" style="text-align:center; font-weight:bold; color: #aaa; margin-top:0;"></p>
 
-  <div id="menu"></div>
+  <div id="menu">Cargando menú...</div>
 
   <div id="carrito">
     <div><strong>Total: $<span id="total">0</span></strong> (<span id="cant-items">0</span>)</div>
@@ -27,37 +27,24 @@
   </div>
 
   <script>
-    const API_URL = "https://appmenu-tavr.onrender.com/api/pedidos"; 
+    const API_URL = "https://appmenu-tavr.onrender.com/api"; 
 
     const params = new URLSearchParams(window.location.search);
     const mesa = params.get('mesa') || '1';
     document.getElementById('info-mesa').innerText = `Mesa N° ${mesa}`;
 
-    const menuData = [
-      { categoria: "Completos", productos: [
-        { nombre: "Completo Italiano", precio: 2990 },
-        { nombre: "Completo Palta", precio: 2990 },
-        { nombre: "Completo Todo En Uno", precio: 2990 },
-        { nombre: "Completo Vegetariano", precio: 2990 },
-        { nombre: "Hot Dog", precio: 2200 }
-      ]},
-      { categoria: "Churrascos", productos: [
-        { nombre: "Churrasco Luco", precio: 6200 },
-        { nombre: "Churrasco Solo", precio: 5200 },
-        { nombre: "Churrasco Italiano", precio: 6300 },
-        { nombre: "Churrasco Palta", precio: 6300 },
-        { nombre: "Barraqueta Palta", precio: 2000 }
-      ]},
-      { categoria: "Platos", productos: [
-        { nombre: "Porción Papas Fritas", precio: 3700 },
-        { nombre: "Papa XI o Familiar", precio: 8000 },
-        { nombre: "Chorrillana Individual", precio: 8500 },
-        { nombre: "Chorrillana para 2", precio: 16000 },
-        { nombre: "Salchipapa", precio: 4000 }
-      ]}
-    ];
-
     let carrito = [];
+    let menuData = [];
+
+    async function cargarMenu() {
+      try {
+        const res = await fetch(`${API_URL}/menu`);
+        menuData = await res.json();
+        renderMenu();
+      } catch (err) {
+        document.getElementById('menu').innerText = 'Error al cargar el menú.';
+      }
+    }
 
     function renderMenu() {
       const contenedor = document.getElementById('menu');
@@ -69,7 +56,7 @@
             <div class="item">
               <div>
                 <strong>${p.nombre}</strong><br>
-                <span style="color:#aaa">$${p.precio.toLocaleString('es-CL')}</span>
+                <span style="color:#aaa">$${Number(p.precio).toLocaleString('es-CL')}</span>
               </div>
               <button onclick="agregar('${p.nombre}', ${p.precio})">+ Agregar</button>
             </div>`;
@@ -78,7 +65,7 @@
     }
 
     function agregar(nombre, precio) {
-      carrito.push({ nombre, precio });
+      carrito.push({ nombre, precio: Number(precio) });
       actualizarCarrito();
     }
 
@@ -93,7 +80,7 @@
       
       const total = carrito.reduce((sum, item) => sum + item.precio, 0);
       try {
-        const res = await fetch(API_URL, {
+        const res = await fetch(`${API_URL}/pedidos`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mesa, items: carrito, total })
@@ -111,7 +98,7 @@
       }
     }
 
-    renderMenu();
+    cargarMenu();
   </script>
 </body>
 </html>
