@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menú Digital</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #181818; color: #fff; margin: 0; padding: 15px; padding-bottom: 90px; }
+    h1 { color: #ffe600; text-align: center; margin-bottom: 5px; }
+    .categoria { color: #ffe600; border-bottom: 2px solid #ffe600; margin-top: 25px; padding-bottom: 5px; }
+    .item { display: flex; justify-content: space-between; align-items: center; background: #282828; padding: 12px; margin: 10px 0; border-radius: 8px; }
+    button { background: #ffe600; color: #000; border: none; padding: 10px 14px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+    #carrito { position: fixed; bottom: 0; left: 0; right: 0; background: #ffe600; color: #000; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
+    #btn-enviar { background: #000; color: #fff; padding: 10px 18px; font-size: 16px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+
+  <h1>TODO EN UNO</h1>
+  <p id="info-mesa" style="text-align:center; font-weight:bold; color: #aaa; margin-top:0;"></p>
+
+  <div id="menu"></div>
+
+  <div id="carrito">
+    <div><strong>Total: $<span id="total">0</span></strong> (<span id="cant-items">0</span>)</div>
+    <button id="btn-enviar" onclick="enviarPedido()">Enviar Pedido</button>
+  </div>
+
+  <script>
+    const API_URL = "https://appmenu-tavr.onrender.com/api/pedidos"; 
+
+    const params = new URLSearchParams(window.location.search);
+    const mesa = params.get('mesa') || '1';
+    document.getElementById('info-mesa').innerText = `Mesa N° ${mesa}`;
+
+    const menuData = [
+      { categoria: "Completos", productos: [
+        { nombre: "Completo Italiano", precio: 2990 },
+        { nombre: "Completo Palta", precio: 2990 },
+        { nombre: "Completo Todo En Uno", precio: 2990 },
+        { nombre: "Completo Vegetariano", precio: 2990 },
+        { nombre: "Hot Dog", precio: 2200 }
+      ]},
+      { categoria: "Churrascos", productos: [
+        { nombre: "Churrasco Luco", precio: 6200 },
+        { nombre: "Churrasco Solo", precio: 5200 },
+        { nombre: "Churrasco Italiano", precio: 6300 },
+        { nombre: "Churrasco Palta", precio: 6300 },
+        { nombre: "Barraqueta Palta", precio: 2000 }
+      ]},
+      { categoria: "Platos", productos: [
+        { nombre: "Porción Papas Fritas", precio: 3700 },
+        { nombre: "Papa XI o Familiar", precio: 8000 },
+        { nombre: "Chorrillana Individual", precio: 8500 },
+        { nombre: "Chorrillana para 2", precio: 16000 },
+        { nombre: "Salchipapa", precio: 4000 }
+      ]}
+    ];
+
+    let carrito = [];
+
+    function renderMenu() {
+      const contenedor = document.getElementById('menu');
+      contenedor.innerHTML = '';
+      menuData.forEach(cat => {
+        contenedor.innerHTML += `<h2 class="categoria">${cat.categoria}</h2>`;
+        cat.productos.forEach(p => {
+          contenedor.innerHTML += `
+            <div class="item">
+              <div>
+                <strong>${p.nombre}</strong><br>
+                <span style="color:#aaa">$${p.precio.toLocaleString('es-CL')}</span>
+              </div>
+              <button onclick="agregar('${p.nombre}', ${p.precio})">+ Agregar</button>
+            </div>`;
+        });
+      });
+    }
+
+    function agregar(nombre, precio) {
+      carrito.push({ nombre, precio });
+      actualizarCarrito();
+    }
+
+    function actualizarCarrito() {
+      document.getElementById('cant-items').innerText = carrito.length;
+      const total = carrito.reduce((sum, item) => sum + item.precio, 0);
+      document.getElementById('total').innerText = total.toLocaleString('es-CL');
+    }
+
+    async function enviarPedido() {
+      if (carrito.length === 0) return alert("Agrega al menos un producto.");
+      
+      const total = carrito.reduce((sum, item) => sum + item.precio, 0);
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mesa, items: carrito, total })
+        });
+
+        if (res.ok) {
+          alert("¡Pedido enviado a la cocina!");
+          carrito = [];
+          actualizarCarrito();
+        } else {
+          alert("Error al enviar el pedido.");
+        }
+      } catch (err) {
+        alert("Ocurrió un error al conectar con el servidor.");
+      }
+    }
+
+    renderMenu();
+  </script>
+</body>
+</html>
