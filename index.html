@@ -2,99 +2,173 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menú Digital</title>
+  <title>Administración del Menú</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #181818; color: #fff; margin: 0; padding: 15px; padding-bottom: 90px; }
-    h1 { color: #ffe600; text-align: center; margin-bottom: 5px; }
-    .categoria { color: #ffe600; border-bottom: 2px solid #ffe600; margin-top: 25px; padding-bottom: 5px; }
-    .item { display: flex; justify-content: space-between; align-items: center; background: #282828; padding: 12px; margin: 10px 0; border-radius: 8px; }
-    button { background: #ffe600; color: #000; border: none; padding: 10px 14px; font-weight: bold; border-radius: 5px; cursor: pointer; }
-    #carrito { position: fixed; bottom: 0; left: 0; right: 0; background: #ffe600; color: #000; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
-    #btn-enviar { background: #000; color: #fff; padding: 10px 18px; font-size: 16px; border-radius: 5px; }
+    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; max-width: 800px; margin: 0 auto; }
+    h1 { color: #ffe600; text-align: center; }
+    .card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
+    input { padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #444; background: #2a2a2a; color: #fff; box-sizing: border-box; }
+    button { background: #ffe600; color: #000; border: none; padding: 10px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+    .btn-danger { background: #f44336; color: white; padding: 6px 10px; }
+    .btn-add { background: #ffe600; color: #000; margin-top: 10px; }
+    .item-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding: 10px 0; }
+    .form-nuevo-prod { background: #282828; padding: 12px; border-radius: 6px; margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .form-nuevo-prod input { flex: 1; min-width: 120px; }
+    .header-cat { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffe600; padding-bottom: 8px; }
+    .header-cat h2 { margin: 0; color: #ffe600; }
   </style>
 </head>
 <body>
 
-  <h1>TODO EN UNO</h1>
-  <p id="info-mesa" style="text-align:center; font-weight:bold; color: #aaa; margin-top:0;"></p>
+  <h1>ADMINISTRACIÓN DEL MENÚ</h1>
 
-  <div id="menu">Cargando menú...</div>
-
-  <div id="carrito">
-    <div><strong>Total: $<span id="total">0</span></strong> (<span id="cant-items">0</span>)</div>
-    <button id="btn-enviar" onclick="enviarPedido()">Enviar Pedido</button>
+  <!-- Autenticación -->
+  <div class="card">
+    <label><strong>Contraseña de Administrador:</strong></label>
+    <input type="password" id="password" placeholder="Ingresa clave (Ej: admin123)" style="width: 100%;">
   </div>
 
+  <!-- Crear Nueva Categoría -->
+  <div class="card">
+    <h3>Crear Nueva Categoría</h3>
+    <div style="display: flex; gap: 10px;">
+      <input type="text" id="cat-nueva" placeholder="Nombre de categoría (Ej: Postres, Bebidas)" style="flex: 1;">
+      <button onclick="crearCategoria()">+ Crear Categoría</button>
+    </div>
+  </div>
+
+  <!-- Listado de Categorías y Productos -->
+  <div id="lista-menu">Cargando menú...</div>
+
+  <!-- Guardar Cambios -->
+  <button onclick="guardarEnServidor()" style="font-size: 18px; width: 100%; padding: 15px; background: #4CAF50; color: white; margin-bottom: 40px;">💾 Guardar Todos los Cambios</button>
+
   <script>
-    const API_URL = "https://appmenu-tavr.onrender.com/api"; 
-
-    const params = new URLSearchParams(window.location.search);
-    const mesa = params.get('mesa') || '1';
-    document.getElementById('info-mesa').innerText = `Mesa N° ${mesa}`;
-
-    let carrito = [];
+    const API_URL = "https://appmenu-tavr.onrender.com/api";
     let menuData = [];
 
     async function cargarMenu() {
       try {
         const res = await fetch(`${API_URL}/menu`);
         menuData = await res.json();
-        renderMenu();
+        renderAdmin();
       } catch (err) {
-        document.getElementById('menu').innerText = 'Error al cargar el menú.';
+        document.getElementById('lista-menu').innerText = 'Error al cargar el menú.';
       }
     }
 
-    function renderMenu() {
-      const contenedor = document.getElementById('menu');
-      contenedor.innerHTML = '';
-      menuData.forEach(cat => {
-        contenedor.innerHTML += `<h2 class="categoria">${cat.categoria}</h2>`;
-        cat.productos.forEach(p => {
-          contenedor.innerHTML += `
-            <div class="item">
+    function renderAdmin() {
+      const container = document.getElementById('lista-menu');
+      container.innerHTML = '';
+
+      if (menuData.length === 0) {
+        container.innerHTML = '<p style="color:#888;">No hay categorías creadas.</p>';
+        return;
+      }
+
+      menuData.forEach((cat, cIndex) => {
+        let itemsHtml = '';
+        cat.productos.forEach((p, pIndex) => {
+          itemsHtml += `
+            <div class="item-row">
               <div>
                 <strong>${p.nombre}</strong><br>
                 <span style="color:#aaa">$${Number(p.precio).toLocaleString('es-CL')}</span>
               </div>
-              <button onclick="agregar('${p.nombre}', ${p.precio})">+ Agregar</button>
-            </div>`;
+              <button class="btn-danger" onclick="eliminarProducto(${cIndex}, ${pIndex})">Eliminar</button>
+            </div>
+          `;
         });
+
+        container.innerHTML += `
+          <div class="card">
+            <div class="header-cat">
+              <h2>${cat.categoria}</h2>
+              <button class="btn-danger" onclick="eliminarCategoria(${cIndex})">Eliminar Categoría</button>
+            </div>
+            
+            <div style="margin-top: 10px;">
+              ${itemsHtml.length > 0 ? itemsHtml : '<p style="color:#777; font-size:14px;">Sin productos en esta categoría.</p>'}
+            </div>
+
+            <!-- Formulario para agregar producto a ESTA categoría -->
+            <div class="form-nuevo-prod">
+              <input type="text" id="prod-nombre-${cIndex}" placeholder="Nombre producto">
+              <input type="number" id="prod-precio-${cIndex}" placeholder="Precio ($)">
+              <button class="btn-add" onclick="agregarProducto(${cIndex})">+ Agregar Producto</button>
+            </div>
+          </div>
+        `;
       });
     }
 
-    function agregar(nombre, precio) {
-      carrito.push({ nombre, precio: Number(precio) });
-      actualizarCarrito();
+    function crearCategoria() {
+      const catNombre = document.getElementById('cat-nueva').value.trim();
+      if (!catNombre) return alert("Escribe un nombre para la categoría.");
+
+      const existe = menuData.some(c => c.categoria.toLowerCase() === catNombre.toLowerCase());
+      if (existe) return alert("Esa categoría ya existe.");
+
+      menuData.push({
+        categoria: catNombre,
+        productos: []
+      });
+
+      document.getElementById('cat-nueva').value = '';
+      renderAdmin();
     }
 
-    function actualizarCarrito() {
-      document.getElementById('cant-items').innerText = carrito.length;
-      const total = carrito.reduce((sum, item) => sum + item.precio, 0);
-      document.getElementById('total').innerText = total.toLocaleString('es-CL');
+    function eliminarCategoria(cIndex) {
+      if (confirm(`¿Seguro que deseas eliminar la categoría "${menuData[cIndex].categoria}" y sus productos?`)) {
+        menuData.splice(cIndex, 1);
+        renderAdmin();
+      }
     }
 
-    async function enviarPedido() {
-      if (carrito.length === 0) return alert("Agrega al menos un producto.");
-      
-      const total = carrito.reduce((sum, item) => sum + item.precio, 0);
+    function agregarProducto(cIndex) {
+      const inputNombre = document.getElementById(`prod-nombre-${cIndex}`);
+      const inputPrecio = document.getElementById(`prod-precio-${cIndex}`);
+
+      const nombre = inputNombre.value.trim();
+      const precio = inputPrecio.value;
+
+      if (!nombre || !precio) return alert("Ingresa el nombre y precio del producto.");
+
+      menuData[cIndex].productos.push({
+        id: Date.now().toString(),
+        nombre,
+        precio: Number(precio)
+      });
+
+      inputNombre.value = '';
+      inputPrecio.value = '';
+      renderAdmin();
+    }
+
+    function eliminarProducto(cIndex, pIndex) {
+      menuData[cIndex].productos.splice(pIndex, 1);
+      renderAdmin();
+    }
+
+    async function guardarEnServidor() {
+      const password = document.getElementById('password').value;
+      if (!password) return alert("Ingresa la contraseña para guardar.");
+
       try {
-        const res = await fetch(`${API_URL}/pedidos`, {
+        const res = await fetch(`${API_URL}/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mesa, items: carrito, total })
+          body: JSON.stringify({ password, menu: menuData })
         });
 
+        const data = await res.json();
         if (res.ok) {
-          alert("¡Pedido enviado a la cocina!");
-          carrito = [];
-          actualizarCarrito();
+          alert("¡Menú guardado y actualizado!");
         } else {
-          alert("Error al enviar el pedido.");
+          alert("Error: " + data.error);
         }
       } catch (err) {
-        alert("Ocurrió un error al conectar con el servidor.");
+        alert("Ocurrió un error al guardar los datos.");
       }
     }
 
