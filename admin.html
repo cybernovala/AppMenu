@@ -4,50 +4,67 @@
   <meta charset="UTF-8">
   <title>Administración del Menú</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; padding: 20px; max-width: 800px; margin: 0 auto; }
-    h1, h2 { color: #ffe600; }
-    .card { background: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    input, select { padding: 8px; margin: 5px 0; border-radius: 4px; border: none; width: 95%; }
-    button { background: #ffe600; color: #000; border: none; padding: 10px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 5px; }
-    .btn-danger { background: #f44336; color: white; }
-    .item-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding: 8px 0; }
+    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; max-width: 800px; margin: 0 auto; }
+    h1 { color: #ffe600; text-align: center; }
+    .card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
+    input { padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #444; background: #2a2a2a; color: #fff; box-sizing: border-box; }
+    button { background: #ffe600; color: #000; border: none; padding: 10px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+    .btn-danger { background: #f44336; color: white; padding: 6px 10px; }
+    .btn-add { background: #ffe600; color: #000; margin-top: 10px; }
+    .item-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding: 10px 0; }
+    .form-nuevo-prod { background: #282828; padding: 12px; border-radius: 6px; margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .form-nuevo-prod input { flex: 1; min-width: 120px; }
+    .header-cat { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffe600; padding-bottom: 8px; }
+    .header-cat h2 { margin: 0; color: #ffe600; }
   </style>
 </head>
 <body>
 
-  <h1>Panel Administrador del Menú</h1>
+  <h1>ADMINISTRACIÓN DEL MENÚ</h1>
 
+  <!-- Autenticación -->
   <div class="card">
-    <h3>Seguridad</h3>
-    <input type="password" id="password" placeholder="Ingresa la contraseña de administrador (Ej: admin123)">
+    <label><strong>Contraseña de Administrador:</strong></label>
+    <input type="password" id="password" placeholder="Ingresa clave (Ej: admin123)" style="width: 100%;">
   </div>
 
+  <!-- Crear Nueva Categoría -->
   <div class="card">
-    <h3>Agregar Producto Nuevo</h3>
-    <input type="text" id="cat-nueva" placeholder="Categoría (Ej: Bebidas, Churrascos)">
-    <input type="text" id="prod-nombre" placeholder="Nombre del producto">
-    <input type="number" id="prod-precio" placeholder="Precio ($)">
-    <button onclick="agregarProducto()">Añadir al Menú</button>
+    <h3>Crear Nueva Categoría</h3>
+    <div style="display: flex; gap: 10px;">
+      <input type="text" id="cat-nueva" placeholder="Nombre de categoría (Ej: Postres, Bebidas)" style="flex: 1;">
+      <button onclick="crearCategoria()">+ Crear Categoría</button>
+    </div>
   </div>
 
-  <h2>Menú Actual</h2>
-  <div id="lista-menu">Cargando productos...</div>
+  <!-- Listado de Categorías y Productos -->
+  <div id="lista-menu">Cargando menú...</div>
 
-  <button onclick="guardarEnServidor()" style="font-size: 18px; width: 100%; padding: 15px; background: #4CAF50; color: white;">💾 Guardar Todos los Cambios</button>
+  <!-- Guardar Cambios -->
+  <button onclick="guardarEnServidor()" style="font-size: 18px; width: 100%; padding: 15px; background: #4CAF50; color: white; margin-bottom: 40px;">💾 Guardar Todos los Cambios</button>
 
   <script>
     const API_URL = "https://appmenu-tavr.onrender.com/api";
     let menuData = [];
 
     async function cargarMenu() {
-      const res = await fetch(`${API_URL}/menu`);
-      menuData = await res.json();
-      renderAdmin();
+      try {
+        const res = await fetch(`${API_URL}/menu`);
+        menuData = await res.json();
+        renderAdmin();
+      } catch (err) {
+        document.getElementById('lista-menu').innerText = 'Error al cargar el menú.';
+      }
     }
 
     function renderAdmin() {
       const container = document.getElementById('lista-menu');
       container.innerHTML = '';
+
+      if (menuData.length === 0) {
+        container.innerHTML = '<p style="color:#888;">No hay categorías creadas.</p>';
+        return;
+      }
 
       menuData.forEach((cat, cIndex) => {
         let itemsHtml = '';
@@ -55,7 +72,8 @@
           itemsHtml += `
             <div class="item-row">
               <div>
-                <strong>${p.nombre}</strong> - $${p.precio}
+                <strong>${p.nombre}</strong><br>
+                <span style="color:#aaa">$${Number(p.precio).toLocaleString('es-CL')}</span>
               </div>
               <button class="btn-danger" onclick="eliminarProducto(${cIndex}, ${pIndex})">Eliminar</button>
             </div>
@@ -64,46 +82,71 @@
 
         container.innerHTML += `
           <div class="card">
-            <h2>${cat.categoria}</h2>
-            ${itemsHtml}
+            <div class="header-cat">
+              <h2>${cat.categoria}</h2>
+              <button class="btn-danger" onclick="eliminarCategoria(${cIndex})">Eliminar Categoría</button>
+            </div>
+            
+            <div style="margin-top: 10px;">
+              ${itemsHtml.length > 0 ? itemsHtml : '<p style="color:#777; font-size:14px;">Sin productos en esta categoría.</p>'}
+            </div>
+
+            <!-- Formulario para agregar producto a ESTA categoría -->
+            <div class="form-nuevo-prod">
+              <input type="text" id="prod-nombre-${cIndex}" placeholder="Nombre producto">
+              <input type="number" id="prod-precio-${cIndex}" placeholder="Precio ($)">
+              <button class="btn-add" onclick="agregarProducto(${cIndex})">+ Agregar Producto</button>
+            </div>
           </div>
         `;
       });
     }
 
-    function agregarProducto() {
+    function crearCategoria() {
       const catNombre = document.getElementById('cat-nueva').value.trim();
-      const prodNombre = document.getElementById('prod-nombre').value.trim();
-      const prodPrecio = document.getElementById('prod-precio').value;
+      if (!catNombre) return alert("Escribe un nombre para la categoría.");
 
-      if (!catNombre || !prodNombre || !prodPrecio) {
-        return alert("Completa todos los campos");
-      }
+      const existe = menuData.some(c => c.categoria.toLowerCase() === catNombre.toLowerCase());
+      if (existe) return alert("Esa categoría ya existe.");
 
-      let categoria = menuData.find(c => c.categoria.toLowerCase() === catNombre.toLowerCase());
-
-      if (!categoria) {
-        categoria = { categoria: catNombre, productos: [] };
-        menuData.push(categoria);
-      }
-
-      categoria.productos.push({
-        id: Date.now().toString(),
-        nombre: prodNombre,
-        precio: Number(prodPrecio)
+      menuData.push({
+        categoria: catNombre,
+        productos: []
       });
 
-      document.getElementById('prod-nombre').value = '';
-      document.getElementById('prod-precio').value = '';
+      document.getElementById('cat-nueva').value = '';
+      renderAdmin();
+    }
 
+    function eliminarCategoria(cIndex) {
+      if (confirm(`¿Seguro que deseas eliminar la categoría "${menuData[cIndex].categoria}" y sus productos?`)) {
+        menuData.splice(cIndex, 1);
+        renderAdmin();
+      }
+    }
+
+    function agregarProducto(cIndex) {
+      const inputNombre = document.getElementById(`prod-nombre-${cIndex}`);
+      const inputPrecio = document.getElementById(`prod-precio-${cIndex}`);
+
+      const nombre = inputNombre.value.trim();
+      const precio = inputPrecio.value;
+
+      if (!nombre || !precio) return alert("Ingresa el nombre y precio del producto.");
+
+      menuData[cIndex].productos.push({
+        id: Date.now().toString(),
+        nombre,
+        precio: Number(precio)
+      });
+
+      inputNombre.value = '';
+      inputPrecio.value = '';
       renderAdmin();
     }
 
     function eliminarProducto(cIndex, pIndex) {
       menuData[cIndex].productos.splice(pIndex, 1);
-      if (menuData[cIndex].productos.length === 0) {
-        menuData.splice(cIndex, 1);
-      }
       renderAdmin();
     }
 
@@ -111,17 +154,21 @@
       const password = document.getElementById('password').value;
       if (!password) return alert("Ingresa la contraseña para guardar.");
 
-      const res = await fetch(`${API_URL}/menu`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, menu: menuData })
-      });
+      try {
+        const res = await fetch(`${API_URL}/menu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password, menu: menuData })
+        });
 
-      const data = await res.json();
-      if (res.ok) {
-        alert("¡Menú guardado y actualizado para todos los clientes!");
-      } else {
-        alert("Error: " + data.error);
+        const data = await res.json();
+        if (res.ok) {
+          alert("¡Menú guardado y actualizado!");
+        } else {
+          alert("Error: " + data.error);
+        }
+      } catch (err) {
+        alert("Ocurrió un error al guardar los datos.");
       }
     }
 
