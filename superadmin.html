@@ -145,7 +145,7 @@
 
         descargarArchivoAccesoCliente(localId, passwordCliente);
 
-        alert(`Restaurante '${localId}' creado con éxito. Se ha generado la descarga.`);
+        alert(`Restaurante '${localId}' creado con éxito. Descargando archivo de administración completo...`);
         cargarListadoLocales();
       } catch (err) {
         return alert("Error de conexión al servidor.");
@@ -153,93 +153,178 @@
     }
 
     function descargarArchivoAccesoCliente(localId, passwordCliente) {
-      const scriptTag = "<" + "script" + ">";
-      const scriptTagClose = "<" + "/script" + ">";
+      const sOpen = "<" + "script" + ">";
+      const sClose = "<" + "/script" + ">";
 
-      const contenidoHTML = '<!DOCTYPE html>\n' +
-'<html lang="es">\n' +
-'<head>\n' +
-'  <meta charset="UTF-8">\n' +
-'  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
-'  <title>Administración de Menú - ' + localId.toUpperCase() + '</title>\n' +
-'  <style>\n' +
-'    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; max-width: 600px; margin: 0 auto; }\n' +
-'    h1 { color: #ffe600; text-align: center; }\n' +
-'    .card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }\n' +
-'    input, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #444; box-sizing: border-box; }\n' +
-'    input { background: #2a2a2a; color: #fff; }\n' +
-'    button { background: #ffe600; color: #000; font-weight: bold; border: none; cursor: pointer; }\n' +
-'    .btn-green { background: #4CAF50; color: white; }\n' +
-'    .btn-red { background: #f44336; color: white; padding: 5px 10px; width: auto; }\n' +
-'  </style>\n' +
-'</head>\n' +
-'<body>\n' +
-'  <h1>Panel Admin - ' + localId.toUpperCase() + '</h1>\n' +
-'  <div class="card">\n' +
-'    <label>Contraseña Administrador:</label>\n' +
-'    <input type="password" id="pass" value="' + passwordCliente + '">\n' +
-'    <button onclick="cargarMenu()">Cargar Mi Menú</button>\n' +
-'  </div>\n' +
-'  <div id="editor" style="display:none;">\n' +
-'    <div class="card">\n' +
-'      <h3>Añadir Categoría</h3>\n' +
-'      <input type="text" id="nueva-cat" placeholder="Nombre de categoría (ej: Hamburguesas)">\n' +
-'      <button onclick="agregarCategoria()">+ Agregar Categoría</button>\n' +
-'    </div>\n' +
-'    <div id="lista-menu"></div>\n' +
-'    <button class="btn-green" onclick="guardarMenu()">💾 Guardar Cambios en Servidor</button>\n' +
-'  </div>\n' +
-  scriptTag + '\n' +
-'    const API_URL = "' + API_URL + '";\n' +
-'    const LOCAL_ID = "' + localId + '";\n' +
-'    let menuData = [];\n' +
-'    async function cargarMenu() {\n' +
-'      const res = await fetch(API_URL + "/menu?local=" + LOCAL_ID);\n' +
-'      menuData = await res.json();\n' +
-'      document.getElementById("editor").style.display = "block";\n' +
-'      render();\n' +
-'    }\n' +
-'    function render() {\n' +
-'      const cont = document.getElementById("lista-menu");\n' +
-'      cont.innerHTML = menuData.map((cat, cIdx) => {\n' +
-'        const prods = cat.productos.map((prod, pIdx) => \n' +
-'          `<div style="display:flex; gap:5px; margin-bottom:5px;">\n` +\n' +
-'          `  <input type="text" value="${prod.nombre}" onchange="menuData[${cIdx}].productos[${pIdx}].nombre = this.value">\n` +\n' +
-'          `  <input type="number" value="${prod.precio}" style="width:100px;" onchange="menuData[${cIdx}].productos[${pIdx}].precio = Number(this.value)">\n` +\n' +
-'          `  <button class="btn-red" onclick="eliminarProd(${cIdx}, ${pIdx})">X</button>\n` +\n' +
-'          `</div>`\n' +
-'        ).join("");\n' +
-'        return `<div class="card"><div style="display:flex; justify-content:space-between; align-items:center;"><h3>${cat.categoria}</h3><button class="btn-red" onclick="eliminarCat(${cIdx})">X</button></div><div style="margin:10px 0;">${prods}</div><button onclick="agregarProducto(${cIdx})">+ Agregar Producto</button></div>`;\n' +
-'      }).join("");\n' +
-'    }\n' +
-'    function agregarCategoria() {\n' +
-'      const name = document.getElementById("nueva-cat").value.trim();\n' +
-'      if (!name) return;\n' +
-'      menuData.push({ categoria: name, productos: [] });\n' +
-'      document.getElementById("nueva-cat").value = "";\n' +
-'      render();\n' +
-'    }\n' +
-'    function agregarProducto(cIdx) {\n' +
-'      menuData[cIdx].productos.push({ nombre: "Nuevo Producto", precio: 1000 });\n' +
-'      render();\n' +
-'    }\n' +
-'    function eliminarCat(cIdx) { menuData.splice(cIdx, 1); render(); }\n' +
-'    function eliminarProd(cIdx, pIdx) { menuData[cIdx].productos.splice(pIdx, 1); render(); }\n' +
-'    async function guardarMenu() {\n' +
-'      const password = document.getElementById("pass").value;\n' +
-'      const res = await fetch(API_URL + "/menu", {\n' +
-'        method: "POST",\n' +
-'        headers: { "Content-Type": "application/json" },\n' +
-'        body: JSON.stringify({ local: LOCAL_ID, password, menu: menuData })\n' +
-'      });\n' +
-'      if (res.ok) alert("¡Menú guardado con éxito!");\n' +
-'      else alert("Error al guardar. Revisa la contraseña.");\n' +
-'    }\n' +
-  scriptTagClose + '\n' +
-'</body>\n' +
-'</html>';
+      const htmlCompleto = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración - ${localId.toUpperCase()}</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 15px; max-width: 800px; margin: 0 auto; }
+    h1, h2 { color: #ffe600; text-align: center; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 12px; background: #2a2a2a; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; }
+    .tab-btn.active { background: #ffe600; color: #000; }
+    .sec { display: none; }
+    .sec.active { display: block; }
+    .card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
+    input, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #444; box-sizing: border-box; }
+    input { background: #2a2a2a; color: #fff; }
+    button { background: #ffe600; color: #000; font-weight: bold; border: none; cursor: pointer; }
+    .btn-green { background: #4CAF50; color: white; }
+    .btn-red { background: #f44336; color: white; width: auto; padding: 5px 10px; }
+    .pedido-card { border-left: 5px solid #ffe600; }
+    .mesa-badge { background: #ffe600; color: #000; font-weight: bold; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+  </style>
+</head>
+<body>
 
-      const blob = new Blob([contenidoHTML], { type: 'text/html' });
+  <h1>Panel de Administración (${localId.toUpperCase()})</h1>
+
+  <div id="login-sec" class="card">
+    <label>Contraseña de Administración:</label>
+    <input type="password" id="pass-input" value="${passwordCliente}">
+    <button onclick="iniciarSesion()">Ingresar al Panel</button>
+  </div>
+
+  <div id="app-sec" style="display:none;">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="verTab('cocina')">🍳 Cocina (Pedidos)</button>
+      <button class="tab-btn" onclick="verTab('menu')">🍔 Editar Menú</button>
+    </div>
+
+    <!-- VISTA DE COCINA -->
+    <div id="tab-cocina" class="sec active">
+      <h2>Pedidos en Tiempo Real</h2>
+      <div id="lista-pedidos-cocina">Cargando pedidos...</div>
+    </div>
+
+    <!-- VISTA DE EDICIÓN DE MENÚ -->
+    <div id="tab-menu" class="sec">
+      <h2>Gestión del Menú</h2>
+      <div class="card">
+        <h3>+ Nueva Categoría</h3>
+        <input type="text" id="nueva-cat" placeholder="Ej: Bebidas, Postres...">
+        <button onclick="agregarCategoria()">Agregar Categoría</button>
+      </div>
+      <div id="editor-menu"></div>
+      <button class="btn-green" style="margin-top:15px; padding:15px;" onclick="guardarMenu()">💾 Guardar Menú en Servidor</button>
+    </div>
+  </div>
+
+  ${sOpen}
+    const API_URL = "${API_URL}";
+    const LOCAL_ID = "${localId}";
+    let menuData = [];
+
+    function iniciarSesion() {
+      document.getElementById('login-sec').style.display = 'none';
+      document.getElementById('app-sec').style.display = 'block';
+      cargarCocina();
+      cargarMenu();
+      setInterval(cargarCocina, 4000);
+    }
+
+    function verTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
+      if(tab === 'cocina') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('tab-cocina').classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('tab-menu').classList.add('active');
+      }
+    }
+
+    async function cargarCocina() {
+      try {
+        const res = await fetch(API_URL + '/pedidos?local=' + LOCAL_ID);
+        const pedidos = await res.json();
+        const cont = document.getElementById('lista-pedidos-cocina');
+        if (!pedidos || pedidos.length === 0) {
+          cont.innerHTML = '<p style="text-align:center; color:#888;">No hay pedidos pendientes en cocina.</p>';
+          return;
+        }
+        cont.innerHTML = pedidos.map(p => {
+          const items = p.items.map(i => '<li>' + i.nombre + '</li>').join('');
+          return '<div class="card pedido-card">' +
+            '<div style="display:flex; justify-content:space-between;">' +
+              '<span class="mesa-badge">Mesa ' + p.mesa + '</span>' +
+              '<small style="color:#aaa;">' + p.hora + '</small>' +
+            '</div>' +
+            '<ul>' + items + '</ul>' +
+            '<strong>Total: $' + p.total.toLocaleString('es-CL') + '</strong>' +
+          '</div>';
+        }).join('');
+      } catch(e) {}
+    }
+
+    async function cargarMenu() {
+      try {
+        const res = await fetch(API_URL + '/menu?local=' + LOCAL_ID);
+        menuData = await res.json();
+        renderMenu();
+      } catch(e) {}
+    }
+
+    function renderMenu() {
+      const cont = document.getElementById('editor-menu');
+      cont.innerHTML = menuData.map((cat, cIdx) => {
+        const prods = (cat.productos || []).map((prod, pIdx) => 
+          '<div style="display:flex; gap:5px; margin-bottom:5px;">' +
+            '<input type="text" value="' + prod.nombre + '" onchange="menuData['+cIdx+'].productos['+pIdx+'].nombre=this.value">' +
+            '<input type="number" value="' + prod.precio + '" style="width:100px;" onchange="menuData['+cIdx+'].productos['+pIdx+'].precio=Number(this.value)">' +
+            '<button class="btn-red" onclick="eliminarProd('+cIdx+','+pIdx+')">X</button>' +
+          '</div>'
+        ).join('');
+
+        return '<div class="card">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<h3>' + cat.categoria + '</h3>' +
+            '<button class="btn-red" onclick="eliminarCat('+cIdx+')">Eliminar Categoría</button>' +
+          '</div>' +
+          '<div style="margin:10px 0;">' + prods + '</div>' +
+          '<button onclick="agregarProd('+cIdx+')">+ Agregar Producto</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    function agregarCategoria() {
+      const val = document.getElementById('nueva-cat').value.trim();
+      if(!val) return;
+      menuData.push({ categoria: val, productos: [] });
+      document.getElementById('nueva-cat').value = '';
+      renderMenu();
+    }
+
+    function agregarProd(cIdx) {
+      if(!menuData[cIdx].productos) menuData[cIdx].productos = [];
+      menuData[cIdx].productos.push({ nombre: 'Nuevo Producto', precio: 1000 });
+      renderMenu();
+    }
+
+    function eliminarCat(cIdx) { menuData.splice(cIdx, 1); renderMenu(); }
+    function eliminarProd(cIdx, pIdx) { menuData[cIdx].productos.splice(pIdx, 1); renderMenu(); }
+
+    async function guardarMenu() {
+      const pass = document.getElementById('pass-input').value;
+      const res = await fetch(API_URL + '/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local: LOCAL_ID, password: pass, menu: menuData })
+      });
+      if(res.ok) alert('¡Menú guardado correctamente en el servidor!');
+      else alert('Error al guardar el menú. Revisa la contraseña.');
+    }
+  ${sClose}
+</body>
+</html>`;
+
+      const blob = new Blob([htmlCompleto], { type: 'text/html' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `admin_${localId}.html`;
