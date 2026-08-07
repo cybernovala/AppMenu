@@ -27,19 +27,13 @@
 
   <h1>Panel Super Admin</h1>
 
+  <!-- 1. CLAVE MAESTRA -->
   <div class="card">
     <label for="clave-maestra">Clave Maestra de Super Admin:</label>
     <input type="password" id="clave-maestra" value="superadmin123">
   </div>
 
-  <div class="card">
-    <h3>🏢 Locales Contratados y Estado de Suscripción</h3>
-    <button class="btn-blue" style="margin-bottom: 15px;" onclick="cargarListadoLocales()">🔄 Listar Todos los Locales</button>
-    <div id="contenedor-locales">
-      <p style="color:#aaa; text-align:center;">Presiona el botón para listar los locales contratados.</p>
-    </div>
-  </div>
-
+  <!-- 2. ALTA DE NUEVO RESTAURANTE -->
   <div class="card">
     <h3>🚀 Alta de Nuevo Restaurante</h3>
     <label for="local-id">Identificador del Restaurante (Slug):</label>
@@ -51,12 +45,22 @@
     <button class="btn-green" onclick="generarPaqueteCliente()">Crear y Descargar Acceso Cliente</button>
   </div>
 
+  <!-- 3. RESPALDOS Y RESTAURACIÓN -->
   <div class="card">
     <h3>💾 Copia de Seguridad y Respaldos</h3>
     <button class="btn-blue" onclick="descargarRespaldo()">📥 Descargar Respaldo JSON</button>
     <hr style="border-color: #333; margin: 15px 0;">
     <input type="file" id="archivo-json" accept=".json">
     <button class="btn-orange" onclick="restaurarServidor()">📤 Restaurar Servidor</button>
+  </div>
+
+  <!-- 4. LISTADO DE LOCALES CONTRATADOS (AL FINAL) -->
+  <div class="card">
+    <h3>🏢 Locales Contratados y Estado de Suscripción</h3>
+    <button class="btn-blue" style="margin-bottom: 15px;" onclick="cargarListadoLocales()">🔄 Cargar / Actualizar Lista de Locales</button>
+    <div id="contenedor-locales">
+      <p style="color:#aaa; text-align:center;">Presiona el botón para listar los locales contratados.</p>
+    </div>
   </div>
 
   <script>
