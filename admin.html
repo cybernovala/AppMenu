@@ -2,174 +2,109 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Administración del Menú</title>
+  <title>Administrar Menú</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; max-width: 800px; margin: 0 auto; }
-    h1 { color: #ffe600; text-align: center; }
-    .card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
-    input { padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #444; background: #2a2a2a; color: #fff; box-sizing: border-box; }
-    button { background: #ffe600; color: #000; border: none; padding: 10px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; }
-    .btn-danger { background: #f44336; color: white; padding: 6px 10px; }
-    .btn-add { background: #ffe600; color: #000; margin-top: 10px; }
-    .item-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding: 10px 0; }
-    .form-nuevo-prod { background: #282828; padding: 12px; border-radius: 6px; margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
-    .form-nuevo-prod input { flex: 1; min-width: 120px; }
-    .header-cat { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffe600; padding-bottom: 8px; }
-    .header-cat h2 { margin: 0; color: #ffe600; }
+    body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; max-width: 600px; margin: 0 auto; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    input, button { padding: 10px; width: 100%; margin: 8px 0; border-radius: 4px; box-sizing: border-box; }
+    button { background: #4CAF50; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn-del { background: #f44336; margin-top: 2px; }
   </style>
 </head>
 <body>
 
-  <h1>ADMINISTRACIÓN DEL MENÚ</h1>
-
-  <!-- Autenticación -->
   <div class="card">
-    <label><strong>Contraseña de Administrador:</strong></label>
-    <input type="password" id="password" placeholder="Ingresa clave (Ej: admin123)" style="width: 100%;">
+    <h2>⚙️ Administrar Menú - <span id="nombre-local"></span></h2>
+    
+    <label>Clave de Administrador:</label>
+    <input type="password" id="password" value="admin123">
+
+    <hr>
+    <h3>Agregar Producto</h3>
+    <input type="text" id="categoria" placeholder="Categoría (Ej: Bebidas)">
+    <input type="text" id="nombre" placeholder="Nombre (Ej: Coca-Cola)">
+    <input type="number" id="precio" placeholder="Precio (Ej: 1500)">
+    <button onclick="agregarProducto()">+ Agregar al Menú</button>
+
+    <h3>Vista Previa y Edición</h3>
+    <div id="vista-previa">Cargando...</div>
+
+    <button style="background: #2196F3; margin-top: 15px;" onclick="guardarMenu()">💾 Guardar Todos los Cambios</button>
   </div>
-
-  <!-- Crear Nueva Categoría -->
-  <div class="card">
-    <h3>Crear Nueva Categoría</h3>
-    <div style="display: flex; gap: 10px;">
-      <input type="text" id="cat-nueva" placeholder="Nombre de categoría (Ej: Postres, Bebidas)" style="flex: 1;">
-      <button onclick="crearCategoria()">+ Crear Categoría</button>
-    </div>
-  </div>
-
-  <!-- Listado de Categorías y Productos -->
-  <div id="lista-menu">Cargando menú...</div>
-
-  <!-- Guardar Cambios -->
-  <button onclick="guardarEnServidor()" style="font-size: 18px; width: 100%; padding: 15px; background: #4CAF50; color: white; margin-bottom: 40px;">💾 Guardar Todos los Cambios</button>
 
   <script>
-    const API_URL = "https://appmenu-tavr.onrender.com/api";
-    let menuData = [];
+    const API_URL = 'https://appmenu-tavr.onrender.com/api';
+    const params = new URLSearchParams(window.location.search);
+    const local = params.get('local') || 'default';
+
+    document.getElementById('nombre-local').innerText = local.toUpperCase();
+
+    let menuActual = [];
 
     async function cargarMenu() {
-      try {
-        const res = await fetch(`${API_URL}/menu`);
-        menuData = await res.json();
-        renderAdmin();
-      } catch (err) {
-        document.getElementById('lista-menu').innerText = 'Error al cargar el menú.';
-      }
+      const res = await fetch(`${API_URL}/menu?local=${local}`);
+      menuActual = await res.json();
+      renderizarMenu();
     }
 
-    function renderAdmin() {
-      const container = document.getElementById('lista-menu');
-      container.innerHTML = '';
+    function renderizarMenu() {
+      const contenedor = document.getElementById('vista-previa');
+      contenedor.innerHTML = '';
 
-      if (menuData.length === 0) {
-        container.innerHTML = '<p style="color:#888;">No hay categorías creadas.</p>';
-        return;
-      }
-
-      menuData.forEach((cat, cIndex) => {
-        let itemsHtml = '';
-        cat.productos.forEach((p, pIndex) => {
-          itemsHtml += `
-            <div class="item-row">
-              <div>
-                <strong>${p.nombre}</strong><br>
-                <span style="color:#aaa">$${Number(p.precio).toLocaleString('es-CL')}</span>
-              </div>
-              <button class="btn-danger" onclick="eliminarProducto(${cIndex}, ${pIndex})">Eliminar</button>
+      menuActual.forEach((cat, cIdx) => {
+        contenedor.innerHTML += `<h4>${cat.categoria}</h4>`;
+        cat.productos.forEach((p, pIdx) => {
+          contenedor.innerHTML += `
+            <div>
+              ${p.nombre} - $${p.precio} 
+              <button class="btn-del" style="width: auto; padding: 2px 8px;" onclick="eliminarProducto(${cIdx}, ${pIdx})">X</button>
             </div>
           `;
         });
-
-        container.innerHTML += `
-          <div class="card">
-            <div class="header-cat">
-              <h2>${cat.categoria}</h2>
-              <button class="btn-danger" onclick="eliminarCategoria(${cIndex})">Eliminar Categoría</button>
-            </div>
-            
-            <div style="margin-top: 10px;">
-              ${itemsHtml.length > 0 ? itemsHtml : '<p style="color:#777; font-size:14px;">Sin productos en esta categoría.</p>'}
-            </div>
-
-            <!-- Formulario para agregar producto a ESTA categoría -->
-            <div class="form-nuevo-prod">
-              <input type="text" id="prod-nombre-${cIndex}" placeholder="Nombre producto">
-              <input type="number" id="prod-precio-${cIndex}" placeholder="Precio ($)">
-              <button class="btn-add" onclick="agregarProducto(${cIndex})">+ Agregar Producto</button>
-            </div>
-          </div>
-        `;
       });
     }
 
-    function crearCategoria() {
-      const catNombre = document.getElementById('cat-nueva').value.trim();
-      if (!catNombre) return alert("Escribe un nombre para la categoría.");
+    function agregarProducto() {
+      const catNombre = document.getElementById('categoria').value.trim();
+      const prodNombre = document.getElementById('nombre').value.trim();
+      const precio = parseInt(document.getElementById('precio').value);
 
-      const existe = menuData.some(c => c.categoria.toLowerCase() === catNombre.toLowerCase());
-      if (existe) return alert("Esa categoría ya existe.");
+      if (!catNombre || !prodNombre || isNaN(precio)) return alert('Llena todos los campos');
 
-      menuData.push({
-        categoria: catNombre,
-        productos: []
-      });
-
-      document.getElementById('cat-nueva').value = '';
-      renderAdmin();
-    }
-
-    function eliminarCategoria(cIndex) {
-      if (confirm(`¿Seguro que deseas eliminar la categoría "${menuData[cIndex].categoria}" y sus productos?`)) {
-        menuData.splice(cIndex, 1);
-        renderAdmin();
+      let catExistente = menuActual.find(c => c.categoria.toLowerCase() === catNombre.toLowerCase());
+      if (!catExistente) {
+        catExistente = { categoria: catNombre, productos: [] };
+        menuActual.push(catExistente);
       }
-    }
 
-    function agregarProducto(cIndex) {
-      const inputNombre = document.getElementById(`prod-nombre-${cIndex}`);
-      const inputPrecio = document.getElementById(`prod-precio-${cIndex}`);
-
-      const nombre = inputNombre.value.trim();
-      const precio = inputPrecio.value;
-
-      if (!nombre || !precio) return alert("Ingresa el nombre y precio del producto.");
-
-      menuData[cIndex].productos.push({
+      catExistente.productos.push({
         id: Date.now().toString(),
-        nombre,
-        precio: Number(precio)
+        nombre: prodNombre,
+        precio: precio
       });
 
-      inputNombre.value = '';
-      inputPrecio.value = '';
-      renderAdmin();
+      renderizarMenu();
     }
 
-    function eliminarProducto(cIndex, pIndex) {
-      menuData[cIndex].productos.splice(pIndex, 1);
-      renderAdmin();
-    }
-
-    async function guardarEnServidor() {
-      const password = document.getElementById('password').value;
-      if (!password) return alert("Ingresa la contraseña para guardar.");
-
-      try {
-        const res = await fetch(`${API_URL}/menu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password, menu: menuData })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          alert("¡Menú guardado y actualizado!");
-        } else {
-          alert("Error: " + data.error);
-        }
-      } catch (err) {
-        alert("Ocurrió un error al guardar los datos.");
+    function eliminarProducto(cIdx, pIdx) {
+      menuActual[cIdx].productos.splice(pIdx, 1);
+      if (menuActual[cIdx].productos.length === 0) {
+        menuActual.splice(cIdx, 1);
       }
+      renderizarMenu();
+    }
+
+    async function guardarMenu() {
+      const password = document.getElementById('password').value;
+      const res = await fetch(`${API_URL}/menu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local, password, menu: menuActual })
+      });
+
+      const data = await res.json();
+      if (res.ok) alert('¡Menú actualizado exitosamente!');
+      else alert('Error: ' + data.error);
     }
 
     cargarMenu();

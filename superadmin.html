@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Super Admin - Generador de Cuentas</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 30px; max-width: 600px; margin: 0 auto; }
+    h1 { color: #ffe600; text-align: center; }
+    .card { background: #1e1e1e; padding: 25px; border-radius: 8px; border: 1px solid #333; }
+    input { width: 100%; padding: 12px; margin: 10px 0 20px 0; border-radius: 4px; border: 1px solid #444; background: #2a2a2a; color: #fff; box-sizing: border-box; }
+    button { background: #4CAF50; color: white; border: none; padding: 14px; font-weight: bold; font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%; }
+    .info { font-size: 13px; color: #aaa; margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+  <h1>Panel de Control de Licencias</h1>
+
+  <div class="card">
+    <h3>Alta de Nuevo Restaurante</h3>
+    <label>Identificador del Restaurante (Sin espacios):</label>
+    <input type="text" id="local-id" placeholder="Ej: burger-papas">
+
+    <button onclick="generarPaqueteCliente()">🚀 Crear y Descargar Acceso Cliente</button>
+
+    <div class="info">
+      * Esto generará las URLs aisladas para Render y GitHub Pages correspondientes al nuevo cliente.
+    </div>
+  </div>
+
+  <script>
+    const BASE_URL = "https://cybernovala.github.io/AppMenu";
+
+    function generarPaqueteCliente() {
+      const idRaw = document.getElementById('local-id').value.trim();
+      if (!idRaw) return alert("Ingresa un identificador válido.");
+
+      const localId = idRaw.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+
+      const urlCliente = `${BASE_URL}/index.html?local=${localId}&mesa=1`;
+      const urlCocina = `${BASE_URL}/cocina.html?local=${localId}`;
+      const urlAdmin = `${BASE_URL}/admin.html?local=${localId}`;
+
+      const contenidoHtml = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Acceso Local - ${localId}</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 40px; }
+    .btn { display: block; background: #ffe600; color: #000; text-decoration: none; padding: 15px; margin: 15px auto; max-width: 320px; font-weight: bold; border-radius: 6px; }
+    .btn-admin { background: #4CAF50; color: #fff; }
+  </style>
+</head>
+<body>
+  <h1>Panel Principal - ${localId.toUpperCase()}</h1>
+  <a class="btn" href="${urlCocina}" target="_blank">📺 Abrir Pantalla de Cocina</a>
+  <a class="btn btn-admin" href="${urlAdmin}" target="_blank">⚙️ Administrar Menú y Precios</a>
+  
+  <h3>Enlace Base para Códigos QR (Mesa 1):</h3>
+  <p><a href="${urlCliente}" target="_blank" style="color: #ffe600;">${urlCliente}</a></p>
+</body>
+</html>`;
+
+      const blob = new Blob([contenidoHtml], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Acceso_Restaurante_${localId}.html`;
+      a.click();
+
+      alert(`¡Cliente "${localId}" activado! Se ha descargado su archivo de acceso.`);
+    }
+  </script>
+</body>
+</html>

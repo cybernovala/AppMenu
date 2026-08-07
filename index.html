@@ -5,96 +5,109 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Menú Digital</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #181818; color: #fff; margin: 0; padding: 15px; padding-bottom: 90px; }
-    h1 { color: #ffe600; text-align: center; margin-bottom: 5px; }
-    .categoria { color: #ffe600; border-bottom: 2px solid #ffe600; margin-top: 25px; padding-bottom: 5px; }
-    .item { display: flex; justify-content: space-between; align-items: center; background: #282828; padding: 12px; margin: 10px 0; border-radius: 8px; }
-    button { background: #ffe600; color: #000; border: none; padding: 10px 14px; font-weight: bold; border-radius: 5px; cursor: pointer; }
-    #carrito { position: fixed; bottom: 0; left: 0; right: 0; background: #ffe600; color: #000; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
-    #btn-enviar { background: #000; color: #fff; padding: 10px 18px; font-size: 16px; border-radius: 5px; }
+    body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
+    .header { background: #ffe600; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+    .categoria { font-size: 20px; font-weight: bold; margin-top: 20px; color: #333; border-bottom: 2px solid #ffe600; padding-bottom: 5px; }
+    .item { background: #fff; padding: 15px; margin: 10px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .btn-add { background: #4CAF50; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .carrito { background: #333; color: white; padding: 15px; border-radius: 8px; position: sticky; bottom: 20px; margin-top: 20px; }
+    .btn-enviar { background: #ffe600; color: #000; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <h1>TODO EN UNO</h1>
-  <p id="info-mesa" style="text-align:center; font-weight:bold; color: #aaa; margin-top:0;"></p>
+  <div class="header">
+    <h1 id="titulo-local">Menú Digital</h1>
+    <h3 id="info-mesa">Mesa: -</h3>
+  </div>
 
-  <div id="menu">Cargando menú...</div>
+  <div id="contenedor-menu">Cargando menú...</div>
 
-  <div id="carrito">
-    <div><strong>Total: $<span id="total">0</span></strong> (<span id="cant-items">0</span>)</div>
-    <button id="btn-enviar" onclick="enviarPedido()">Enviar Pedido</button>
+  <div class="carrito">
+    <h3>Mi Pedido (<span id="cant-items">0</span>)</h3>
+    <div id="detalle-carrito">Vacío</div>
+    <h4>Total: $<span id="total-carrito">0</span></h4>
+    <button class="btn-enviar" onclick="enviarPedido()">🚀 Enviar Pedido a Cocina</button>
   </div>
 
   <script>
-    const API_URL = "https://appmenu-tavr.onrender.com/api"; 
-
+    const API_URL = 'https://appmenu-tavr.onrender.com/api';
     const params = new URLSearchParams(window.location.search);
+    const local = params.get('local') || 'default';
     const mesa = params.get('mesa') || '1';
-    document.getElementById('info-mesa').innerText = `Mesa N° ${mesa}`;
+
+    document.getElementById('info-mesa').innerText = `Mesa: ${mesa}`;
+    document.getElementById('titulo-local').innerText = `Menú - ${local.toUpperCase()}`;
 
     let carrito = [];
-    let menuData = [];
+    let menuCompleto = [];
 
     async function cargarMenu() {
       try {
-        const res = await fetch(`${API_URL}/menu`);
-        menuData = await res.json();
-        renderMenu();
+        const res = await fetch(`${API_URL}/menu?local=${local}`);
+        menuCompleto = await res.json();
+        const divMenu = document.getElementById('contenedor-menu');
+        divMenu.innerHTML = '';
+
+        menuCompleto.forEach(cat => {
+          const htmlCat = document.createElement('div');
+          htmlCat.className = 'categoria';
+          htmlCat.innerText = cat.categoria;
+          divMenu.appendChild(htmlCat);
+
+          cat.productos.forEach(p => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item';
+            itemDiv.innerHTML = `
+              <div>
+                <strong>${p.nombre}</strong><br>
+                <span>$${p.precio}</span>
+              </div>
+              <button class="btn-add" onclick="agregarAlCarrito('${p.id}', '${p.nombre}', ${p.precio})">+ Agregar</button>
+            `;
+            divMenu.appendChild(itemDiv);
+          });
+        });
       } catch (err) {
-        document.getElementById('menu').innerText = 'Error al cargar el menú.';
+        document.getElementById('contenedor-menu').innerText = 'Error al cargar el menú.';
       }
     }
 
-    function renderMenu() {
-      const contenedor = document.getElementById('menu');
-      contenedor.innerHTML = '';
-      menuData.forEach(cat => {
-        contenedor.innerHTML += `<h2 class="categoria">${cat.categoria}</h2>`;
-        cat.productos.forEach(p => {
-          contenedor.innerHTML += `
-            <div class="item">
-              <div>
-                <strong>${p.nombre}</strong><br>
-                <span style="color:#aaa">$${Number(p.precio).toLocaleString('es-CL')}</span>
-              </div>
-              <button onclick="agregar('${p.nombre}', ${p.precio})">+ Agregar</button>
-            </div>`;
-        });
-      });
-    }
-
-    function agregar(nombre, precio) {
-      carrito.push({ nombre, precio: Number(precio) });
+    function agregarAlCarrito(id, nombre, precio) {
+      carrito.push({ id, nombre, precio });
       actualizarCarrito();
     }
 
     function actualizarCarrito() {
       document.getElementById('cant-items').innerText = carrito.length;
-      const total = carrito.reduce((sum, item) => sum + item.precio, 0);
-      document.getElementById('total').innerText = total.toLocaleString('es-CL');
+      const detalle = document.getElementById('detalle-carrito');
+      let total = 0;
+      
+      if (carrito.length === 0) {
+        detalle.innerText = 'Vacío';
+      } else {
+        detalle.innerHTML = carrito.map(i => `${i.nombre} - $${i.precio}`).join('<br>');
+        total = carrito.reduce((sum, item) => sum + item.precio, 0);
+      }
+      document.getElementById('total-carrito').innerText = total;
     }
 
     async function enviarPedido() {
-      if (carrito.length === 0) return alert("Agrega al menos un producto.");
-      
-      const total = carrito.reduce((sum, item) => sum + item.precio, 0);
-      try {
-        const res = await fetch(`${API_URL}/pedidos`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mesa, items: carrito, total })
-        });
+      if (carrito.length === 0) return alert('Agrega productos al carrito');
 
-        if (res.ok) {
-          alert("¡Pedido enviado a la cocina!");
-          carrito = [];
-          actualizarCarrito();
-        } else {
-          alert("Error al enviar el pedido.");
-        }
-      } catch (err) {
-        alert("Ocurrió un error al conectar con el servidor.");
+      const total = carrito.reduce((sum, item) => sum + item.precio, 0);
+      const res = await fetch(`${API_URL}/pedidos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local, mesa, items: carrito, total })
+      });
+
+      if (res.ok) {
+        alert('¡Pedido enviado con éxito a la cocina!');
+        carrito = [];
+        actualizarCarrito();
+      } else {
+        alert('Error al enviar el pedido.');
       }
     }
 
