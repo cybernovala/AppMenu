@@ -13,10 +13,7 @@
       max-width: 650px;
       margin: 0 auto;
     }
-    h1 {
-      color: #ffe600;
-      text-align: center;
-    }
+    h1 { color: #ffe600; text-align: center; }
     .card {
       background: #1e1e1e;
       padding: 25px;
@@ -24,11 +21,7 @@
       border: 1px solid #333;
       margin-bottom: 25px;
     }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
+    label { display: block; margin-top: 10px; font-weight: bold; }
     input, button {
       width: 100%;
       padding: 12px;
@@ -37,16 +30,8 @@
       border: 1px solid #444;
       box-sizing: border-box;
     }
-    input {
-      background: #2a2a2a;
-      color: #fff;
-    }
-    button {
-      font-weight: bold;
-      font-size: 15px;
-      cursor: pointer;
-      border: none;
-    }
+    input { background: #2a2a2a; color: #fff; }
+    button { font-weight: bold; font-size: 15px; cursor: pointer; border: none; }
     .btn-green { background: #4CAF50; color: white; }
     .btn-blue { background: #2196F3; color: white; }
     .btn-orange { background: #ff9800; color: white; }
@@ -71,7 +56,7 @@
     <input type="text" id="local-id" placeholder="Ej: burger-papas">
 
     <label for="local-pass">Contraseña de Administración para este Cliente:</label>
-    <input type="text" id="local-pass" placeholder="Ej: claveSegura2026">
+    <input type="password" id="local-pass" placeholder="Ingresa clave para el restaurante">
 
     <button class="btn-green" onclick="generarPaqueteCliente()">Crear y Descargar Acceso Cliente</button>
   </div>
@@ -79,7 +64,7 @@
   <!-- Respaldos y Restauración -->
   <div class="card">
     <h3>💾 Copia de Seguridad y Restauración</h3>
-    <p class="info">Descarga un respaldo JSON completo a tu PC o restaura los datos si la plataforma de hosting borra la memoria temporal.</p>
+    <p class="info">Descarga un respaldo JSON completo a tu PC o restaura los datos en el servidor.</p>
 
     <button class="btn-blue" onclick="descargarRespaldo()">📥 Descargar Respaldo Total a mi PC</button>
     
@@ -105,7 +90,6 @@
 
       const localId = idRaw.toLowerCase().replace(/[^a-z0-9_-]/g, '');
 
-      // 1. Enviar registro al servidor
       try {
         const res = await fetch(`${API_URL}/superadmin/crear-local`, {
           method: 'POST',
@@ -120,11 +104,11 @@
         return alert("Error de conexión al intentar registrar el restaurante en el servidor.");
       }
 
-      // 2. Construir archivo HTML de acceso único para el cliente
       const urlCliente = `${BASE_URL}/index.html?local=${localId}&mesa=1`;
       const urlCocina = `${BASE_URL}/cocina.html?local=${localId}`;
       const urlAdmin = `${BASE_URL}/admin.html?local=${localId}`;
 
+      // NOTA: Se elimina la contraseña en texto plano de este archivo descargable por seguridad
       const contenidoHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -134,24 +118,18 @@
     body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 40px; }
     .btn { display: block; background: #ffe600; color: #000; text-decoration: none; padding: 15px; margin: 15px auto; max-width: 320px; font-weight: bold; border-radius: 6px; }
     .btn-admin { background: #4CAF50; color: #fff; }
-    .box { background: #2a2a2a; padding: 15px; margin-top: 20px; border-radius: 6px; display: inline-block; }
   </style>
 </head>
 <body>
   <h1>Panel Principal - ${localId.toUpperCase()}</h1>
   <a class="btn" href="${urlCocina}" target="_blank">📺 Abrir Pantalla de Cocina</a>
   <a class="btn btn-admin" href="${urlAdmin}" target="_blank">⚙️ Administrar Menú y Precios</a>
-  
-  <div class="box">
-    <p><strong>Contraseña de Administración:</strong> <span style="color: #ffe600;">${passwordCliente}</span></p>
-  </div>
 
   <h3>Enlace Base para Códigos QR (Mesa 1):</h3>
   <p><a href="${urlCliente}" target="_blank" style="color: #ffe600;">${urlCliente}</a></p>
 </body>
 </html>`;
 
-      // 3. Descargar el archivo .html al PC
       const blob = new Blob([contenidoHtml], { type: 'text/html' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -177,7 +155,7 @@
         a.download = `Respaldo_Sistema_AppMenu_${fecha}.json`;
         a.click();
 
-        alert("¡Copia de seguridad guardada con éxito en tu computador!");
+        alert("¡Copia de seguridad guardada con éxito!");
       } catch (err) {
         alert("Error de conexión al obtener el respaldo.");
       }
@@ -205,12 +183,12 @@
 
           const respData = await res.json();
           if (res.ok) {
-            alert("¡Servidor restaurado con éxito! Toda la información ha sido vuelta a subir a Render.");
+            alert("¡Servidor restaurado con éxito!");
           } else {
             alert("Error: " + respData.error);
           }
         } catch (err) {
-          alert("El archivo subido no contiene una estructura de respaldo válida.");
+          alert("El archivo subido no contiene un respaldo válido.");
         }
       };
 
