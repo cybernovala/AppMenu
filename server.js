@@ -23,6 +23,7 @@ function guardarEnDisco() {
 }
 
 let pedidosTemp = {};
+let historialEntregas = {}; // Guarda entregas completadas asociadas a cada garzón
 
 // ------------------- RUTAS DE MENÚ Y PEDIDOS -------------------
 
@@ -73,7 +74,7 @@ app.get('/api/pedidos', (req, res) => {
   res.json(pedidosTemp[local] || []);
 });
 
-// ------------------- RUTAS PARA EL GARZÓN -------------------
+// ------------------- RUTAS PARA EL GARZÓN Y HISTORIAL -------------------
 
 app.get('/api/pedidos/garzon', (req, res) => {
   const { local } = req.query;
@@ -81,34 +82,62 @@ app.get('/api/pedidos/garzon', (req, res) => {
 });
 
 app.post('/api/pedidos/entregar', (req, res) => {
-  const { local, id } = req.body;
-  if (!pedidosTemp[local]) return res.status(404).json({ error: 'No hay pedidos' });
+  const { local, id, rutGarzon } = req.body;
+  if (!pedidosTemp[local]) return res.status(404).json({ error: 'No hay pedidos en este local' });
+  if (!rutGarzon) return res.status(400).json({ error: 'El RUT o ID del garzón es obligatorio' });
 
   const idx = pedidosTemp[local].findIndex(p => p.id === id);
   if (idx !== -1) {
-    pedidosTemp[local].splice(idx, 1); // Lo elimina de cocina y garzón
-    return res.json({ mensaje: 'Pedido entregado en mesa' });
+    const pedidoEntregado = pedidosTemp[local].splice(idx, 1)[0]; // Remueve el pedido de la lista activa
+
+    // Registrar en historial para incentivos
+    if (!historialEntregas[local]) historialEntregas[local] = [];
+    historialEntregas[local].push({
+      ...pedidoEntregado,
+      rutGarzon,
+      horaEntrega: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
+      fechaEntrega: new Date().toISOString().split('T')[0]
+    });
+
+    return res.json({ mensaje: 'Pedido entregado en mesa y registrado en historial', pedido: pedidoEntregado });
   }
   res.status(404).json({ error: 'Pedido no encontrado' });
 });
 
+app.get('/api/garzon/historial', (req, res) => {
+  const { local, rutGarzon } = req.query;
+  if (!historialEntregas[local]) return res.json([]);
+  
+  if (rutGarzon) {
+    const filtrados = historialEntregas[local].filter(h => h.rutGarzon === rutGarzon);
+    return res.json(filtrados);
+  }
+  res.json(historialEntregas[local]);
+});
+
 // ------------------- RUTAS DE SUSCRIPCIÓN Y SUPERADMIN -------------------
 
-app.get('/api/suscripcion', (req, res) => {
-  const { local } = req.query;
-  if (!db[local]) return res.status(404).json({ error: 'Local no encontrado' });
+app.get('/api/superadmin/locales', (req, res) => {
+  const { clave } = req.query;
+  if (clave !== 'superadmin123') return res.status(403).json({ error: 'Clave Maestra incorrecta' });
 
-  const hoy = new Date();
-  const fechaVenc = new Date(db[local].fechaVencimiento || hoy);
-  const diffTiempo = fechaVenc - hoy;
-  const diasRestantes = Math.ceil(diffTiempo / (1000 * 60 * 60 * 24));
+  const listaLocales = Object.keys(db).map(key => {
+    const hoy = new Date();
+    const fechaVenc = new Date(db[key].fechaVencimiento || hoy);
+    const diffTiempo = fechaVenc - hoy;
+    const diasRestantes = Math.ceil(diffTiempo / (1000 * 60 * 60 * 24));
 
-  res.json({
-    fechaVencimiento: db[local].fechaVencimiento,
-    diasRestantes,
-    alerta: diasRestantes <= 2 && diasRestantes >= 0,
-    vencido: diasRestantes < 0
+    return {
+      id: key,
+      fechaCreacion: db[key].fechaCreacion || 'N/A',
+      fechaVencimiento: db[key].fechaVencimiento || 'N/A',
+      diasRestantes,
+      activo: diasRestantes >= 0,
+      totalProductosMenu: (db[key].menu || []).reduce((acc, cat) => acc + (cat.productos ? cat.productos.length : 0), 0)
+    };
   });
+
+  res.json(listaLocales);
 });
 
 app.post('/api/superadmin/crear-local', (req, res) => {
