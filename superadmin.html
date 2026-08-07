@@ -54,7 +54,7 @@
     <button class="btn-orange" onclick="restaurarServidor()">📤 Restaurar Servidor</button>
   </div>
 
-  <!-- 4. LISTADO DE LOCALES CONTRATADOS (UBICADO AL FINAL) -->
+  <!-- 4. LISTADO DE LOCALES CONTRATADOS (AL FINAL) -->
   <div class="card">
     <h3>🏢 Locales Contratados y Estado de Suscripción</h3>
     <button class="btn-blue" style="margin-bottom: 15px;" onclick="cargarListadoLocales()">🔄 Cargar / Actualizar Lista de Locales</button>
@@ -145,7 +145,7 @@
 
         descargarArchivoAccesoCliente(localId, passwordCliente, data.fechaVencimiento || 'N/A');
 
-        alert(`Restaurante '${localId}' creado con éxito. Descargando acceso del cliente...`);
+        alert(`Restaurante '${localId}' creado con éxito. Descargando panel completo...`);
         cargarListadoLocales();
       } catch (err) {
         return alert("Error de conexión al servidor.");
@@ -153,27 +153,24 @@
     }
 
     function descargarArchivoAccesoCliente(localId, passwordCliente, fechaVencimiento) {
-      const sOpen = "<" + "script" + ">";
-      const sClose = "<" + "/script" + ">";
-
-      const htmlCompleto = `<!DOCTYPE html>
+      const htmlContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel de Control - ${localId.toUpperCase()}</title>
-  ${sOpen}src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"${sClose}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <style>
     body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 15px; max-width: 800px; margin: 0 auto; }
     h1, h2, h3 { color: #ffe600; text-align: center; margin-top: 5px; }
     .status-bar { background: #222; padding: 10px; border-radius: 6px; text-align: center; font-size: 13px; color: #aaa; border: 1px solid #333; margin-bottom: 15px; }
     .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-    .tab-btn { flex: 1; min-width: 120px; padding: 12px; background: #2a2a2a; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; }
+    .tab-btn { flex: 1; min-width: 100px; padding: 12px; background: #2a2a2a; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; }
     .tab-btn.active { background: #ffe600; color: #000; }
     .sec { display: none; }
     .sec.active { display: block; }
     .card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
-    input, button, select { width: 100%; padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #444; box-sizing: border-box; }
+    input, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #444; box-sizing: border-box; }
     input { background: #2a2a2a; color: #fff; }
     button { background: #ffe600; color: #000; font-weight: bold; border: none; cursor: pointer; }
     .btn-green { background: #4CAF50; color: white; }
@@ -182,6 +179,7 @@
     .pedido-card { border-left: 5px solid #ffe600; }
     .mesa-badge { background: #ffe600; color: #000; font-weight: bold; padding: 2px 8px; border-radius: 4px; display: inline-block; }
     #qr-box { background: #fff; padding: 15px; border-radius: 8px; display: inline-block; margin-top: 10px; }
+    #qr-box img { margin: 0 auto; }
   </style>
 </head>
 <body>
@@ -196,8 +194,8 @@
 
   <div id="app-sec" style="display:none;">
     <div class="status-bar">
-      <span>🔑 Restaurante: <strong>${localId.toUpperCase()}</strong></span> | 
-      <span>📅 Vencimiento de Servicio: <strong style="color:#4CAF50;">${fechaVencimiento}</strong></span>
+      <span>🔑 Local: <strong>${localId.toUpperCase()}</strong></span> | 
+      <span>📅 Servicio Activo Hasta: <strong style="color:#4CAF50;">${fechaVencimiento}</strong></span>
     </div>
 
     <div class="tabs">
@@ -209,26 +207,26 @@
 
     <!-- 1. VISTA DE COCINA -->
     <div id="tab-cocina" class="sec active">
-      <h2>🍳 Pedidos de Cocina</h2>
+      <h2>🍳 Pedidos Pendientes (Cocina)</h2>
       <div id="lista-pedidos-cocina">Cargando pedidos...</div>
     </div>
 
     <!-- 2. VISTA DE GARZÓN -->
     <div id="tab-garzon" class="sec">
-      <h2>🤵 Vista de Garzón / Garzonas</h2>
-      <div id="lista-pedidos-garzon">Cargando pedidos...</div>
+      <h2>🤵 Pedidos Listos para Entregar</h2>
+      <div id="lista-pedidos-garzon">Cargando comanda...</div>
     </div>
 
     <!-- 3. GENERADOR DE QR -->
     <div id="tab-qr" class="sec">
-      <h2>📱 Generar Código QR para Mesas</h2>
+      <h2>📱 Generador de QR para Mesas</h2>
       <div class="card" style="text-align: center;">
         <label>Número de Mesa:</label>
-        <input type="number" id="num-mesa" value="1" min="1" style="text-align: center; font-size: 18px;">
-        <button class="btn-blue" onclick="generarQR()">Generar Código QR</button>
+        <input type="number" id="num-mesa" value="1" min="1" style="text-align: center; font-size: 18px;" onchange="generarQR()">
+        <button class="btn-blue" onclick="generarQR()">Generar Nuevo QR</button>
         <div style="margin-top: 15px;">
           <div id="qr-box"></div>
-          <p id="qr-link-txt" style="font-size: 12px; color: #aaa; margin-top: 8px;"></p>
+          <p id="qr-link-txt" style="font-size: 12px; color: #aaa; margin-top: 10px; word-break: break-all;"></p>
         </div>
       </div>
     </div>
@@ -238,15 +236,15 @@
       <h2>🍔 Editor de Categorías y Productos</h2>
       <div class="card">
         <h3>+ Nueva Categoría</h3>
-        <input type="text" id="nueva-cat" placeholder="Ej: Entradas, Bebidas...">
+        <input type="text" id="nueva-cat" placeholder="Ej: Hamburguesas, Bebidas...">
         <button onclick="agregarCategoria()">Agregar Categoría</button>
       </div>
       <div id="editor-menu"></div>
-      <button class="btn-green" style="margin-top:15px; padding:15px;" onclick="guardarMenu()">💾 Guardar Cambios en Servidor</button>
+      <button class="btn-green" style="margin-top:15px; padding:15px;" onclick="guardarMenu()">💾 Guardar Menú en Servidor</button>
     </div>
   </div>
 
-  ${sOpen}
+  <script>
     const API_URL = "${API_URL}";
     const BASE_URL = "${BASE_URL}";
     const LOCAL_ID = "${localId}";
@@ -262,12 +260,20 @@
       setInterval(() => { cargarCocina(); cargarGarzon(); }, 4000);
     }
 
-    function verTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
-      const idxs = { 'cocina': 0, 'garzon': 1, 'qr': 2, 'menu': 3 };
-      document.querySelectorAll('.tab-btn')[idxs[tab]].classList.add('active');
-      document.getElementById('tab-' + tab).classList.add('active');
+    function verTab(tabName) {
+      const tabs = ['cocina', 'garzon', 'qr', 'menu'];
+      tabs.forEach((t, i) => {
+        const btn = document.querySelectorAll('.tab-btn')[i];
+        const sec = document.getElementById('tab-' + t);
+        if (t === tabName) {
+          btn.classList.add('active');
+          sec.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+          sec.classList.remove('active');
+        }
+      });
+      if(tabName === 'qr') generarQR();
     }
 
     async function cargarCocina() {
@@ -275,8 +281,8 @@
         const res = await fetch(API_URL + '/pedidos?local=' + LOCAL_ID);
         const pedidos = await res.json();
         const cont = document.getElementById('lista-pedidos-cocina');
-        if (!pedidos || pedidos.length === 0) {
-          cont.innerHTML = '<p style="text-align:center; color:#888;">No hay pedidos pendientes en cocina.</p>';
+        if (!Array.isArray(pedidos) || pedidos.length === 0) {
+          cont.innerHTML = '<p style="text-align:center; color:#888;">No hay pedidos en cocina.</p>';
           return;
         }
         cont.innerHTML = pedidos.map(p => {
@@ -284,10 +290,10 @@
           return '<div class="card pedido-card">' +
             '<div style="display:flex; justify-content:space-between;">' +
               '<span class="mesa-badge">Mesa ' + p.mesa + '</span>' +
-              '<small style="color:#aaa;">' + p.hora + '</small>' +
+              '<small style="color:#aaa;">' + (p.hora || '') + '</small>' +
             '</div>' +
-            '<ul>' + items + '</ul>' +
-            '<strong>Total: $' + p.total.toLocaleString('es-CL') + '</strong>' +
+            '<ul style="margin:10px 0; padding-left:20px;">' + items + '</ul>' +
+            '<strong>Total: $' + (p.total || 0).toLocaleString('es-CL') + '</strong>' +
           '</div>';
         }).join('');
       } catch(e) {}
@@ -298,7 +304,7 @@
         const res = await fetch(API_URL + '/pedidos/garzon?local=' + LOCAL_ID);
         const pedidos = await res.json();
         const cont = document.getElementById('lista-pedidos-garzon');
-        if (!pedidos || pedidos.length === 0) {
+        if (!Array.isArray(pedidos) || pedidos.length === 0) {
           cont.innerHTML = '<p style="text-align:center; color:#888;">Sin comandas por entregar.</p>';
           return;
         }
@@ -307,10 +313,10 @@
           return '<div class="card">' +
             '<div style="display:flex; justify-content:space-between;">' +
               '<span class="mesa-badge">Mesa ' + p.mesa + '</span>' +
-              '<small style="color:#aaa;">' + p.hora + '</small>' +
+              '<small style="color:#aaa;">' + (p.hora || '') + '</small>' +
             '</div>' +
-            '<ul>' + items + '</ul>' +
-            '<button class="btn-green" onclick="entregarPedido(' + p.id + ')">✅ Marcar Entregado (Borrar de Cocina)</button>' +
+            '<ul style="margin:10px 0; padding-left:20px;">' + items + '</ul>' +
+            '<button class="btn-green" onclick="entregarPedido(' + p.id + ')">✅ Marcar como Entregado</button>' +
           '</div>';
         }).join('');
       } catch(e) {}
@@ -331,7 +337,11 @@
       const urlFinal = BASE_URL + '/index.html?local=' + LOCAL_ID + '&mesa=' + mesa;
       const box = document.getElementById('qr-box');
       box.innerHTML = "";
-      new QRCode(box, { text: urlFinal, width: 160, height: 160 });
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(box, { text: urlFinal, width: 160, height: 160 });
+      } else {
+        box.innerHTML = '<p style="color:red;">Cargando librería QR...</p>';
+      }
       document.getElementById('qr-link-txt').innerText = urlFinal;
     }
 
@@ -345,6 +355,7 @@
 
     function renderMenu() {
       const cont = document.getElementById('editor-menu');
+      if(!Array.isArray(menuData)) menuData = [];
       cont.innerHTML = menuData.map((cat, cIdx) => {
         const prods = (cat.productos || []).map((prod, pIdx) => 
           '<div style="display:flex; gap:5px; margin-bottom:5px;">' +
@@ -392,11 +403,11 @@
       if(res.ok) alert('¡Menú guardado correctamente en el servidor!');
       else alert('Error al guardar el menú. Revisa la contraseña.');
     }
-  ${sClose}
+  <\/script>
 </body>
 </html>`;
 
-      const blob = new Blob([htmlCompleto], { type: 'text/html' });
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `admin_${localId}.html`;
