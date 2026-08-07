@@ -135,6 +135,7 @@
       const localId = idRaw.toLowerCase().replace(/[^a-z0-9_-]/g, '');
 
       try {
+        // 1. Crear el local en el servidor backend
         const res = await fetch(`${API_URL}/superadmin/crear-local`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -142,10 +143,122 @@
         });
         const data = await res.json();
         if (!res.ok) return alert("Error: " + data.error);
-      } catch (err) { return alert("Error de conexión al servidor."); }
 
-      alert(`Restaurante ${localId} creado correctamente.`);
-      cargarListadoLocales();
+        // 2. Generar y descargar el archivo HTML de administración para el cliente
+        descargarArchivoAccesoCliente(localId, passwordCliente);
+
+        alert(`Restaurante '${localId}' creado con éxito. El archivo de acceso cliente se ha descargado.`);
+        cargarListadoLocales();
+      } catch (err) {
+        return alert("Error de conexión al servidor.");
+      }
+    }
+
+    function descargarArchivoAccesoCliente(localId, passwordCliente) {
+      const contenidoHTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración de Menú - ${localId.toUpperCase()}</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; max-width: 600px; margin: 0 auto; }
+    h1 { color: #ffe600; text-align: center; }
+    .card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
+    input, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #444; box-sizing: border-box; }
+    input { background: #2a2a2a; color: #fff; }
+    button { background: #ffe600; color: #000; font-weight: bold; border: none; cursor: pointer; }
+    .btn-green { background: #4CAF50; color: white; }
+    .btn-red { background: #f44336; color: white; padding: 5px 10px; width: auto; }
+  </style>
+</head>
+<body>
+  <h1>Panel Admin - ${localId.toUpperCase()}</h1>
+  <div class="card">
+    <label>Contraseña Administrador:</label>
+    <input type="password" id="pass" value="${passwordCliente}">
+    <button onclick="cargarMenu()">Cargar Mi Menú</button>
+  </div>
+  <div id="editor" style="display:none;">
+    <div class="card">
+      <h3>Añadir Categoría</h3>
+      <input type="text" id="nueva-cat" placeholder="Nombre de categoría (ej: Hamburguesas)">
+      <button onclick="agregarCategoria()">+ Agregar Categoría</button>
+    </div>
+    <div id="lista-menu"></div>
+    <button class="btn-green" onclick="guardarMenu()">💾 Guardar Cambios en Servidor</button>
+  </div>
+  <script>
+    const API_URL = "${API_URL}";
+    const LOCAL_ID = "${localId}";
+    let menuData = [];
+
+    async function cargarMenu() {
+      const res = await fetch(\`\${API_URL}/menu?local=\${LOCAL_ID}\`);
+      menuData = await res.json();
+      document.getElementById('editor').style.display = 'block';
+      render();
+    }
+
+    function render() {
+      const cont = document.getElementById('lista-menu');
+      cont.innerHTML = menuData.map((cat, cIdx) => \`
+        <div class="card">
+          <div style="display:flex; justify-space-between; align-items:center;">
+            <h3>\${cat.categoria}</h3>
+            <button class="btn-red" onclick="eliminarCat(\${cIdx})">X</button>
+          </div>
+          <div style="margin:10px 0;">
+            \${cat.productos.map((prod, pIdx) => \`
+              <div style="display:flex; gap:5px; margin-bottom:5px;">
+                <input type="text" value="\${prod.nombre}" onchange="menuData[\${cIdx}].productos[\${pIdx}].nombre = this.value">
+                <input type="number" value="\${prod.precio}" style="width:100px;" onchange="menuData[\${cIdx}].productos[\${pIdx}].precio = Number(this.value)">
+                <button class="btn-red" onclick="eliminarProd(\${cIdx}, \${pIdx})">X</button>
+              </div>
+            \`).join('')}
+          </div>
+          <button onclick="agregarProducto(\${cIdx})">+ Agregar Producto</button>
+        </div>
+      \`).join('');
+    }
+
+    function agregarCategoria() {
+      const name = document.getElementById('nueva-cat').value.trim();
+      if (!name) return;
+      menuData.push({ categoria: name, productos: [] });
+      document.getElementById('nueva-cat').value = '';
+      render();
+    }
+
+    function agregarProducto(cIdx) {
+      menuData[cIdx].productos.push({ nombre: 'Nuevo Producto', precio: 1000 });
+      render();
+    }
+
+    function eliminarCat(cIdx) { menuData.splice(cIdx, 1); render(); }
+    function eliminarProd(cIdx, pIdx) { menuData[cIdx].productos.splice(pIdx, 1); render(); }
+
+    async function guardarMenu() {
+      const password = document.getElementById('pass').value;
+      const res = await fetch(\`\${API_URL}/menu\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local: LOCAL_ID, password, menu: menuData })
+      });
+      if (res.ok) alert('¡Menú guardado con éxito!');
+      else alert('Error al guardar. Revisa la contraseña.');
+    }
+  </script>
+</body>
+</html>`;
+
+      const blob = new Blob([contenidoHTML], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `admin_${localId}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
 
     async function descargarRespaldo() {
