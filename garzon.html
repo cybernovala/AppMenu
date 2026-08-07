@@ -3,120 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Garzones / Meseros</title>
+  <title>Panel Garzón - Entrega de Pedidos</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #111116;
-      color: #fff;
-      padding: 15px;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    h1 { color: #2196F3; text-align: center; font-size: 22px; }
-    .sub { text-align: center; color: #888; font-size: 13px; margin-bottom: 20px; }
-    .pedido-card {
-      background: #1e1e24;
-      border-left: 5px solid #2196F3;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    }
-    .header-pedido { display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-bottom: 10px; }
-    .mesa-badge { background: #ffe600; color: #000; padding: 2px 8px; border-radius: 4px; }
-    .items-list { list-style: none; padding: 0; margin: 10px 0; }
-    .items-list li { font-size: 14px; padding: 4px 0; border-bottom: 1px dashed #333; }
-    .btn-deliver {
-      width: 100%;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      padding: 12px;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
+    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 15px; max-width: 500px; margin: 0 auto; }
+    h1 { color: #2196F3; text-align: center; font-size: 20px; }
+    .card { background: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 5px solid #2196F3; margin-bottom: 12px; }
+    .mesa { font-size: 18px; font-weight: bold; background: #ffe600; color: #000; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+    .btn-entregar { background: #4CAF50; color: #fff; border: none; padding: 10px; width: 100%; font-weight: bold; font-size: 14px; border-radius: 4px; margin-top: 10px; cursor: pointer; }
+    ul { padding-left: 20px; margin: 10px 0; }
   </style>
 </head>
 <body>
 
-  <h1>🍽️ Control de Pedidos en Mesa</h1>
-  <div class="sub" id="local-title">Cargando restaurante...</div>
+  <h1>🤵 Panel de Garzón</h1>
+  <p style="text-align:center; color:#aaa; font-size:12px;" id="lbl-local">Cargando...</p>
 
-  <div id="contenedor-pedidos">
-    <p style="text-align:center; color:#aaa;">Cargando pedidos pendientes...</p>
-  </div>
+  <div id="lista-pedidos"></div>
 
   <script>
     const API_URL = "https://appmenu-tavr.onrender.com/api";
     const urlParams = new URLSearchParams(window.location.search);
     const localId = urlParams.get('local') || 'default';
 
-    document.getElementById('local-title').innerText = "LOCAL: " + localId.toUpperCase();
+    document.getElementById('lbl-local').innerText = "Local: " + localId.toUpperCase();
 
-    async function cargarPedidosGarzon() {
+    async function cargarPedidos() {
       try {
         const res = await fetch(`${API_URL}/pedidos/garzon?local=${localId}`);
         const pedidos = await res.json();
-        renderizarPedidos(pedidos);
+        const cont = document.getElementById('lista-pedidos');
+        cont.innerHTML = "";
+
+        if (pedidos.length === 0) {
+          cont.innerHTML = "<p style='text-align:center; color:#777; margin-top:30px;'>No hay pedidos pendientes por entregar.</p>";
+          return;
+        }
+
+        pedidos.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'card';
+
+          const conteo = {};
+          p.items.forEach(i => conteo[i.nombre] = (conteo[i.nombre] || 0) + 1);
+          const itemsTxt = Object.keys(conteo).map(k => `<li><strong>${conteo[k]}x</strong> ${k}</li>`).join('');
+
+          div.innerHTML = `
+            <div style="display:flex; justify-content:space-between;">
+              <span class="mesa">Mesa ${p.mesa}</span>
+              <small style="color:#aaa;">${p.hora}</small>
+            </div>
+            <ul>${itemsTxt}</ul>
+            <button class="btn-entregar" onclick="entregarPedido(${p.id})">✅ Marcar Entregado en Mesa</button>
+          `;
+          cont.appendChild(div);
+        });
       } catch (err) {
-        console.error("Error conectando al servidor");
+        console.error("Error al obtener pedidos.");
       }
     }
 
-    function renderizarPedidos(pedidos) {
-      const cont = document.getElementById('contenedor-pedidos');
-      cont.innerHTML = "";
-
-      if (pedidos.length === 0) {
-        cont.innerHTML = `<p style="text-align:center; color:#888; margin-top:30px;">✅ Todos los pedidos han sido entregados en mesa.</p>`;
-        return;
-      }
-
-      pedidos.forEach(p => {
-        const card = document.createElement('div');
-        card.className = "pedido-card";
-
-        const conteo = {};
-        p.items.forEach(i => conteo[i.nombre] = (conteo[i.nombre] || 0) + 1);
-        const listaItems = Object.keys(conteo).map(k => `<li><strong>${conteo[k]}x</strong> ${k}</li>`).join('');
-
-        card.innerHTML = `
-          <div class="header-pedido">
-            <span class="mesa-badge">Mesa ${p.mesa}</span>
-            <span style="font-size:14px; color:#aaa;">${p.hora} hs</span>
-          </div>
-          <ul class="items-list">${listaItems}</ul>
-          <button class="btn-deliver" onclick="marcarEntregado(${p.id})">✅ Entregado en Mesa</button>
-        `;
-
-        cont.appendChild(card);
-      });
-    }
-
-    async function marcarEntregado(id) {
+    async function entregarPedido(id) {
       try {
         const res = await fetch(`${API_URL}/pedidos/entregar`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ local: localId, id })
         });
-
-        if (res.ok) {
-          cargarPedidosGarzon();
-        } else {
-          alert("Error al actualizar pedido.");
-        }
-      } catch (err) {
-        alert("Error de conexión.");
-      }
+        if (res.ok) cargarPedidos();
+      } catch (err) { alert("Error al entregar pedido."); }
     }
 
-    setInterval(cargarPedidosGarzon, 4000);
-    cargarPedidosGarzon();
+    setInterval(cargarPedidos, 4000);
+    cargarPedidos();
   </script>
 </body>
 </html>

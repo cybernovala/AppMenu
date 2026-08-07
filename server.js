@@ -1,105 +1,168 @@
 const express = require('express');
 const cors = require('cors');
-const app = express();
+const fs = require('fs');
+const path = require('path');
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Base de datos en memoria para el menú (Puedes adaptar con JSON o MongoDB más adelante)
-let menus = {
-  "default": [
-    {
-      categoria: "Entradas",
-      productos: [
-        { nombre: "Empanadas de Pino", precio: 2500 },
-        { nombre: "Papas Fry Neon", precio: 3800 }
-      ]
-    },
-    {
-      categoria: "Hamburguesas",
-      productos: [
-        { nombre: "Burger Cyber", precio: 6900 },
-        { nombre: "Burger Doble Queso", precio: 7500 }
-      ]
-    },
-    {
-      categoria: "Bebidas",
-      productos: [
-        { nombre: "Coca Cola 350ml", precio: 1500 },
-        { nombre: "Jugo Natural", precio: 2200 }
-      ]
-    }
-  ]
-};
+const DB_FILE = path.join(__dirname, 'database.json');
+let db = {};
 
-// Pedidos temporales agrupados por local
+if (fs.existsSync(DB_FILE)) {
+  try {
+    db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+  } catch (err) {
+    db = {};
+  }
+}
+
+function guardarEnDisco() {
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+}
+
 let pedidosTemp = {};
 
-// GET: Obtener el menú de un local
+// ------------------- RUTAS DE MENÚ Y PEDIDOS -------------------
+
 app.get('/api/menu', (req, res) => {
-  const local = req.query.local || 'default';
-  if (!menus[local]) {
-    menus[local] = menus['default']; // Asigna menú por defecto si no existe
-  }
-  res.json(menus[local]);
+  const { local } = req.query;
+  const localData = db[local] || { menu: [] };
+  res.json(localData.menu || []);
 });
 
-// POST: Guardar/Actualizar el menú desde el Administrador
 app.post('/api/menu', (req, res) => {
-  const { local, menu } = req.body;
-  if (!local || !menu) return res.status(400).json({ error: 'Faltan parámetros' });
-  menus[local] = menu;
-  res.json({ mensaje: 'Menú guardado correctamente' });
+  const { local, password, menu } = req.body;
+  if (!db[local]) return res.status(404).json({ error: 'El restaurante no existe.' });
+  if (db[local].password !== password) return res.status(403).json({ error: 'Contraseña incorrecta.' });
+
+  db[local].menu = menu;
+  guardarEnDisco();
+  res.json({ mensaje: 'Menú actualizado correctamente.' });
 });
 
-// GET: Obtener los pedidos activos de un local (Para la Cocina)
-app.get('/api/pedidos', (req, res) => {
-  const local = req.query.local || 'default';
-  res.json(pedidosTemp[local] || []);
-});
-
-// POST: Enviar un nuevo pedido desde el Cliente (Celular)
 app.post('/api/pedidos', (req, res) => {
   const { local, mesa, items, total } = req.body;
-  if (!local || !mesa || !items || items.length === 0) {
-    return res.status(400).json({ error: 'Datos de pedido inválidos' });
+  
+  if (db[local] && db[local].fechaVencimiento) {
+    const hoy = new Date();
+    const vencimiento = new Date(db[local].fechaVencimiento);
+    if (hoy > vencimiento) {
+      return res.status(402).json({ error: 'El servicio de este restaurante se encuentra suspendido por mantenimiento.' });
+    }
   }
 
   if (!pedidosTemp[local]) pedidosTemp[local] = [];
 
   const nuevoPedido = {
     id: Date.now(),
-    mesa: mesa,
-    items: items,
-    total: total,
-    hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
-    estado: 'en_preparacion' // 'en_preparacion', 'listo'
+    mesa,
+    items,
+    total,
+    estado: 'pendiente',
+    hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
   };
 
-  pedidosTemp[local].push(nuevoPedido);
+  pedidosTemp[local].unshift(nuevoPedido);
   res.json({ mensaje: 'Pedido recibido', pedido: nuevoPedido });
 });
 
-// GET: Obtener pedidos para la vista del Garzón
-app.get('/api/pedidos/garzon', (req, res) => {
-  const local = req.query.local || 'default';
+app.get('/api/pedidos', (req, res) => {
+  const { local } = req.query;
   res.json(pedidosTemp[local] || []);
 });
 
-// POST: Cambiar estado o eliminar pedido al ser entregado en mesa
+// ------------------- RUTAS PARA EL GARZÓN -------------------
+
+app.get('/api/pedidos/garzon', (req, res) => {
+  const { local } = req.query;
+  res.json(pedidosTemp[local] || []);
+});
+
 app.post('/api/pedidos/entregar', (req, res) => {
   const { local, id } = req.body;
-  if (!pedidosTemp[local]) return res.status(404).json({ error: 'No hay pedidos activos' });
+  if (!pedidosTemp[local]) return res.status(404).json({ error: 'No hay pedidos' });
 
-  const index = pedidosTemp[local].findIndex(p => p.id === id);
-  if (index !== -1) {
-    pedidosTemp[local].splice(index, 1); // Lo borra de la lista activa (cocina y garzón)
-    return res.json({ mensaje: 'Pedido entregado en mesa y eliminado de cocina' });
+  const idx = pedidosTemp[local].findIndex(p => p.id === id);
+  if (idx !== -1) {
+    pedidosTemp[local].splice(idx, 1); // Lo elimina de cocina y garzón
+    return res.json({ mensaje: 'Pedido entregado en mesa' });
   }
   res.status(404).json({ error: 'Pedido no encontrado' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor activo en puerto ${PORT}`);
+// ------------------- RUTAS DE SUSCRIPCIÓN Y SUPERADMIN -------------------
+
+app.get('/api/suscripcion', (req, res) => {
+  const { local } = req.query;
+  if (!db[local]) return res.status(404).json({ error: 'Local no encontrado' });
+
+  const hoy = new Date();
+  const fechaVenc = new Date(db[local].fechaVencimiento || hoy);
+  const diffTiempo = fechaVenc - hoy;
+  const diasRestantes = Math.ceil(diffTiempo / (1000 * 60 * 60 * 24));
+
+  res.json({
+    fechaVencimiento: db[local].fechaVencimiento,
+    diasRestantes,
+    alerta: diasRestantes <= 2 && diasRestantes >= 0,
+    vencido: diasRestantes < 0
+  });
 });
+
+app.post('/api/superadmin/crear-local', (req, res) => {
+  const { claveSuperAdmin, local, passwordCliente } = req.body;
+  if (claveSuperAdmin !== 'superadmin123') return res.status(403).json({ error: 'Clave Maestra incorrecta' });
+
+  const hoy = new Date();
+  const vencimiento = new Date();
+  vencimiento.setDate(hoy.getDate() + 30);
+
+  db[local] = {
+    password: passwordCliente,
+    fechaCreacion: hoy.toISOString().split('T')[0],
+    fechaVencimiento: vencimiento.toISOString().split('T')[0],
+    menu: []
+  };
+
+  guardarEnDisco();
+  res.json({ mensaje: 'Restaurante creado con éxito', fechaVencimiento: db[local].fechaVencimiento });
+});
+
+app.post('/api/superadmin/renovar-pago', (req, res) => {
+  const { claveSuperAdmin, local } = req.body;
+  if (claveSuperAdmin !== 'superadmin123') return res.status(403).json({ error: 'Clave Maestra incorrecta' });
+  if (!db[local]) return res.status(404).json({ error: 'Local no encontrado' });
+
+  const hoy = new Date();
+  let fechaBase = new Date(db[local].fechaVencimiento);
+  
+  if (isNaN(fechaBase.getTime()) || fechaBase < hoy) {
+    fechaBase = new Date();
+  }
+  
+  fechaBase.setDate(fechaBase.getDate() + 30);
+  db[local].fechaVencimiento = fechaBase.toISOString().split('T')[0];
+
+  guardarEnDisco();
+  res.json({ mensaje: 'Pago registrado con éxito', nuevaFecha: db[local].fechaVencimiento });
+});
+
+app.get('/api/superadmin/backup', (req, res) => {
+  const { clave } = req.query;
+  if (clave !== 'superadmin123') return res.status(403).json({ error: 'Clave Maestra incorrecta' });
+  res.json(db);
+});
+
+app.post('/api/superadmin/restore', (req, res) => {
+  const { clave, backupData } = req.body;
+  if (clave !== 'superadmin123') return res.status(403).json({ error: 'Clave Maestra incorrecta' });
+
+  db = backupData;
+  guardarEnDisco();
+  res.json({ mensaje: 'Base de datos restaurada correctamente' });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Servidor iniciado en puerto ${PORT}`));
