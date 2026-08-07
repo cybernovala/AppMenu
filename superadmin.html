@@ -2,47 +2,130 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Panel Super Admin - Generador de Cuentas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Super Admin - Gestión de Locales y Respaldos</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 30px; max-width: 600px; margin: 0 auto; }
-    h1 { color: #ffe600; text-align: center; }
-    .card { background: #1e1e1e; padding: 25px; border-radius: 8px; border: 1px solid #333; }
-    input { width: 100%; padding: 12px; margin: 10px 0 20px 0; border-radius: 4px; border: 1px solid #444; background: #2a2a2a; color: #fff; box-sizing: border-box; }
-    button { background: #4CAF50; color: white; border: none; padding: 14px; font-weight: bold; font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%; }
-    .info { font-size: 13px; color: #aaa; margin-top: 15px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #fff;
+      padding: 30px;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #ffe600;
+      text-align: center;
+    }
+    .card {
+      background: #1e1e1e;
+      padding: 25px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      margin-bottom: 25px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      border: 1px solid #444;
+      box-sizing: border-box;
+    }
+    input {
+      background: #2a2a2a;
+      color: #fff;
+    }
+    button {
+      font-weight: bold;
+      font-size: 15px;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-green { background: #4CAF50; color: white; }
+    .btn-blue { background: #2196F3; color: white; }
+    .btn-orange { background: #ff9800; color: white; }
+    .info { font-size: 13px; color: #aaa; margin-top: 5px; }
   </style>
 </head>
 <body>
 
-  <h1>Panel de Control de Licencias</h1>
+  <h1>Panel Super Admin</h1>
 
+  <!-- Credencial Maestra -->
   <div class="card">
-    <h3>Alta de Nuevo Restaurante</h3>
-    <label>Identificador del Restaurante (Sin espacios):</label>
+    <label for="clave-maestra">Clave Maestra de Super Admin:</label>
+    <input type="password" id="clave-maestra" value="superadmin123">
+  </div>
+
+  <!-- Crear Cliente / Restaurante -->
+  <div class="card">
+    <h3>🚀 Alta de Nuevo Restaurante</h3>
+    
+    <label for="local-id">Identificador del Restaurante (Sin espacios ni tildes):</label>
     <input type="text" id="local-id" placeholder="Ej: burger-papas">
 
-    <button onclick="generarPaqueteCliente()">🚀 Crear y Descargar Acceso Cliente</button>
+    <label for="local-pass">Contraseña de Administración para este Cliente:</label>
+    <input type="text" id="local-pass" placeholder="Ej: claveSegura2026">
 
-    <div class="info">
-      * Esto generará las URLs aisladas para Render y GitHub Pages correspondientes al nuevo cliente.
-    </div>
+    <button class="btn-green" onclick="generarPaqueteCliente()">Crear y Descargar Acceso Cliente</button>
+  </div>
+
+  <!-- Respaldos y Restauración -->
+  <div class="card">
+    <h3>💾 Copia de Seguridad y Restauración</h3>
+    <p class="info">Descarga un respaldo JSON completo a tu PC o restaura los datos si la plataforma de hosting borra la memoria temporal.</p>
+
+    <button class="btn-blue" onclick="descargarRespaldo()">📥 Descargar Respaldo Total a mi PC</button>
+    
+    <hr style="border-color: #333; margin: 20px 0;">
+
+    <h4>Restaurar Base de Datos desde PC:</h4>
+    <input type="file" id="archivo-json" accept=".json">
+    <button class="btn-orange" onclick="restaurarServidor()">📤 Restaurar Servidor desde Archivo</button>
   </div>
 
   <script>
+    const API_URL = "https://appmenu-tavr.onrender.com/api";
     const BASE_URL = "https://cybernovala.github.io/AppMenu";
 
-    function generarPaqueteCliente() {
+    async function generarPaqueteCliente() {
+      const claveSuperAdmin = document.getElementById('clave-maestra').value;
       const idRaw = document.getElementById('local-id').value.trim();
-      if (!idRaw) return alert("Ingresa un identificador válido.");
+      const passwordCliente = document.getElementById('local-pass').value.trim();
+
+      if (!idRaw || !passwordCliente) {
+        return alert("Por favor ingresa tanto el identificador como la contraseña del cliente.");
+      }
 
       const localId = idRaw.toLowerCase().replace(/[^a-z0-9_-]/g, '');
 
+      // 1. Enviar registro al servidor
+      try {
+        const res = await fetch(`${API_URL}/superadmin/crear-local`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ claveSuperAdmin, local: localId, passwordCliente })
+        });
+
+        const data = await res.json();
+        if (!res.ok) return alert("Error: " + data.error);
+
+      } catch (err) {
+        return alert("Error de conexión al intentar registrar el restaurante en el servidor.");
+      }
+
+      // 2. Construir archivo HTML de acceso único para el cliente
       const urlCliente = `${BASE_URL}/index.html?local=${localId}&mesa=1`;
       const urlCocina = `${BASE_URL}/cocina.html?local=${localId}`;
       const urlAdmin = `${BASE_URL}/admin.html?local=${localId}`;
 
-      const contenidoHtml = `
-<!DOCTYPE html>
+      const contenidoHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -51,6 +134,7 @@
     body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 40px; }
     .btn { display: block; background: #ffe600; color: #000; text-decoration: none; padding: 15px; margin: 15px auto; max-width: 320px; font-weight: bold; border-radius: 6px; }
     .btn-admin { background: #4CAF50; color: #fff; }
+    .box { background: #2a2a2a; padding: 15px; margin-top: 20px; border-radius: 6px; display: inline-block; }
   </style>
 </head>
 <body>
@@ -58,18 +142,79 @@
   <a class="btn" href="${urlCocina}" target="_blank">📺 Abrir Pantalla de Cocina</a>
   <a class="btn btn-admin" href="${urlAdmin}" target="_blank">⚙️ Administrar Menú y Precios</a>
   
+  <div class="box">
+    <p><strong>Contraseña de Administración:</strong> <span style="color: #ffe600;">${passwordCliente}</span></p>
+  </div>
+
   <h3>Enlace Base para Códigos QR (Mesa 1):</h3>
   <p><a href="${urlCliente}" target="_blank" style="color: #ffe600;">${urlCliente}</a></p>
 </body>
 </html>`;
 
+      // 3. Descargar el archivo .html al PC
       const blob = new Blob([contenidoHtml], { type: 'text/html' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `Acceso_Restaurante_${localId}.html`;
       a.click();
 
-      alert(`¡Cliente "${localId}" activado! Se ha descargado su archivo de acceso.`);
+      alert(`¡Cliente "${localId}" creado con éxito! Se descargó su panel de acceso.`);
+    }
+
+    async function descargarRespaldo() {
+      const clave = document.getElementById('clave-maestra').value;
+      try {
+        const res = await fetch(`${API_URL}/superadmin/backup?clave=${clave}`);
+        if (!res.ok) return alert("Clave de Super Admin incorrecta.");
+
+        const data = await res.json();
+        const jsonStr = JSON.stringify(data, null, 2);
+        
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        const fecha = new Date().toISOString().split('T')[0];
+        a.download = `Respaldo_Sistema_AppMenu_${fecha}.json`;
+        a.click();
+
+        alert("¡Copia de seguridad guardada con éxito en tu computador!");
+      } catch (err) {
+        alert("Error de conexión al obtener el respaldo.");
+      }
+    }
+
+    async function restaurarServidor() {
+      const clave = document.getElementById('clave-maestra').value;
+      const fileInput = document.getElementById('archivo-json');
+
+      if (!fileInput.files.length) {
+        return alert("Selecciona primero un archivo .json de respaldo.");
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async function(e) {
+        try {
+          const backupData = JSON.parse(e.target.result);
+          const res = await fetch(`${API_URL}/superadmin/restore`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clave, backupData })
+          });
+
+          const respData = await res.json();
+          if (res.ok) {
+            alert("¡Servidor restaurado con éxito! Toda la información ha sido vuelta a subir a Render.");
+          } else {
+            alert("Error: " + respData.error);
+          }
+        } catch (err) {
+          alert("El archivo subido no contiene una estructura de respaldo válida.");
+        }
+      };
+
+      reader.readAsText(file);
     }
   </script>
 </body>

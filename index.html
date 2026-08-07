@@ -3,114 +3,617 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menú Digital</title>
+  <title>Menú Digital Futurista</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
-    .header { background: #ffe600; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
-    .categoria { font-size: 20px; font-weight: bold; margin-top: 20px; color: #333; border-bottom: 2px solid #ffe600; padding-bottom: 5px; }
-    .item { background: #fff; padding: 15px; margin: 10px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .btn-add { background: #4CAF50; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    .carrito { background: #333; color: white; padding: 15px; border-radius: 8px; position: sticky; bottom: 20px; margin-top: 20px; }
-    .btn-enviar { background: #ffe600; color: #000; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    :root {
+      --bg-dark: #08080a;
+      --card-bg: rgba(18, 18, 22, 0.85);
+      --neon-orange: #ff5500;
+      --neon-yellow: #ffea00;
+      --grad-neon: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
+      --text-main: #ffffff;
+      --text-muted: #a0a0b0;
+      --grid-color: rgba(255, 85, 0, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding-bottom: 110px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Fondo Futurista: Plano Cartesiano en Perspectiva */
+    .grid-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      perspective: 600px;
+      overflow: hidden;
+    }
+
+    .grid-lines {
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      top: -50%;
+      left: -50%;
+      background-image: 
+        linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+      background-size: 40px 40px;
+      transform: rotateX(55deg) translateY(-20%);
+      animation: gridMove 20s linear infinite;
+    }
+
+    @keyframes gridMove {
+      0% { transform: rotateX(55deg) translateY(0); }
+      100% { transform: rotateX(55deg) translateY(40px); }
+    }
+
+    /* Glow de Iluminación Superior */
+    .top-glow {
+      position: fixed;
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 400px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255,85,0,0.3) 0%, rgba(0,0,0,0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Contenedor Principal */
+    .app-container {
+      position: relative;
+      z-index: 1;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px 15px;
+    }
+
+    /* Encabezado */
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding: 20px;
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 85, 0, 0.3);
+      clip-path: polygon(0 0, 92% 0, 100% 20px, 100% 100%, 8% 100%, 0 calc(100% - 20px));
+      box-shadow: 0 0 15px rgba(255, 85, 0, 0.15);
+    }
+
+    h1 {
+      font-size: 26px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      background: var(--grad-neon);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 10px rgba(255, 85, 0, 0.3);
+    }
+
+    .mesa-badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 12px;
+      background: rgba(255, 234, 0, 0.1);
+      border: 1px solid var(--neon-yellow);
+      color: var(--neon-yellow);
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      border-radius: 20px;
+    }
+
+    /* Filtro de Categorías */
+    .categories-bar {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      scrollbar-width: none;
+    }
+
+    .categories-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-btn {
+      background: rgba(20, 20, 25, 0.8);
+      color: var(--text-muted);
+      border: 1px solid #333;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: bold;
+      white-space: nowrap;
+      cursor: pointer;
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      transition: all 0.2s ease;
+    }
+
+    .cat-btn.active, .cat-btn:hover {
+      color: #000;
+      background: var(--grad-neon);
+      border-color: var(--neon-yellow);
+      box-shadow: 0 0 10px rgba(255, 234, 0, 0.4);
+    }
+
+    /* Lista de Productos */
+    .product-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 85, 0, 0.2);
+      padding: 15px;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      clip-path: polygon(0 0, 95% 0, 100% 15px, 100% 100%, 5% 100%, 0 calc(100% - 15px));
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .product-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--neon-orange);
+    }
+
+    .product-info h3 {
+      font-size: 17px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .price {
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--neon-yellow);
+      text-shadow: 0 0 5px rgba(255, 234, 0, 0.3);
+    }
+
+    .add-btn {
+      background: transparent;
+      border: 1px solid var(--neon-orange);
+      color: var(--neon-orange);
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .add-btn:active {
+      background: var(--neon-orange);
+      color: #000;
+      box-shadow: 0 0 10px var(--neon-orange);
+    }
+
+    /* Barra de Carrito Flotante Inferior */
+    .cart-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(10, 10, 14, 0.95);
+      border-top: 1px solid var(--neon-orange);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 -5px 20px rgba(255, 85, 0, 0.2);
+    }
+
+    .cart-summary {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cart-summary span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .cart-summary strong {
+      font-size: 20px;
+      color: var(--neon-yellow);
+    }
+
+    .review-btn {
+      background: var(--grad-neon);
+      border: none;
+      color: #000;
+      padding: 12px 20px;
+      font-weight: bold;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      box-shadow: 0 0 15px rgba(255, 85, 0, 0.4);
+    }
+
+    .review-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* MODAL DE REVISIÓN Y EDICIÓN DE PEDIDO */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 200;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #121216;
+      border: 1px solid var(--neon-orange);
+      border-radius: 12px 12px 0 0;
+      width: 100%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      box-shadow: 0 -10px 30px rgba(255, 85, 0, 0.3);
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #222;
+      padding-bottom: 12px;
+      margin-bottom: 15px;
+    }
+
+    .modal-header h2 {
+      font-size: 18px;
+      color: var(--neon-yellow);
+      text-transform: uppercase;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    .cart-items-list {
+      overflow-y: auto;
+      flex: 1;
+      margin-bottom: 15px;
+    }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(25, 25, 30, 0.8);
+      border: 1px solid #2a2a30;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+    }
+
+    .cart-item-details h4 {
+      font-size: 15px;
+      color: #fff;
+    }
+
+    .cart-item-details span {
+      font-size: 13px;
+      color: var(--neon-yellow);
+    }
+
+    .cart-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-qty {
+      background: #222;
+      border: 1px solid var(--neon-orange);
+      color: var(--neon-orange);
+      width: 28px;
+      height: 28px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .modal-footer {
+      border-top: 1px solid #222;
+      padding-top: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-total {
+      display: flex;
+      justify-content: space-between;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .confirm-btn {
+      background: var(--grad-neon);
+      border: none;
+      color: #000;
+      padding: 14px;
+      font-weight: bold;
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 6px;
+      box-shadow: 0 0 15px rgba(255, 85, 0, 0.4);
+    }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <h1 id="titulo-local">Menú Digital</h1>
-    <h3 id="info-mesa">Mesa: -</h3>
+  <!-- Fondo Neón Cartesiano -->
+  <div class="grid-background">
+    <div class="grid-lines"></div>
+  </div>
+  <div class="top-glow"></div>
+
+  <div class="app-container">
+    <header>
+      <h1 id="titulo-local">MENÚ DIGITAL</h1>
+      <div class="mesa-badge" id="badge-mesa">MESA --</div>
+    </header>
+
+    <!-- Selector de Categorías -->
+    <div class="categories-bar" id="contenedor-categorias"></div>
+
+    <!-- Lista de Productos -->
+    <div id="contenedor-menu"></div>
   </div>
 
-  <div id="contenedor-menu">Cargando menú...</div>
+  <!-- Barra de Pedido Flotante -->
+  <div class="cart-bar">
+    <div class="cart-summary">
+      <span id="cant-items">0 productos seleccionados</span>
+      <strong id="total-pedido">$0</strong>
+    </div>
+    <button class="review-btn" id="btn-revisar" onclick="abrirModal()" disabled>Revisar Orden</button>
+  </div>
 
-  <div class="carrito">
-    <h3>Mi Pedido (<span id="cant-items">0</span>)</h3>
-    <div id="detalle-carrito">Vacío</div>
-    <h4>Total: $<span id="total-carrito">0</span></h4>
-    <button class="btn-enviar" onclick="enviarPedido()">🚀 Enviar Pedido a Cocina</button>
+  <!-- MODAL DE REVISIÓN Y CONFIRMACIÓN -->
+  <div class="modal-overlay" id="modal-orden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📋 Resumen de tu Pedido</h2>
+        <button class="close-btn" onclick="cerrarModal()">&times;</button>
+      </div>
+
+      <div class="cart-items-list" id="lista-carrito-modal">
+        <!-- Los ítems del carrito se insertan aquí -->
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-total">
+          <span>Total a Pagar:</span>
+          <span id="modal-total-val" style="color: var(--neon-yellow);">$0</span>
+        </div>
+        <button class="confirm-btn" id="btn-confirmar" onclick="enviarPedido()">🚀 Confirmar y Enviar Pedido</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    const API_URL = 'https://appmenu-tavr.onrender.com/api';
-    const params = new URLSearchParams(window.location.search);
-    const local = params.get('local') || 'default';
-    const mesa = params.get('mesa') || '1';
+    const API_URL = "https://appmenu-tavr.onrender.com/api";
+    
+    // Obtener parámetros de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const localId = urlParams.get('local') || 'default';
+    const numMesa = urlParams.get('mesa') || '1';
 
-    document.getElementById('info-mesa').innerText = `Mesa: ${mesa}`;
-    document.getElementById('titulo-local').innerText = `Menú - ${local.toUpperCase()}`;
-
-    let carrito = [];
     let menuCompleto = [];
+    // Estructura del carrito: [{ nombre, precio, cantidad }]
+    let carrito = [];
 
+    document.getElementById('titulo-local').innerText = localId.replace('-', ' ').toUpperCase();
+    document.getElementById('badge-mesa').innerText = `MESA ${numMesa}`;
+
+    // Cargar Menú desde el Servidor
     async function cargarMenu() {
       try {
-        const res = await fetch(`${API_URL}/menu?local=${local}`);
+        const res = await fetch(`${API_URL}/menu?local=${localId}`);
         menuCompleto = await res.json();
-        const divMenu = document.getElementById('contenedor-menu');
-        divMenu.innerHTML = '';
-
-        menuCompleto.forEach(cat => {
-          const htmlCat = document.createElement('div');
-          htmlCat.className = 'categoria';
-          htmlCat.innerText = cat.categoria;
-          divMenu.appendChild(htmlCat);
-
-          cat.productos.forEach(p => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'item';
-            itemDiv.innerHTML = `
-              <div>
-                <strong>${p.nombre}</strong><br>
-                <span>$${p.precio}</span>
-              </div>
-              <button class="btn-add" onclick="agregarAlCarrito('${p.id}', '${p.nombre}', ${p.precio})">+ Agregar</button>
-            `;
-            divMenu.appendChild(itemDiv);
-          });
-        });
+        renderizarCategorias();
+        if (menuCompleto.length > 0) {
+          renderizarProductos(menuCompleto[0].categoria);
+        }
       } catch (err) {
-        document.getElementById('contenedor-menu').innerText = 'Error al cargar el menú.';
+        document.getElementById('contenedor-menu').innerHTML = `<p style="text-align:center; color:var(--neon-orange);">Error al cargar la carta digital.</p>`;
       }
     }
 
-    function agregarAlCarrito(id, nombre, precio) {
-      carrito.push({ id, nombre, precio });
+    function renderizarCategorias() {
+      const cont = document.getElementById('contenedor-categorias');
+      cont.innerHTML = menuCompleto.map((cat, index) => `
+        <button class="cat-btn ${index === 0 ? 'active' : ''}" onclick="seleccionarCategoria('${cat.categoria}', this)">
+          ${cat.categoria}
+        </button>
+      `).join('');
+    }
+
+    function seleccionarCategoria(catNombre, btnElement) {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btnElement.classList.add('active');
+      renderizarProductos(catNombre);
+    }
+
+    function renderizarProductos(catNombre) {
+      const cont = document.getElementById('contenedor-menu');
+      const categoria = menuCompleto.find(c => c.categoria === catNombre);
+
+      if (!categoria || !categoria.productos.length) {
+        cont.innerHTML = `<p style="text-align:center; color:var(--text-muted); margin-top:30px;">No hay productos en esta categoría.</p>`;
+        return;
+      }
+
+      cont.innerHTML = categoria.productos.map(p => `
+        <div class="product-card">
+          <div class="product-info">
+            <h3>${p.nombre}</h3>
+            <div class="price">$${p.precio.toLocaleString('es-CL')}</div>
+          </div>
+          <button class="add-btn" onclick="agregarAlCarrito('${p.nombre}', ${p.precio})">+ Agregar</button>
+        </div>
+      `).join('');
+    }
+
+    function agregarAlCarrito(nombre, precio) {
+      const itemExistente = carrito.find(i => i.nombre === nombre);
+      if (itemExistente) {
+        itemExistente.cantidad += 1;
+      } else {
+        carrito.push({ nombre, precio, cantidad: 1 });
+      }
       actualizarCarrito();
     }
 
-    function actualizarCarrito() {
-      document.getElementById('cant-items').innerText = carrito.length;
-      const detalle = document.getElementById('detalle-carrito');
-      let total = 0;
-      
-      if (carrito.length === 0) {
-        detalle.innerText = 'Vacío';
-      } else {
-        detalle.innerHTML = carrito.map(i => `${i.nombre} - $${i.precio}`).join('<br>');
-        total = carrito.reduce((sum, item) => sum + item.precio, 0);
+    function cambiarCantidad(index, delta) {
+      carrito[index].cantidad += delta;
+      if (carrito[index].cantidad <= 0) {
+        carrito.splice(index, 1);
       }
-      document.getElementById('total-carrito').innerText = total;
+      actualizarCarrito();
+      renderizarModal();
+
+      if (carrito.length === 0) {
+        cerrarModal();
+      }
+    }
+
+    function actualizarCarrito() {
+      const cantTotal = carrito.reduce((acc, item) => acc + item.cantidad, 0);
+      const totalPrecio = carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+
+      document.getElementById('cant-items').innerText = `${cantTotal} producto(s) en pedido`;
+      document.getElementById('total-pedido').innerText = `$${totalPrecio.toLocaleString('es-CL')}`;
+      document.getElementById('modal-total-val').innerText = `$${totalPrecio.toLocaleString('es-CL')}`;
+      
+      const btnRevisar = document.getElementById('btn-revisar');
+      btnRevisar.disabled = carrito.length === 0;
+    }
+
+    function abrirModal() {
+      if (carrito.length === 0) return;
+      renderizarModal();
+      document.getElementById('modal-orden').classList.add('open');
+    }
+
+    function cerrarModal() {
+      document.getElementById('modal-orden').classList.remove('open');
+    }
+
+    function renderizarModal() {
+      const cont = document.getElementById('lista-carrito-modal');
+      cont.innerHTML = carrito.map((item, index) => `
+        <div class="cart-item">
+          <div class="cart-item-details">
+            <h4>${item.nombre}</h4>
+            <span>$${(item.precio * item.cantidad).toLocaleString('es-CL')}</span>
+          </div>
+          <div class="cart-controls">
+            <button class="btn-qty" onclick="cambiarCantidad(${index}, -1)">-</button>
+            <span style="font-weight:bold;">${item.cantidad}</span>
+            <button class="btn-qty" onclick="cambiarCantidad(${index}, 1)">+</button>
+          </div>
+        </div>
+      `).join('');
     }
 
     async function enviarPedido() {
-      if (carrito.length === 0) return alert('Agrega productos al carrito');
+      if (carrito.length === 0) return;
 
-      const total = carrito.reduce((sum, item) => sum + item.precio, 0);
-      const res = await fetch(`${API_URL}/pedidos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ local, mesa, items: carrito, total })
+      // Transformar carrito para enviarlo agrupado a la cocina
+      const itemsParaEnviar = [];
+      carrito.forEach(item => {
+        for (let i = 0; i < item.cantidad; i++) {
+          itemsParaEnviar.push({ nombre: item.nombre, precio: item.precio });
+        }
       });
 
-      if (res.ok) {
-        alert('¡Pedido enviado con éxito a la cocina!');
-        carrito = [];
-        actualizarCarrito();
-      } else {
-        alert('Error al enviar el pedido.');
+      const total = itemsParaEnviar.reduce((acc, item) => acc + item.precio, 0);
+      const payload = {
+        local: localId,
+        mesa: numMesa,
+        items: itemsParaEnviar,
+        total
+      };
+
+      const btnConfirmar = document.getElementById('btn-confirmar');
+      btnConfirmar.disabled = true;
+      btnConfirmar.innerText = "Enviando a cocina...";
+
+      try {
+        const res = await fetch(`${API_URL}/pedidos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          alert('¡Tu pedido ha sido enviado a la cocina con éxito!');
+          carrito = [];
+          actualizarCarrito();
+          cerrarModal();
+        } else {
+          alert('Ocurrió un error al enviar el pedido.');
+        }
+      } catch (err) {
+        alert('Error de conexión con el servidor.');
+      } finally {
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerText = "🚀 Confirmar y Enviar Pedido";
       }
     }
 
+    // Inicializar
     cargarMenu();
   </script>
 </body>
