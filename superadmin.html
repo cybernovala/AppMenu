@@ -54,7 +54,7 @@
     <button class="btn-orange" onclick="restaurarServidor()">📤 Restaurar Servidor</button>
   </div>
 
-  <!-- 4. LISTADO DE LOCALES CONTRATADOS (AL FINAL) -->
+  <!-- 4. LISTADO DE LOCALES CONTRATADOS (UBICADO AL FINAL) -->
   <div class="card">
     <h3>🏢 Locales Contratados y Estado de Suscripción</h3>
     <button class="btn-blue" style="margin-bottom: 15px;" onclick="cargarListadoLocales()">🔄 Cargar / Actualizar Lista de Locales</button>
@@ -132,7 +132,6 @@
 
       if (!idRaw || !passwordCliente) return alert("Ingresa RUT/identificador y contraseña.");
 
-      // Limpia RUTs o identificadores (elimina puntos y espacios, mantiene guión)
       const localId = idRaw.toLowerCase().replace(/\./g, '').replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
 
       try {
@@ -166,7 +165,7 @@
     h1, h2, h3 { color: #ffe600; text-align: center; margin-top: 5px; }
     .status-bar { background: #222; padding: 10px; border-radius: 6px; text-align: center; font-size: 14px; color: #aaa; border: 1px solid #333; margin-bottom: 15px; }
     .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-    .tab-btn { flex: 1; min-width: 110px; padding: 14px; background: #2a2a2a; color: #fff; border: none; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 6px; }
+    .tab-btn { flex: 1; min-width: 100px; padding: 14px; background: #2a2a2a; color: #fff; border: none; font-weight: bold; font-size: 15px; cursor: pointer; border-radius: 6px; }
     .tab-btn.active { background: #ffe600; color: #000; }
     .sec { display: none; }
     .sec.active { display: block; }
@@ -178,7 +177,6 @@
     .btn-blue { background: #2196F3; color: white; }
     .btn-red { background: #f44336; color: white; width: auto; padding: 5px 10px; }
     
-    /* VISTA DE COCINA MAXIMIZADA */
     .cocina-card { background: #1a1a1a; border-left: 10px solid #ffe600; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
     .cocina-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
     .mesa-badge-lg { background: #ffe600; color: #000; font-size: 26px; font-weight: bold; padding: 5px 15px; border-radius: 6px; }
@@ -187,6 +185,10 @@
 
     #qr-box { background: #fff; padding: 15px; border-radius: 8px; display: inline-block; margin-top: 10px; }
     #qr-box img { margin: 0 auto; }
+    
+    .table-historial { width: 100%; border-collapse: collapse; margin-top: 10px; text-align: left; }
+    .table-historial th, .table-historial td { border: 1px solid #333; padding: 10px; }
+    .table-historial th { background: #2a2a2a; color: #ffe600; }
   </style>
 </head>
 <body>
@@ -201,13 +203,14 @@
 
   <div id="app-sec" style="display:none;">
     <div class="status-bar">
-      <span>🔑 Identificador / RUT: <strong>${localId.toUpperCase()}</strong></span> | 
+      <span>🔑 Identificador: <strong>${localId.toUpperCase()}</strong></span> | 
       <span>📅 Servicio Activo Hasta: <strong style="color:#4CAF50;">${fechaVencimiento}</strong></span>
     </div>
 
     <div class="tabs">
       <button class="tab-btn active" onclick="verTab('cocina')">🍳 Cocina</button>
       <button class="tab-btn" onclick="verTab('garzon')">🤵 Garzón</button>
+      <button class="tab-btn" onclick="verTab('beneficios')">🏆 Beneficios</button>
       <button class="tab-btn" onclick="verTab('qr')">📱 Generar QR</button>
       <button class="tab-btn" onclick="verTab('menu')">🍔 Editar Menú</button>
     </div>
@@ -220,11 +223,20 @@
 
     <!-- 2. VISTA DE GARZÓN -->
     <div id="tab-garzon" class="sec">
-      <h2>🤵 Pedidos Listos para Entregar</h2>
+      <h2>🤵 Pedidos Activos para Entrega</h2>
       <div id="lista-pedidos-garzon">Cargando comandas...</div>
     </div>
 
-    <!-- 3. GENERADOR DE QR -->
+    <!-- 3. HISTORIAL Y BENEFICIOS DE GARZONES -->
+    <div id="tab-beneficios" class="sec">
+      <h2>🏆 Historial de Entregas y Beneficios de Garzones</h2>
+      <div class="card">
+        <button class="btn-blue" onclick="cargarHistorialGarzones()">🔄 Actualizar Historial de Entregas</button>
+        <div id="tabla-beneficios-container" style="margin-top:15px;"></div>
+      </div>
+    </div>
+
+    <!-- 4. GENERADOR DE QR -->
     <div id="tab-qr" class="sec">
       <h2>📱 Generador de QR para Mesas</h2>
       <div class="card" style="text-align: center;">
@@ -239,7 +251,7 @@
       </div>
     </div>
 
-    <!-- 4. EDICIÓN DE MENÚ -->
+    <!-- 5. EDICIÓN DE MENÚ -->
     <div id="tab-menu" class="sec">
       <h2>🍔 Editor de Categorías y Productos</h2>
       <div class="card">
@@ -269,7 +281,7 @@
     }
 
     function verTab(tabName) {
-      const tabs = ['cocina', 'garzon', 'qr', 'menu'];
+      const tabs = ['cocina', 'garzon', 'beneficios', 'qr', 'menu'];
       tabs.forEach((t, i) => {
         const btn = document.querySelectorAll('.tab-btn')[i];
         const sec = document.getElementById('tab-' + t);
@@ -282,6 +294,7 @@
         }
       });
       if(tabName === 'qr') generarQR();
+      if(tabName === 'beneficios') cargarHistorialGarzones();
     }
 
     async function cargarCocina() {
@@ -318,30 +331,84 @@
         }
         cont.innerHTML = pedidos.map(p => {
           const items = p.items.map(i => '<li>' + i.nombre + '</li>').join('');
-          return '<div class="card">' +
+          return '<div class="card" id="pedido-card-' + p.id + '">' +
             '<div style="display:flex; justify-content:space-between; align-items:center;">' +
               '<span class="mesa-badge-lg" style="font-size:20px;">Mesa ' + p.mesa + '</span>' +
               '<small style="color:#aaa; font-size:16px;">' + (p.hora || '') + '</small>' +
             '</div>' +
             '<ul style="margin:15px 0; padding-left:25px; font-size:18px;">' + items + '</ul>' +
-            '<button class="btn-green" onclick="eliminarOrden(' + p.id + ')">✅ Marcar Entregado y Borrar Orden</button>' +
+            '<div style="margin-top:10px;">' +
+              '<label style="font-size:13px; color:#ffe600;">RUT del Garzón para entregar:</label>' +
+              '<input type="text" id="rut-garzon-' + p.id + '" placeholder="Ej: 18234567-8" style="margin-bottom:8px;">' +
+              '<button class="btn-green" onclick="entregarYBorrarOrden(' + p.id + ')">✅ Marcar Entregado (Borrar de Cocina)</button>' +
+            '</div>' +
           '</div>';
         }).join('');
       } catch(e) {}
     }
 
-    async function eliminarOrden(id) {
+    async function entregarYBorrarOrden(id) {
+      const rutInput = document.getElementById('rut-garzon-' + id);
+      const rutGarzon = rutInput ? rutInput.value.trim() : "";
+      if (!rutGarzon) return alert("Por favor ingresa el RUT del garzón antes de entregar.");
+
       try {
-        await fetch(API_URL + '/pedidos/entregar', {
+        const res = await fetch(API_URL + '/pedidos/entregar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: LOCAL_ID, id: id })
+          body: JSON.stringify({ local: LOCAL_ID, id: id, rutGarzon: rutGarzon })
         });
+        
+        // Guardar registro en almacenamiento local para historial acumulativo de beneficios
+        guardarHistorialLocal(rutGarzon, id);
+
+        // Remueve la orden visualmente al instante
+        const el = document.getElementById('pedido-card-' + id);
+        if (el) el.remove();
+
         cargarCocina();
         cargarGarzon();
       } catch(e) {
-        alert("Error al eliminar la orden.");
+        alert("Error al procesar la entrega.");
       }
+    }
+
+    function guardarHistorialLocal(rut, pedidoId) {
+      const key = 'historial_garzones_' + LOCAL_ID;
+      let data = JSON.parse(localStorage.getItem(key) || '[]');
+      data.push({ rut: rut, pedidoId: pedidoId, fecha: new Date().toLocaleString('es-CL') });
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+
+    function cargarHistorialGarzones() {
+      const key = 'historial_garzones_' + LOCAL_ID;
+      const data = JSON.parse(localStorage.getItem(key) || '[]');
+      const cont = document.getElementById('tabla-beneficios-container');
+
+      if (data.length === 0) {
+        cont.innerHTML = '<p style="color:#aaa; text-align:center;">No hay historial registrado aún.</p>';
+        return;
+      }
+
+      // Agrupar entregas por RUT
+      const contex = {};
+      data.forEach(item => {
+        contex[item.rut] = (contex[item.rut] || 0) + 1;
+      });
+
+      let rows = '';
+      for (const [rut, cantidad] of Object.entries(contex)) {
+        rows += '<tr>' +
+          '<td>' + rut + '</td>' +
+          '<td><strong>' + cantidad + ' comandas</strong></td>' +
+          '<td><span style="color:#4CAF50; font-weight:bold;">$' + (cantidad * 500).toLocaleString('es-CL') + '</span> (Comisión sugerida)</td>' +
+        '</tr>';
+      }
+
+      cont.innerHTML = '<table class="table-historial">' +
+        '<thead><tr><th>RUT Garzón</th><th>Órdenes Entregadas</th><th>Beneficio / Comisión</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>';
     }
 
     function generarQR() {
