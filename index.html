@@ -2,125 +2,169 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menú Digital Futurista</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Menú Digital</title>
   <style>
     :root {
       --bg-dark: #08080a;
-      --card-bg: rgba(18, 18, 22, 0.85);
+      --card-bg: rgba(18, 18, 22, 0.95);
       --neon-orange: #ff5500;
       --neon-yellow: #ffea00;
       --grad-neon: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
-      --grid-color: rgba(255, 85, 0, 0.15);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
-      padding-bottom: 110px;
+      padding-bottom: calc(110px + env(safe-area-inset-bottom));
       overflow-x: hidden;
-      position: relative;
     }
 
-    .grid-background {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      pointer-events: none; z-index: 0; perspective: 600px; overflow: hidden;
+    .app-container {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 12px;
     }
-
-    .grid-lines {
-      position: absolute; width: 200%; height: 200%; top: -50%; left: -50%;
-      background-image: 
-        linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
-      background-size: 40px 40px;
-      transform: rotateX(55deg) translateY(-20%);
-      animation: gridMove 20s linear infinite;
-    }
-
-    @keyframes gridMove {
-      0% { transform: rotateX(55deg) translateY(0); }
-      100% { transform: rotateX(55deg) translateY(40px); }
-    }
-
-    .app-container { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; padding: 20px 15px; }
 
     header {
-      text-align: center; margin-bottom: 25px; padding: 20px; background: var(--card-bg);
+      text-align: center;
+      margin-bottom: 15px;
+      padding: 15px 10px;
+      background: var(--card-bg);
       border: 1px solid rgba(255, 85, 0, 0.3);
-      clip-path: polygon(0 0, 92% 0, 100% 20px, 100% 100%, 8% 100%, 0 calc(100% - 20px));
+      border-radius: 12px;
     }
 
     h1 {
-      font-size: 26px; text-transform: uppercase; letter-spacing: 2px;
-      background: var(--grad-neon); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      font-size: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: var(--grad-neon);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .mesa-badge {
-      display: inline-block; margin-top: 8px; padding: 4px 12px;
-      background: rgba(255, 234, 0, 0.1); border: 1px solid var(--neon-yellow);
-      color: var(--neon-yellow); font-size: 12px; font-weight: bold; border-radius: 20px;
+      display: inline-block;
+      margin-top: 6px;
+      padding: 3px 10px;
+      background: rgba(255, 234, 0, 0.1);
+      border: 1px solid var(--neon-yellow);
+      color: var(--neon-yellow);
+      font-size: 11px;
+      font-weight: bold;
+      border-radius: 20px;
     }
 
-    .categories-bar { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
-    .cat-btn {
-      background: rgba(20, 20, 25, 0.8); color: var(--text-muted); border: 1px solid #333;
-      padding: 8px 16px; font-size: 13px; font-weight: bold; white-space: nowrap; cursor: pointer;
+    .categories-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 15px;
+      -webkit-overflow-scrolling: touch;
     }
-    .cat-btn.active { color: #000; background: var(--grad-neon); border-color: var(--neon-yellow); }
+
+    .categories-bar::-webkit-scrollbar { display: none; }
+
+    .cat-btn {
+      background: #181820;
+      color: var(--text-muted);
+      border: 1px solid #333;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: bold;
+      white-space: nowrap;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    .cat-btn.active {
+      color: #000;
+      background: var(--grad-neon);
+      border-color: var(--neon-yellow);
+    }
 
     .product-card {
-      background: var(--card-bg); border: 1px solid rgba(255, 85, 0, 0.2);
-      padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 85, 0, 0.2);
+      border-radius: 10px;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+
+    .product-title { font-size: 15px; font-weight: bold; }
+    .product-price { color: var(--neon-yellow); font-weight: bold; font-size: 14px; margin-top: 2px; }
 
     .add-btn {
-      background: transparent; border: 1px solid var(--neon-orange); color: var(--neon-orange);
-      padding: 8px 14px; font-size: 12px; font-weight: bold; cursor: pointer;
+      background: transparent;
+      border: 1px solid var(--neon-orange);
+      color: var(--neon-orange);
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
     }
 
-    /* BARRA DE CARRITO INFERIOR */
     .cart-bar {
-      position: fixed; bottom: 0; left: 0; width: 100%;
-      background: rgba(10, 10, 14, 0.95); border-top: 1px solid var(--neon-orange);
-      padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #0f0f14;
+      border-top: 1px solid var(--neon-orange);
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
     }
 
     .review-btn {
-      background: var(--grad-neon); border: none; color: #000; padding: 12px 20px;
-      font-weight: bold; cursor: pointer;
+      background: var(--grad-neon);
+      border: none;
+      color: #000;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
     }
 
-    /* MODAL FLOTANTE DE REVISIÓN DE PEDIDO */
+    .review-btn:disabled { opacity: 0.4; }
+
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+      background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
       display: none; justify-content: center; align-items: flex-end; z-index: 200;
     }
     .modal-overlay.open { display: flex; }
 
     .modal-content {
-      background: #121216; border: 1px solid var(--neon-orange);
-      border-radius: 12px 12px 0 0; width: 100%; max-width: 600px; max-height: 80vh;
-      display: flex; flex-direction: column; padding: 20px; animation: slideUp 0.3s ease;
+      background: #14141a; border: 1px solid var(--neon-orange);
+      border-radius: 16px 16px 0 0; width: 100%; max-width: 500px; max-height: 85vh;
+      display: flex; flex-direction: column; padding: 18px;
+      padding-bottom: calc(18px + env(safe-area-inset-bottom));
     }
 
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .cart-items-list { overflow-y: auto; flex: 1; margin: 12px 0; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; background: #1c1c24; padding: 10px; margin-bottom: 8px; border-radius: 6px; }
+    .btn-qty { background: #282835; border: 1px solid var(--neon-orange); color: var(--neon-orange); width: 30px; height: 30px; font-weight: bold; border-radius: 4px; }
 
-    .modal-header { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding-bottom: 12px; }
-    .cart-items-list { overflow-y: auto; flex: 1; margin: 15px 0; }
-    .cart-item { display: flex; justify-content: space-between; align-items: center; background: #19191e; padding: 12px; margin-bottom: 8px; }
-    .btn-qty { background: #222; border: 1px solid var(--neon-orange); color: var(--neon-orange); width: 28px; height: 28px; cursor: pointer; }
-
-    .confirm-btn { background: var(--grad-neon); border: none; color: #000; padding: 14px; font-weight: bold; cursor: pointer; width: 100%; border-radius: 6px; }
+    .confirm-btn { background: var(--grad-neon); border: none; color: #000; padding: 14px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; border-radius: 8px; }
   </style>
 </head>
 <body>
-
-  <div class="grid-background"><div class="grid-lines"></div></div>
 
   <div class="app-container">
     <header>
@@ -134,28 +178,27 @@
 
   <div class="cart-bar">
     <div>
-      <span id="cant-items" style="font-size:12px; color:var(--text-muted);">0 productos</span><br>
-      <strong id="total-pedido" style="font-size:20px; color:var(--neon-yellow);">$0</strong>
+      <span id="cant-items" style="font-size:11px; color:var(--text-muted);">0 productos</span><br>
+      <strong id="total-pedido" style="font-size:18px; color:var(--neon-yellow);">$0</strong>
     </div>
-    <button class="review-btn" id="btn-revisar" onclick="abrirModal()" disabled>Revisar Orden</button>
+    <button class="review-btn" id="btn-revisar" onclick="abrirModal()" disabled>Revisar Orden 🛒</button>
   </div>
 
-  <!-- MODAL DE CONFIRMACIÓN -->
   <div class="modal-overlay" id="modal-orden">
     <div class="modal-content">
-      <div class="modal-header">
-        <h2 style="color:var(--neon-yellow); font-size:18px;">📋 Resumen de tu Pedido</h2>
-        <button style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;" onclick="cerrarModal()">&times;</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #282830; padding-bottom:10px;">
+        <h3 style="color:var(--neon-yellow); font-size:16px;">📋 Confirmar Pedido</h3>
+        <button style="background:none; border:none; color:#fff; font-size:22px;" onclick="cerrarModal()">&times;</button>
       </div>
 
       <div class="cart-items-list" id="lista-carrito-modal"></div>
 
-      <div style="border-top:1px solid #222; padding-top:15px;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-size:18px; font-weight:bold;">
-          <span>Total:</span>
+      <div style="border-top:1px solid #282830; padding-top:12px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:16px; font-weight:bold;">
+          <span>Total a Pagar:</span>
           <span id="modal-total-val" style="color:var(--neon-yellow);">$0</span>
         </div>
-        <button class="confirm-btn" id="btn-confirmar" onclick="enviarPedido()">🚀 Confirmar y Enviar Pedido</button>
+        <button class="confirm-btn" id="btn-confirmar" onclick="enviarPedido()">🚀 Pedir Orden</button>
       </div>
     </div>
   </div>
@@ -179,7 +222,7 @@
         renderizarCategorias();
         if (menuCompleto.length > 0) renderizarProductos(menuCompleto[0].categoria);
       } catch (err) {
-        document.getElementById('contenedor-menu').innerHTML = `<p style="text-align:center; color:var(--neon-orange);">Error cargando la carta digital.</p>`;
+        document.getElementById('contenedor-menu').innerHTML = `<p style="text-align:center; color:var(--neon-orange);">Error al cargar menú.</p>`;
       }
     }
 
@@ -203,15 +246,15 @@
       const categoria = menuCompleto.find(c => c.categoria === catNombre);
 
       if (!categoria || !categoria.productos.length) {
-        cont.innerHTML = `<p style="text-align:center; color:var(--text-muted); margin-top:30px;">No hay productos disponibles.</p>`;
+        cont.innerHTML = `<p style="text-align:center; color:var(--text-muted); margin-top:20px;">Sin productos en esta categoría.</p>`;
         return;
       }
 
       cont.innerHTML = categoria.productos.map(p => `
         <div class="product-card">
           <div>
-            <h3>${p.nombre}</h3>
-            <div style="color:var(--neon-yellow); font-weight:bold;">$${p.precio.toLocaleString('es-CL')}</div>
+            <div class="product-title">${p.nombre}</div>
+            <div class="product-price">$${p.precio.toLocaleString('es-CL')}</div>
           </div>
           <button class="add-btn" onclick="agregarAlCarrito('${p.nombre}', ${p.precio})">+ Agregar</button>
         </div>
@@ -258,12 +301,12 @@
       cont.innerHTML = carrito.map((item, index) => `
         <div class="cart-item">
           <div>
-            <h4>${item.nombre}</h4>
-            <span style="color:var(--neon-yellow);">$${(item.precio * item.cantidad).toLocaleString('es-CL')}</span>
+            <div style="font-size:14px; font-weight:bold;">${item.nombre}</div>
+            <span style="color:var(--neon-yellow); font-size:13px;">$${(item.precio * item.cantidad).toLocaleString('es-CL')}</span>
           </div>
-          <div style="display:flex; gap:8px; align-items:center;">
+          <div style="display:flex; gap:10px; align-items:center;">
             <button class="btn-qty" onclick="cambiarCantidad(${index}, -1)">-</button>
-            <span>${item.cantidad}</span>
+            <span style="font-weight:bold;">${item.cantidad}</span>
             <button class="btn-qty" onclick="cambiarCantidad(${index}, 1)">+</button>
           </div>
         </div>
@@ -285,7 +328,7 @@
 
       const btnConfirmar = document.getElementById('btn-confirmar');
       btnConfirmar.disabled = true;
-      btnConfirmar.innerText = "Enviando...";
+      btnConfirmar.innerText = "Enviando a Cocina...";
 
       try {
         const res = await fetch(`${API_URL}/pedidos`, {
@@ -294,21 +337,19 @@
           body: JSON.stringify(payload)
         });
 
-        const data = await res.json();
-
         if (res.ok) {
-          alert('¡Tu pedido ha sido enviado con éxito!');
+          alert('¡Tu pedido ha sido recibido en cocina!');
           carrito = [];
           actualizarCarrito();
           cerrarModal();
         } else {
-          alert('Error: ' + (data.error || 'Ocurrió un error al enviar el pedido.'));
+          alert('Ocurrió un error al enviar el pedido.');
         }
       } catch (err) {
-        alert('Error de conexión con el servidor.');
+        alert('Error de conexión.');
       } finally {
         btnConfirmar.disabled = false;
-        btnConfirmar.innerText = "🚀 Confirmar y Enviar Pedido";
+        btnConfirmar.innerText = "🚀 Pedir Orden";
       }
     }
 
