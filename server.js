@@ -5,186 +5,176 @@ const path = require('path');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Permitir archivos JSON amplios para respaldos grandes
+app.use(express.json());
 
-const DIR_DATOS = path.join(__dirname, 'datos_locales');
+const DB_FILE = path.join(__dirname, 'database.json');
+let db = {};
 
-// Asegurar que exista la carpeta principal de almacenamiento
-if (!fs.existsSync(DIR_DATOS)) {
-  fs.mkdirSync(DIR_DATOS, { recursive: true });
+// Cargar base de datos desde disco si existe
+if (fs.existsSync(DB_FILE)) {
+  try {
+    db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+  } catch (err) {
+    db = {};
+  }
 }
 
-// Función auxiliar para obtener o crear la carpeta de un local
-const getLocalFolder = (localId) => {
-  const idLimpio = (localId || 'default').toLowerCase().replace(/[^a-z0-9_-]/g, '');
-  const dir = path.join(DIR_DATOS, idLimpio);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  return dir;
-};
+function guardarEnDisco() {
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+}
 
-// Leer datos en formato JSON de forma segura
-const obtenerDatos = (archivoPath, porDefecto) => {
-  if (!fs.existsSync(archivoPath)) return porDefecto;
-  const data = fs.readFileSync(archivoPath, 'utf-8');
-  return data ? JSON.parse(data) : porDefecto;
-};
+// ------------------- RUTAS DE MENÚ Y CLIENTES -------------------
 
-// Guardar datos en formato JSON
-const guardarDatos = (archivoPath, datos) => {
-  fs.writeFileSync(archivoPath, JSON.stringify(datos, null, 2));
-};
-
-// ================= API PEDIDOS =================
-
-// Obtener pedidos de un local específico
-app.get('/api/pedidos', (req, res) => {
-  const local = req.query.local || 'default';
-  const folder = getLocalFolder(local);
-  res.json(obtenerDatos(path.join(folder, 'pedidos.json'), []));
+// Cargar menú de un local
+app.get('/api/menu', (req, res) => {
+  const { local } = req.query;
+  const localData = db[local] || { menu: [] };
+  res.json(localData.menu || []);
 });
 
-// Guardar un nuevo pedido
+// Actualizar menú (Requiere contraseña del restaurante)
+app.post('/api/menu', (req, res) => {
+  const { local, password, menu } = req.body;
+  if (!db[local]) return res.status(404).json({ error: 'El restaurante no existe.' });
+  if (db[local].password !== password) return res.status(403).json({ error: 'Contraseña incorrecta.' });
+
+  db[local].menu = menu;
+  guardarEnDisco();
+  res.json({ mensaje: 'Menú actualizado correctamente.' });
+});
+
+// Enviar pedido a cocina (Soporta pedidos agrupados)
+let pedidosTemp = {};
+
 app.post('/api/pedidos', (req, res) => {
   const { local, mesa, items, total } = req.body;
-  if (!mesa || !items || items.length === 0) {
-    return res.status(400).json({ error: 'Faltan datos obligatorios para el pedido.' });
+  
+  // Verificar si la suscripción está vencida antes de aceptar pedidos
+  if (db[local] && db[local].fechaVencimiento) {
+    const hoy = new Date();
+    const vencimiento = new Date(db[local].fechaVencimiento);
+    if (hoy > vencimiento) {
+      return res.status(402).json({ error: 'El servicio de este restaurante se encuentra temporalmente suspendido por mantenimiento.' });
+    }
   }
 
-  const folder = getLocalFolder(local);
-  const archivoPedidos = path.join(folder, 'pedidos.json');
-  const pedidos = obtenerDatos(archivoPedidos, []);
+  if (!pedidosTemp[local]) pedidosTemp[local] = [];
 
   const nuevoPedido = {
     id: Date.now(),
     mesa,
     items,
     total,
-    estado: 'Pendiente',
+    estado: 'pendiente',
     hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
   };
 
-  pedidos.push(nuevoPedido);
-  guardarDatos(archivoPedidos, pedidos);
-  res.status(201).json({ mensaje: 'Pedido recibido con éxito', pedido: nuevoPedido });
+  pedidosTemp[local].unshift(nuevoPedido);
+  res.json({ mensaje: 'Pedido recibido', pedido: nuevoPedido });
 });
 
-// Actualizar o eliminar un pedido existente
-app.patch('/api/pedidos/:id', (req, res) => {
-  const { id } = req.params;
-  const { local, estado } = req.body;
-  const folder = getLocalFolder(local);
-  const archivoPedidos = path.join(folder, 'pedidos.json');
-  let pedidos = obtenerDatos(archivoPedidos, []);
-  
-  const index = pedidos.findIndex(p => p.id == id);
-  if (index !== -1) {
-    if (estado === 'Eliminar') {
-      pedidos.splice(index, 1);
+// Obtener pedidos en pantalla de cocina
+app.get('/api/pedidos', (req, res) => {
+  const { local } = req.query;
+  res.json(pedidosTemp[local] || []);
+});
+
+// Cambiar estado de pedido en cocina
+app.post('/api/pedidos/estado', (req, res) => {
+  const { local, id, estado } = req.body;
+  if (!pedidosTemp[local]) return res.status(404).json({ error: 'No hay pedidos' });
+
+  const idx = pedidosTemp[local].findIndex(p => p.id === id);
+  if (idx !== -1) {
+    if (estado === 'despachado') {
+      pedidosTemp[local].splice(idx, 1);
     } else {
-      pedidos[index].estado = estado;
+      pedidosTemp[local][idx].estado = estado;
     }
-    guardarDatos(archivoPedidos, pedidos);
-    return res.json({ mensaje: 'Estado del pedido actualizado.' });
+    return res.json({ mensaje: 'Estado actualizado' });
   }
-  res.status(404).json({ error: 'Pedido no encontrado.' });
+  res.status(404).json({ error: 'Pedido no encontrado' });
 });
 
-// ================= API MENÚ Y CONFIGURACIÓN =================
+// ------------------- RUTAS DE SUSCRIPCIÓN Y PAGOS -------------------
 
-// Cargar el menú de un local
-app.get('/api/menu', (req, res) => {
-  const local = req.query.local || 'default';
-  const folder = getLocalFolder(local);
-  const menuPorDefecto = [{ categoria: "Completos", productos: [{ id: "1", nombre: "Completo Italiano", precio: 2990 }] }];
-  res.json(obtenerDatos(path.join(folder, 'menu.json'), menuPorDefecto));
+// Obtener estado de suscripción de un local (Para admin.html)
+app.get('/api/suscripcion', (req, res) => {
+  const { local } = req.query;
+  if (!db[local]) return res.status(404).json({ error: 'Local no encontrado' });
+
+  const hoy = new Date();
+  const fechaVenc = new Date(db[local].fechaVencimiento || hoy);
+  const diffTiempo = fechaVenc - hoy;
+  const diasRestantes = Math.ceil(diffTiempo / (1000 * 60 * 60 * 24));
+
+  res.json({
+    fechaVencimiento: db[local].fechaVencimiento,
+    diasRestantes,
+    alerta: diasRestantes <= 2 && diasRestantes >= 0,
+    vencido: diasRestantes < 0
+  });
 });
 
-// Guardar el menú de un local comprobando la contraseña propia del local
-app.post('/api/menu', (req, res) => {
-  const { local, password, menu } = req.body;
-  const folder = getLocalFolder(local);
-  
-  const configPath = path.join(folder, 'config.json');
-  const config = obtenerDatos(configPath, { password: 'admin' });
+// ------------------- RUTAS DE SUPER ADMIN -------------------
 
-  if (password !== config.password) {
-    return res.status(401).json({ error: 'Contraseña de administración incorrecta.' });
-  }
-
-  guardarDatos(path.join(folder, 'menu.json'), menu);
-  res.json({ mensaje: 'Menú guardado con éxito.' });
-});
-
-// ================= SUPER ADMIN: GESTIÓN DE LOCALES, RESPALDOS Y RESTAURACIÓN =================
-
-// Crear nuevo local con clave asignada
+// Crear Nuevo Local con 30 días de suscripción
 app.post('/api/superadmin/crear-local', (req, res) => {
   const { claveSuperAdmin, local, passwordCliente } = req.body;
-  if (claveSuperAdmin !== 'superadmin123') {
-    return res.status(401).json({ error: 'Acceso no autorizado. Clave Super Admin incorrecta.' });
-  }
+  if (claveSuperAdmin !== 'superadmin123') return res.status(403).json({ error: 'Clave Maestra incorrecta' });
 
-  if (!local || !passwordCliente) {
-    return res.status(400).json({ error: 'Debe ingresar el identificador del local y su contraseña.' });
-  }
+  const hoy = new Date();
+  const vencimiento = new Date();
+  vencimiento.setDate(hoy.getDate() + 30); // Suscripción inicial de 30 días
 
-  const folder = getLocalFolder(local);
-  guardarDatos(path.join(folder, 'config.json'), { password: passwordCliente });
+  db[local] = {
+    password: passwordCliente,
+    fechaCreacion: hoy.toISOString().split('T')[0],
+    fechaVencimiento: vencimiento.toISOString().split('T')[0],
+    menu: []
+  };
 
-  res.json({ mensaje: `Local "${local}" creado exitosamente con su clave personalizada.` });
+  guardarEnDisco();
+  res.json({ mensaje: 'Restaurante creado con éxito', fechaVencimiento: db[local].fechaVencimiento });
 });
 
-// Descargar respaldo completo del servidor
+// Renovación de Pago por 30 Días Adicionales
+app.post('/api/superadmin/renovar-pago', (req, res) => {
+  const { claveSuperAdmin, local } = req.body;
+  if (claveSuperAdmin !== 'superadmin123') return res.status(403).json({ error: 'Clave Maestra incorrecta' });
+  if (!db[local]) return res.status(404).json({ error: 'Local no encontrado' });
+
+  const hoy = new Date();
+  let fechaBase = new Date(db[local].fechaVencimiento);
+  
+  // Si la fecha ya venció, se computan los 30 días desde hoy. Si está al día, se suman a la fecha existente.
+  if (isNaN(fechaBase.getTime()) || fechaBase < hoy) {
+    fechaBase = new Date();
+  }
+  
+  fechaBase.setDate(fechaBase.getDate() + 30);
+  db[local].fechaVencimiento = fechaBase.toISOString().split('T')[0];
+
+  guardarEnDisco();
+  res.json({ mensaje: 'Pago registrado con éxito', nuevaFecha: db[local].fechaVencimiento });
+});
+
+// Descargar Respaldo JSON Completo
 app.get('/api/superadmin/backup', (req, res) => {
   const { clave } = req.query;
-  if (clave !== 'superadmin123') {
-    return res.status(401).json({ error: 'Acceso no autorizado. Clave Super Admin incorrecta.' });
-  }
-
-  const backupData = {};
-  if (fs.existsSync(DIR_DATOS)) {
-    const carpetasLocales = fs.readdirSync(DIR_DATOS);
-    carpetasLocales.forEach(localId => {
-      const folderPath = path.join(DIR_DATOS, localId);
-      if (fs.statSync(folderPath).isDirectory()) {
-        backupData[localId] = {
-          config: obtenerDatos(path.join(folderPath, 'config.json'), { password: 'admin' }),
-          menu: obtenerDatos(path.join(folderPath, 'menu.json'), []),
-          pedidos: obtenerDatos(path.join(folderPath, 'pedidos.json'), [])
-        };
-      }
-    });
-  }
-  res.json(backupData);
+  if (clave !== 'superadmin123') return res.status(403).json({ error: 'Clave Maestra incorrecta' });
+  res.json(db);
 });
 
-// Restaurar todo el servidor desde un archivo subido
+// Restaurar Base de Datos desde JSON
 app.post('/api/superadmin/restore', (req, res) => {
   const { clave, backupData } = req.body;
-  if (clave !== 'superadmin123') {
-    return res.status(401).json({ error: 'Acceso no autorizado. Clave Super Admin incorrecta.' });
-  }
+  if (clave !== 'superadmin123') return res.status(403).json({ error: 'Clave Maestra incorrecta' });
 
-  try {
-    Object.keys(backupData).forEach(localId => {
-      const folder = getLocalFolder(localId);
-      if (backupData[localId].config) {
-        guardarDatos(path.join(folder, 'config.json'), backupData[localId].config);
-      }
-      if (backupData[localId].menu) {
-        guardarDatos(path.join(folder, 'menu.json'), backupData[localId].menu);
-      }
-      if (backupData[localId].pedidos) {
-        guardarDatos(path.join(folder, 'pedidos.json'), backupData[localId].pedidos);
-      }
-    });
-    res.json({ mensaje: '¡Servidor restaurado exitosamente!' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al procesar la restauración del archivo.' });
-  }
+  db = backupData;
+  guardarEnDisco();
+  res.json({ mensaje: 'Base de datos restaurada correctamente' });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor activo en el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor iniciado en puerto ${PORT}`));

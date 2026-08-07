@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Super Admin - Gestión de Locales y Respaldos</title>
+  <title>Panel Super Admin - Control Global</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #121212;
       color: #fff;
       padding: 30px;
-      max-width: 650px;
+      max-width: 700px;
       margin: 0 auto;
     }
     h1 { color: #ffe600; text-align: center; }
@@ -36,6 +36,15 @@
     .btn-blue { background: #2196F3; color: white; }
     .btn-orange { background: #ff9800; color: white; }
     .info { font-size: 13px; color: #aaa; margin-top: 5px; }
+    .local-row {
+      background: #2a2a2a;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -61,11 +70,18 @@
     <button class="btn-green" onclick="generarPaqueteCliente()">Crear y Descargar Acceso Cliente</button>
   </div>
 
+  <!-- Control de Suscripciones -->
+  <div class="card">
+    <h3>💳 Control de Pagos y Suscripciones (30 Días)</h3>
+    <button class="btn-blue" style="margin-bottom: 15px;" onclick="cargarEstadoPagos()">🔄 Cargar / Actualizar Lista de Locales</button>
+    <div id="lista-locales-pagos">
+      <p style="color:#aaa; text-align:center;">Presiona el botón para cargar los restaurantes activos.</p>
+    </div>
+  </div>
+
   <!-- Respaldos y Restauración -->
   <div class="card">
     <h3>💾 Copia de Seguridad y Restauración</h3>
-    <p class="info">Descarga un respaldo JSON completo a tu PC o restaura los datos en el servidor.</p>
-
     <button class="btn-blue" onclick="descargarRespaldo()">📥 Descargar Respaldo Total a mi PC</button>
     
     <hr style="border-color: #333; margin: 20px 0;">
@@ -108,14 +124,13 @@
       const urlCocina = `${BASE_URL}/cocina.html?local=${localId}`;
       const urlAdmin = `${BASE_URL}/admin.html?local=${localId}`;
 
-      // PLANTILLA DEL ARCHIVO DESCARGABLE CON DESCARGA DE IMAGEN PNG
+      // PLANTILLA DEL ARCHIVO HTML DESCARGABLE
       const contenidoHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Acceso Local - ${localId}</title>
-  <!-- Bibliotecas para QR y renderizado a imagen -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
   <style>
@@ -143,7 +158,6 @@
   <a class="btn" href="${urlCocina}" target="_blank">📺 Abrir Pantalla de Cocina</a>
   <a class="btn btn-admin" href="${urlAdmin}" target="_blank">⚙️ Administrar Menú y Precios</a>
 
-  <!-- Generador de Códigos QR por Mesa -->
   <div class="card-info">
     <h3>📱 Generador de Código QR por Mesa</h3>
     <p style="font-size: 14px; color: #ccc;">Ingresa el número de mesa para actualizar:</p>
@@ -154,7 +168,6 @@
       <button class="btn-qr" onclick="generarQR()">Actualizar</button>
     </div>
 
-    <!-- TARJETA DEL QR QUE SE DESCARGA COMO IMAGEN -->
     <div class="qr-container" id="qr-card">
       <div class="num-mesa" id="label-mesa">Mesa 1</div>
       <div id="qrcode"></div>
@@ -202,7 +215,6 @@
       });
     }
 
-    // Inicializar Mesa 1
     generarQR();
   <\/script>
 </body>
@@ -215,6 +227,63 @@
       a.click();
 
       alert(`¡Cliente "${localId}" creado con éxito! Se descargó su panel de acceso seguro.`);
+      cargarEstadoPagos();
+    }
+
+    async function cargarEstadoPagos() {
+      const clave = document.getElementById('clave-maestra').value;
+      try {
+        const res = await fetch(`${API_URL}/superadmin/backup?clave=${clave}`);
+        if (!res.ok) return alert("Clave Maestra incorrecta.");
+
+        const locales = await res.json();
+        const cont = document.getElementById('lista-locales-pagos');
+        cont.innerHTML = "";
+
+        const keys = Object.keys(locales);
+        if (keys.length === 0) {
+          cont.innerHTML = "<p style='color:#aaa; text-align:center;'>No hay restaurantes registrados.</p>";
+          return;
+        }
+
+        keys.forEach(localKey => {
+          const info = locales[localKey];
+          const div = document.createElement('div');
+          div.className = "local-row";
+          
+          div.innerHTML = `
+            <div>
+              <strong>${localKey.toUpperCase()}</strong><br>
+              <small style="color:#ffe600;">Vence: ${info.fechaVencimiento || 'Sin fecha'}</small>
+            </div>
+            <button class="btn-green" style="width:auto; padding:8px 15px;" onclick="renovarPago('${localKey}')">✅ Registrar Pago (+30 Días)</button>
+          `;
+          cont.appendChild(div);
+        });
+      } catch (err) {
+        alert("Error cargando estado de pagos.");
+      }
+    }
+
+    async function renovarPago(localKey) {
+      const clave = document.getElementById('clave-maestra').value;
+      try {
+        const res = await fetch(`${API_URL}/superadmin/renovar-pago`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ claveSuperAdmin: clave, local: localKey })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert(`¡Suscripción de ${localKey} extendida hasta el ${data.nuevaFecha}!`);
+          cargarEstadoPagos();
+        } else {
+          alert("Error: " + data.error);
+        }
+      } catch (err) {
+        alert("Error de conexión al renovar pago.");
+      }
     }
 
     async function descargarRespaldo() {
@@ -235,7 +304,7 @@
 
         alert("¡Copia de seguridad guardada con éxito!");
       } catch (err) {
-        alert("Error de conexión al obtener el respaldo.");
+        alert("Error al obtener respaldo.");
       }
     }
 
@@ -259,11 +328,11 @@
             body: JSON.stringify({ clave, backupData })
           });
 
-          const respData = await res.json();
           if (res.ok) {
             alert("¡Servidor restaurado con éxito!");
+            cargarEstadoPagos();
           } else {
-            alert("Error: " + respData.error);
+            alert("Error al restaurar servidor.");
           }
         } catch (err) {
           alert("El archivo subido no contiene un respaldo válido.");
