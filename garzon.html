@@ -3,131 +3,170 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Garzón - Identificador e Historial</title>
+  <title>Panel de Garzón - Inicio de Turno</title>
+  <!-- Librería gratuita para generar el código QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 15px; max-width: 500px; margin: 0 auto; }
-    h1 { color: #2196F3; text-align: center; font-size: 20px; }
-    .card { background: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 5px solid #2196F3; margin-bottom: 12px; }
-    .mesa { font-size: 18px; font-weight: bold; background: #ffe600; color: #000; padding: 2px 8px; border-radius: 4px; display: inline-block; }
-    .btn-entregar { background: #4CAF50; color: #fff; border: none; padding: 12px; width: 100%; font-weight: bold; font-size: 14px; border-radius: 4px; margin-top: 10px; cursor: pointer; }
-    input { width: 100%; padding: 10px; margin-top: 8px; border-radius: 4px; border: 1px solid #444; background: #2a2a2a; color: #fff; box-sizing: border-box; }
-    ul { padding-left: 20px; margin: 10px 0; }
-    
-    .stats-box { background: #2a2a2a; border: 1px solid #444; padding: 12px; border-radius: 6px; margin-bottom: 15px; text-align: center; }
+    body { font-family: Arial, sans-serif; margin: 16px; background-color: #f4f6f8; }
+    .card { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 16px; }
+    .btn { background: #28a745; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-danger { background: #dc3545; }
+    .btn-secondary { background: #007bff; }
+    input { padding: 8px; width: 80%; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    #qr-container { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    #qrcode { margin: 15px 0; }
   </style>
 </head>
 <body>
 
-  <h1>🤵 Panel Garzón</h1>
-  <p style="text-align:center; color:#aaa; font-size:12px;" id="lbl-local">Cargando...</p>
-
-  <div class="card" id="seccion-login">
-    <label style="font-weight:bold;">RUT / ID del Garzón:</label>
-    <input type="text" id="rut-garzon" placeholder="Ej: 12345678-9">
-    <button class="btn-entregar" style="background:#2196F3; margin-top:10px;" onclick="ingresarGarzon()">Ingresar al Turno</button>
+  <!-- SECCIÓN 1: DESCARGA DE QR PARA LA COCINA/LOCAL -->
+  <div class="card" id="seccion-qr">
+    <h3>📌 Código QR de Inicio de Turno</h3>
+    <p>Descarga y pega este QR en un lugar visible (cocina o caja) para que los garzones ingresen a su turno escaneándolo con su celular.</p>
+    <div id="qr-container">
+      <div id="qrcode"></div>
+      <button class="btn btn-secondary" onclick="descargarQR()">📥 Descargar QR para Imprimir</button>
+    </div>
   </div>
 
-  <div id="seccion-panel" style="display:none;">
-    <div class="stats-box">
-      <span style="font-size:12px; color:#aaa;">Garzón Activo: <strong id="lbl-rut-activo" style="color:#ffe600;">--</strong></span><br>
-      <span style="font-size:14px;">Entregas Realizadas Hoy: <strong id="lbl-total-entregas" style="color:#4CAF50;">0</strong></span>
+  <!-- SECCIÓN 2: CONTROL DE TURNO DEL GARZÓN -->
+  <div class="card" id="seccion-turno">
+    <div id="pantalla-login" style="display:none;">
+      <h3>🔑 Iniciar Turno de Garzón</h3>
+      <p>Ingresa tu RUT para registrar las entregas de hoy:</p>
+      <input type="text" id="rutInput" placeholder="Ej: 12345678-9">
+      <br>
+      <button class="btn" onclick="iniciarTurno()">Iniciar Turno</button>
     </div>
 
-    <h3 style="font-size:16px; margin-bottom:10px;">📋 Pedidos Pendientes por Entregar:</h3>
-    <div id="lista-pedidos"></div>
+    <div id="pantalla-garzon" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <p>🟢 Turno Activo: <strong id="rutGarzonActivo"></strong></p>
+        <button class="btn btn-danger" onclick="cerrarTurno()">Cerrar Turno</button>
+      </div>
+      <hr>
+      <h3>📦 Pedidos Pendientes</h3>
+      <div id="lista-pedidos">Cargando pedidos...</div>
+    </div>
   </div>
 
   <script>
-    const API_URL = "https://appmenu-tavr.onrender.com/api";
+    // Obtener el local desde la URL (Ej: garzon.html?local=mi_restaurante)
     const urlParams = new URLSearchParams(window.location.search);
-    const localId = urlParams.get('local') || 'default';
+    const localActual = urlParams.get('local') || 'mi_restaurante';
 
-    document.getElementById('lbl-local').innerText = "Local: " + localId.toUpperCase();
+    // 1. Generar el código QR de acceso directo
+    const urlTurno = window.location.href; // Genera el QR apuntando a esta misma página
+    const qrDiv = document.getElementById("qrcode");
+    
+    new QRCode(qrDiv, {
+      text: urlTurno,
+      width: 180,
+      height: 180
+    });
 
-    let rutActual = localStorage.getItem(`garzon_rut_${localId}`) || '';
-
-    if (rutActual) {
-      document.getElementById('rut-garzon').value = rutActual;
-      ingresarGarzon();
-    }
-
-    function ingresarGarzon() {
-      const inputRut = document.getElementById('rut-garzon').value.trim();
-      if (!inputRut) return alert("Por favor ingresa tu RUT o ID de Garzón.");
-
-      rutActual = inputRut;
-      localStorage.setItem(`garzon_rut_${localId}`, rutActual);
-
-      document.getElementById('seccion-login').style.display = 'none';
-      document.getElementById('seccion-panel').style.display = 'block';
-      document.getElementById('lbl-rut-activo').innerText = rutActual;
-
-      cargarPedidos();
-      cargarHistorialGarzon();
-      setInterval(cargarPedidos, 4000);
-    }
-
-    async function cargarPedidos() {
-      try {
-        const res = await fetch(`${API_URL}/pedidos/garzon?local=${localId}`);
-        const pedidos = await res.json();
-        const cont = document.getElementById('lista-pedidos');
-        cont.innerHTML = "";
-
-        if (pedidos.length === 0) {
-          cont.innerHTML = "<p style='text-align:center; color:#777; margin-top:20px;'>No hay pedidos pendientes por entregar.</p>";
-          return;
-        }
-
-        pedidos.forEach(p => {
-          const div = document.createElement('div');
-          div.className = 'card';
-
-          const conteo = {};
-          p.items.forEach(i => conteo[i.nombre] = (conteo[i.nombre] || 0) + 1);
-          const itemsTxt = Object.keys(conteo).map(k => `<li><strong>${conteo[k]}x</strong> ${k}</li>`).join('');
-
-          div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span class="mesa">Mesa ${p.mesa}</span>
-              <small style="color:#aaa;">Hora: ${p.hora}</small>
-            </div>
-            <ul>${itemsTxt}</ul>
-            <div style="text-align:right; font-weight:bold; color:#ffe600; margin-bottom:8px;">Total: $${p.total.toLocaleString('es-CL')}</div>
-            <button class="btn-entregar" onclick="entregarPedido(${p.id})">✅ Marcar Entregado en Mesa</button>
-          `;
-          cont.appendChild(div);
-        });
-      } catch (err) {
-        console.error("Error al obtener pedidos.");
+    function descargarQR() {
+      const img = qrDiv.querySelector("img");
+      if (img && img.src) {
+        const enlace = document.createElement("a");
+        enlace.href = img.src;
+        enlace.download = `QR_Turno_Garzon_${localActual}.png`;
+        enlace.click();
+      } else {
+        alert("El QR aún se está generando, intenta de nuevo en un segundo.");
       }
     }
 
-    async function entregarPedido(id) {
-      try {
-        const res = await fetch(`${API_URL}/pedidos/entregar`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, id, rutGarzon: rutActual })
-        });
+    // 2. Lógica de Turno Guardado (localStorage)
+    document.addEventListener("DOMContentLoaded", () => {
+      const rutGuardado = localStorage.getItem("rutGarzon");
 
-        if (res.ok) {
-          cargarPedidos();
-          cargarHistorialGarzon();
-        } else {
-          const data = await res.json();
-          alert(data.error || "Error al entregar pedido.");
+      if (rutGuardado) {
+        mostrarPantallaGarzon(rutGuardado);
+      } else {
+        document.getElementById("pantalla-login").style.display = "block";
+      }
+    });
+
+    function iniciarTurno() {
+      const rut = document.getElementById("rutInput").value.trim();
+      if (!rut) return alert("Por favor ingresa tu RUT");
+
+      localStorage.setItem("rutGarzon", rut);
+      mostrarPantallaGarzon(rut);
+    }
+
+    function cerrarTurno() {
+      if (confirm("¿Seguro que deseas cerrar el turno?")) {
+        localStorage.removeItem("rutGarzon");
+        location.reload();
+      }
+    }
+
+    function mostrarPantallaGarzon(rut) {
+      document.getElementById("pantalla-login").style.display = "none";
+      document.getElementById("pantalla-garzon").style.display = "block";
+      document.getElementById("rutGarzonActivo").innerText = rut;
+      cargarPedidos();
+    }
+
+    // 3. Obtener Pedidos y Entregar con 1 solo clic
+    async function cargarPedidos() {
+      try {
+        const res = await fetch(`/api/pedidos/garzon?local=${localActual}`);
+        const pedidos = await res.json();
+        
+        const contenedor = document.getElementById("lista-pedidos");
+        if (pedidos.length === 0) {
+          contenedor.innerHTML = "<p>No hay pedidos pendientes por entregar 🎉</p>";
+          return;
         }
-      } catch (err) { alert("Error de conexión al entregar pedido."); }
+
+        contenedor.innerHTML = pedidos.map(p => `
+          <div style="border:1px solid #ddd; padding:10px; margin-bottom:10px; border-radius:6px; background:#fff;">
+            <h4>Mesa: ${p.mesa} <small>(${p.hora})</small></h4>
+            <ul>
+              ${p.items.map(i => `<li>${i.nombre} x${i.cantidad || 1}</li>`).join('')}
+            </ul>
+            <p><strong>Total: $${p.total}</strong></p>
+            <button class="btn" onclick="entregarPedido(${p.id})">✅ Entregar a Mesa</button>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error("Error al cargar pedidos:", err);
+      }
     }
 
-    async function cargarHistorialGarzon() {
-      try {
-        const res = await fetch(`${API_URL}/garzon/historial?local=${localId}&rutGarzon=${rutActual}`);
-        const historial = await res.json();
-        document.getElementById('lbl-total-entregas').innerText = historial.length;
-      } catch (err) { console.error("Error al consultar historial."); }
+    async function entregarPedido(idPedido) {
+      const rutGarzon = localStorage.getItem("rutGarzon");
+
+      if (!rutGarzon) {
+        alert("Tu sesión de turno expiró. Por favor vuelve a ingresar tu RUT.");
+        return location.reload();
+      }
+
+      const res = await fetch('/api/pedidos/entregar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          local: localActual,
+          id: idPedido,
+          rutGarzon: rutGarzon
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        cargarPedidos(); // Refrescar la lista en tiempo real
+      } else {
+        alert("Error: " + data.error);
+      }
     }
+
+    // Auto-refrescar la lista de pedidos cada 10 segundos
+    setInterval(() => {
+      if (localStorage.getItem("rutGarzon")) cargarPedidos();
+    }, 10000);
   </script>
 </body>
 </html>
