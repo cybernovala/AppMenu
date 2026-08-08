@@ -3,45 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Garzón - Inicio de Turno</title>
-  <!-- Librería gratuita para generar el código QR -->
+  <title>Panel de Garzón - Control de Entregas</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 16px; background-color: #f4f6f8; }
-    .card { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 16px; }
-    .btn { background: #28a745; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    .btn-danger { background: #dc3545; }
-    .btn-secondary { background: #007bff; }
-    input { padding: 8px; width: 80%; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    body { font-family: Arial, sans-serif; margin: 16px; background-color: #f4f6f8; color: #333; }
+    .card { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 16px; }
+    .btn { background: #28a745; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1rem; }
+    .btn:hover { background: #218838; }
+    .btn-danger { background: #dc3545; width: auto; font-size: 0.85rem; }
+    .btn-secondary { background: #007bff; margin-top: 10px; }
+    input { padding: 10px; width: 100%; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
     #qr-container { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
     #qrcode { margin: 15px 0; }
+    .pedido-card { border-left: 5px solid #28a745; background: #fff; padding: 12px; margin-bottom: 12px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
   </style>
 </head>
 <body>
 
-  <!-- SECCIÓN 1: DESCARGA DE QR PARA LA COCINA/LOCAL -->
+  <!-- DESCARGA DE QR PARA COCINA -->
   <div class="card" id="seccion-qr">
-    <h3>📌 Código QR de Inicio de Turno</h3>
-    <p>Descarga y pega este QR en un lugar visible (cocina o caja) para que los garzones ingresen a su turno escaneándolo con su celular.</p>
+    <h3>📌 QR de Inicio de Turno</h3>
+    <p>Descarga e imprime este código para pegarlo en cocina/barra. Los garzones lo escanearán para iniciar su turno.</p>
     <div id="qr-container">
       <div id="qrcode"></div>
       <button class="btn btn-secondary" onclick="descargarQR()">📥 Descargar QR para Imprimir</button>
     </div>
   </div>
 
-  <!-- SECCIÓN 2: CONTROL DE TURNO DEL GARZÓN -->
-  <div class="card" id="seccion-turno">
+  <!-- CONTROL DE TURNO DE GARZÓN -->
+  <div class="card">
     <div id="pantalla-login" style="display:none;">
-      <h3>🔑 Iniciar Turno de Garzón</h3>
-      <p>Ingresa tu RUT para registrar las entregas de hoy:</p>
+      <h3>🔑 Iniciar Turno</h3>
+      <p>Ingresa tu RUT (solo una vez por turno):</p>
       <input type="text" id="rutInput" placeholder="Ej: 12345678-9">
-      <br>
       <button class="btn" onclick="iniciarTurno()">Iniciar Turno</button>
     </div>
 
     <div id="pantalla-garzon" style="display:none;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <p>🟢 Turno Activo: <strong id="rutGarzonActivo"></strong></p>
+        <span>🟢 Turno Activo: <strong id="rutGarzonActivo"></strong></span>
         <button class="btn btn-danger" onclick="cerrarTurno()">Cerrar Turno</button>
       </div>
       <hr>
@@ -51,18 +51,18 @@
   </div>
 
   <script>
-    // Obtener el local desde la URL (Ej: garzon.html?local=mi_restaurante)
-    const urlParams = new URLSearchParams(window.location.search);
-    const localActual = urlParams.get('local') || 'mi_restaurante';
+    const BACKEND_URL = "https://appmenu-backend.onrender.com";
 
-    // 1. Generar el código QR de acceso directo
-    const urlTurno = window.location.href; // Genera el QR apuntando a esta misma página
+    // Parámetros de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const localActual = urlParams.get('local') || 'demo';
+
+    // 1. Generación de QR de Acceso
     const qrDiv = document.getElementById("qrcode");
-    
     new QRCode(qrDiv, {
-      text: urlTurno,
-      width: 180,
-      height: 180
+      text: window.location.href,
+      width: 160,
+      height: 160
     });
 
     function descargarQR() {
@@ -70,17 +70,16 @@
       if (img && img.src) {
         const enlace = document.createElement("a");
         enlace.href = img.src;
-        enlace.download = `QR_Turno_Garzon_${localActual}.png`;
+        enlace.download = `QR_Turno_${localActual}.png`;
         enlace.click();
       } else {
-        alert("El QR aún se está generando, intenta de nuevo en un segundo.");
+        alert("El QR se está generando, reintenta en un segundo.");
       }
     }
 
-    // 2. Lógica de Turno Guardado (localStorage)
+    // 2. Control de Sesión del Turno
     document.addEventListener("DOMContentLoaded", () => {
       const rutGuardado = localStorage.getItem("rutGarzon");
-
       if (rutGuardado) {
         mostrarPantallaGarzon(rutGuardado);
       } else {
@@ -97,7 +96,7 @@
     }
 
     function cerrarTurno() {
-      if (confirm("¿Seguro que deseas cerrar el turno?")) {
+      if (confirm("¿Cerrar el turno de garzón activo?")) {
         localStorage.removeItem("rutGarzon");
         location.reload();
       }
@@ -110,20 +109,20 @@
       cargarPedidos();
     }
 
-    // 3. Obtener Pedidos y Entregar con 1 solo clic
+    // 3. Consultar y Entregar Pedidos
     async function cargarPedidos() {
       try {
-        const res = await fetch(`/api/pedidos/garzon?local=${localActual}`);
+        const res = await fetch(`${BACKEND_URL}/api/pedidos/garzon?local=${localActual}`);
         const pedidos = await res.json();
         
         const contenedor = document.getElementById("lista-pedidos");
-        if (pedidos.length === 0) {
+        if (!pedidos || pedidos.length === 0) {
           contenedor.innerHTML = "<p>No hay pedidos pendientes por entregar 🎉</p>";
           return;
         }
 
         contenedor.innerHTML = pedidos.map(p => `
-          <div style="border:1px solid #ddd; padding:10px; margin-bottom:10px; border-radius:6px; background:#fff;">
+          <div class="pedido-card">
             <h4>Mesa: ${p.mesa} <small>(${p.hora})</small></h4>
             <ul>
               ${p.items.map(i => `<li>${i.nombre} x${i.cantidad || 1}</li>`).join('')}
@@ -141,32 +140,36 @@
       const rutGarzon = localStorage.getItem("rutGarzon");
 
       if (!rutGarzon) {
-        alert("Tu sesión de turno expiró. Por favor vuelve a ingresar tu RUT.");
+        alert("Tu sesión de turno expiró. Ingresa tu RUT nuevamente.");
         return location.reload();
       }
 
-      const res = await fetch('/api/pedidos/entregar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          local: localActual,
-          id: idPedido,
-          rutGarzon: rutGarzon
-        })
-      });
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos/entregar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            local: localActual,
+            id: idPedido,
+            rutGarzon: rutGarzon
+          })
+        });
 
-      const data = await res.json();
-      if (res.ok) {
-        cargarPedidos(); // Refrescar la lista en tiempo real
-      } else {
-        alert("Error: " + data.error);
+        if (res.ok) {
+          cargarPedidos();
+        } else {
+          const data = await res.json();
+          alert("Error: " + data.error);
+        }
+      } catch (err) {
+        alert("Error al registrar la entrega.");
       }
     }
 
-    // Auto-refrescar la lista de pedidos cada 10 segundos
+    // Refresco automático cada 8 segundos
     setInterval(() => {
       if (localStorage.getItem("rutGarzon")) cargarPedidos();
-    }, 10000);
+    }, 8000);
   </script>
 </body>
 </html>

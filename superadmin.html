@@ -3,542 +3,202 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Super Admin - Control Global</title>
+  <title>Panel SuperAdmin - Gestión de Locales</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; max-width: 800px; margin: 0 auto; }
-    h1 { color: #ffe600; text-align: center; }
-    .card { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    input, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 4px; border: 1px solid #444; box-sizing: border-box; }
-    input { background: #2a2a2a; color: #fff; }
-    button { font-weight: bold; font-size: 15px; cursor: pointer; border: none; }
-    .btn-green { background: #4CAF50; color: white; }
-    .btn-blue { background: #2196F3; color: white; }
-    .btn-orange { background: #ff9800; color: white; }
-    
-    .local-card { background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 12px; border-left: 5px solid #2196F3; }
-    .local-card.vencido { border-left-color: #f44336; }
-    .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
-    .badge-ok { background: rgba(76, 175, 80, 0.2); color: #4CAF50; border: 1px solid #4CAF50; }
-    .badge-off { background: rgba(244, 67, 54, 0.2); color: #f44336; border: 1px solid #f44336; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f8f9fa; color: #333; }
+    h1, h2 { color: #2c3e50; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-weight: bold; margin-bottom: 4px; }
+    input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { background-color: #007bff; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { background-color: #0056b3; }
+    .btn-download { background-color: #28a745; margin-left: 8px; }
+    .btn-download:hover { background-color: #218838; }
+    .btn-renew { background-color: #ffc107; color: #212529; margin-left: 8px; }
+    .btn-renew:hover { background-color: #e0a800; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
+    th { background-color: #e9ecef; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
+    .badge-success { background-color: #d4edda; color: #155724; }
+    .badge-danger { background-color: #f8d7da; color: #721c24; }
   </style>
 </head>
 <body>
 
-  <h1>Panel Super Admin</h1>
+  <h1>🛡️ Panel SuperAdmin - Control de Suscripciones</h1>
 
-  <!-- 1. CLAVE MAESTRA -->
+  <!-- SECCIÓN CLAVE MAESTRA -->
   <div class="card">
-    <label for="clave-maestra">Clave Maestra de Super Admin:</label>
-    <input type="password" id="clave-maestra" value="superadmin123">
-  </div>
-
-  <!-- 2. ALTA DE NUEVO RESTAURANTE -->
-  <div class="card">
-    <h3>🚀 Alta de Nuevo Restaurante</h3>
-    <label for="local-id">RUT o Identificador del Local:</label>
-    <input type="text" id="local-id" placeholder="Ej: 77123456-7 o burger-papas">
-
-    <label for="local-pass">Contraseña del Cliente:</label>
-    <input type="password" id="local-pass" placeholder="Clave para que el cliente edite su menú">
-
-    <button class="btn-green" onclick="generarPaqueteCliente()">Crear y Descargar Acceso Cliente</button>
-  </div>
-
-  <!-- 3. RESPALDOS Y RESTAURACIÓN -->
-  <div class="card">
-    <h3>💾 Copia de Seguridad y Respaldos</h3>
-    <button class="btn-blue" onclick="descargarRespaldo()">📥 Descargar Respaldo JSON</button>
-    <hr style="border-color: #333; margin: 15px 0;">
-    <input type="file" id="archivo-json" accept=".json">
-    <button class="btn-orange" onclick="restaurarServidor()">📤 Restaurar Servidor</button>
-  </div>
-
-  <!-- 4. LISTADO DE LOCALES CONTRATADOS (UBICADO AL FINAL) -->
-  <div class="card">
-    <h3>🏢 Locales Contratados y Estado de Suscripción</h3>
-    <button class="btn-blue" style="margin-bottom: 15px;" onclick="cargarListadoLocales()">🔄 Cargar / Actualizar Lista de Locales</button>
-    <div id="contenedor-locales">
-      <p style="color:#aaa; text-align:center;">Presiona el botón para listar los locales contratados.</p>
+    <h2>1. Autenticación</h2>
+    <div class="form-group">
+      <label for="claveMaestra">Clave Maestra:</label>
+      <input type="password" id="claveMaestra" value="superadmin123" placeholder="Ingresa la clave maestra">
     </div>
+    <button onclick="cargarLocales()">Cargar / Refrescar Lista de Locales</button>
+  </div>
+
+  <!-- SECCIÓN CREAR LOCAL -->
+  <div class="card">
+    <h2>2. Crear Nuevo Restaurante</h2>
+    <div class="form-group">
+      <label for="nuevoLocal">Nombre / ID del Local (sin espacios):</label>
+      <input type="text" id="nuevoLocal" placeholder="Ej: restaurante_don_pepe">
+    </div>
+    <div class="form-group">
+      <label for="passwordCliente">Contraseña para el Administrador del Local:</label>
+      <input type="password" id="passwordCliente" placeholder="Ej: clave1234">
+    </div>
+    <button onclick="crearLocal()">Crear Local y Activar 30 Días</button>
+  </div>
+
+  <!-- LISTA DE LOCALES -->
+  <div class="card">
+    <h2>3. Estado de Locales Registrados</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID Local</th>
+          <th>Fecha Creación</th>
+          <th>Vencimiento</th>
+          <th>Días Restantes</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaLocales">
+        <tr>
+          <td colspan="6" style="text-align:center;">Ingresa la Clave Maestra y presiona "Cargar"</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <script>
-    const API_URL = "https://appmenu-tavr.onrender.com/api";
-    const BASE_URL = "https://cybernovala.github.io/AppMenu";
+    // URL DE TU BACKEND EN RENDER
+    const BACKEND_URL = "https://appmenu-backend.onrender.com"; 
 
-    async function cargarListadoLocales() {
-      const clave = document.getElementById('clave-maestra').value;
+    // URL PÚBLICA DE TU FRONTEND EN GITHUB PAGES
+    const URL_BASE_GITHUB = "https://cybernovala.github.io/AppMenu/index.html";
+
+    async function cargarLocales() {
+      const clave = document.getElementById("claveMaestra").value;
+      if (!clave) return alert("Ingresa la clave maestra");
+
       try {
-        const res = await fetch(`${API_URL}/superadmin/locales?clave=${clave}`);
-        if (!res.ok) return alert("Clave Maestra incorrecta.");
-        const locales = await res.json();
-        
-        const cont = document.getElementById('contenedor-locales');
-        cont.innerHTML = "";
+        const res = await fetch(`${BACKEND_URL}/api/superadmin/locales?clave=${encodeURIComponent(clave)}`);
+        const data = await res.json();
 
-        if (locales.length === 0) {
-          cont.innerHTML = "<p style='color:#aaa; text-align:center;'>No hay locales registrados aún.</p>";
+        if (!res.ok) return alert(data.error || "Error al cargar locales");
+
+        const tbody = document.getElementById("tablaLocales");
+        tbody.innerHTML = "";
+
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No hay restaurantes registrados.</td></tr>`;
           return;
         }
 
-        locales.forEach(loc => {
-          const div = document.createElement('div');
-          div.className = `local-card ${loc.activo ? '' : 'vencido'}`;
-          div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <h4 style="margin:0; font-size:16px;">${loc.id.toUpperCase()}</h4>
-              <span class="badge ${loc.activo ? 'badge-ok' : 'badge-off'}">
-                ${loc.activo ? `${loc.diasRestantes} días restantes` : 'SUSPENDIDO'}
+        data.forEach(local => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><strong>${local.id}</strong></td>
+            <td>${local.fechaCreacion}</td>
+            <td>${local.fechaVencimiento}</td>
+            <td>${local.diasRestantes} días</td>
+            <td>
+              <span class="badge ${local.activo ? 'badge-success' : 'badge-danger'}">
+                ${local.activo ? 'ACTIVO' : 'SUSPENDIDO'}
               </span>
-            </div>
-            <div style="font-size:12px; color:#aaa; margin: 8px 0;">
-              <span>📅 Creado: ${loc.fechaCreacion}</span> | 
-              <span>⏳ Vence: ${loc.fechaVencimiento}</span> | 
-              <span>🍔 Productos: ${loc.totalProductosMenu}</span>
-            </div>
-            <div style="display:flex; gap:8px; margin-top:10px;">
-              <button class="btn-green" style="padding:6px; font-size:12px;" onclick="renovarPago('${loc.id}')">✅ Renovación (+30 días)</button>
-              <a href="${BASE_URL}/index.html?local=${loc.id}&mesa=1" target="_blank" style="color:#2196F3; font-size:12px; text-decoration:none; align-self:center;">🔗 Menú Cliente</a>
-            </div>
+            </td>
+            <td>
+              <button class="btn-renew" onclick="renovarPago('${local.id}')">➕ 30 Días</button>
+              <button class="btn-download" onclick="descargarScriptLocal('${local.id}')">📥 Descargar Script</button>
+            </td>
           `;
-          cont.appendChild(div);
+          tbody.appendChild(tr);
         });
       } catch (err) {
-        alert("Error al cargar locales.");
+        alert("Error de conexión con el servidor de Render");
       }
     }
 
-    async function renovarPago(localKey) {
-      const clave = document.getElementById('clave-maestra').value;
+    async function crearLocal() {
+      const claveSuperAdmin = document.getElementById("claveMaestra").value;
+      const local = document.getElementById("nuevoLocal").value.trim().toLowerCase().replace(/\s+/g, '_');
+      const passwordCliente = document.getElementById("passwordCliente").value;
+
+      if (!local || !passwordCliente) return alert("Completa el nombre y la contraseña del local");
+
       try {
-        const res = await fetch(`${API_URL}/superadmin/renovar-pago`, {
+        const res = await fetch(`${BACKEND_URL}/api/superadmin/crear-local`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ claveSuperAdmin: clave, local: localKey })
+          body: JSON.stringify({ claveSuperAdmin, local, passwordCliente })
         });
+
         const data = await res.json();
         if (res.ok) {
-          alert(`¡Suscripción renovada para ${localKey}! Nueva fecha: ${data.nuevaFecha}`);
-          cargarListadoLocales();
+          alert(`✅ Restaurante creado con éxito. Vence el: ${data.fechaVencimiento}`);
+          document.getElementById("nuevoLocal").value = "";
+          document.getElementById("passwordCliente").value = "";
+          descargarScriptLocal(local); // Descargar acceso directo automáticamente
+          cargarLocales();
+        } else {
+          alert("Error: " + data.error);
         }
-      } catch (err) { alert("Error al renovar."); }
-    }
-
-    async function generarPaqueteCliente() {
-      const claveSuperAdmin = document.getElementById('clave-maestra').value;
-      const idRaw = document.getElementById('local-id').value.trim();
-      const passwordCliente = document.getElementById('local-pass').value.trim();
-
-      if (!idRaw || !passwordCliente) return alert("Ingresa RUT/identificador y contraseña.");
-
-      const localId = idRaw.toLowerCase().replace(/\./g, '').replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
-
-      try {
-        const res = await fetch(`${API_URL}/superadmin/crear-local`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ claveSuperAdmin, local: localId, passwordCliente })
-        });
-        const data = await res.json();
-        if (!res.ok) return alert("Error: " + data.error);
-
-        descargarArchivoAccesoCliente(localId, passwordCliente, data.fechaVencimiento || 'N/A');
-
-        alert(`Restaurante '${localId}' creado con éxito. Descargando acceso...`);
-        cargarListadoLocales();
       } catch (err) {
-        return alert("Error de conexión al servidor.");
+        alert("Error al conectar con el servidor");
       }
     }
 
-    function descargarArchivoAccesoCliente(localId, passwordCliente, fechaVencimiento) {
-      const htmlContent = `<!DOCTYPE html>
+    async function renovarPago(local) {
+      const claveSuperAdmin = document.getElementById("claveMaestra").value;
+      if (!confirm(`¿Confirmas la recepción del pago para renovar 30 días a '${local}'?`)) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/superadmin/renovar-pago`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ claveSuperAdmin, local })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert(`✅ Pago registrado. Nueva fecha de vencimiento: ${data.nuevaFecha}`);
+          cargarLocales();
+        } else {
+          alert("Error: " + data.error);
+        }
+      } catch (err) {
+        alert("Error al procesar la renovación");
+      }
+    }
+
+    // GENERADOR DEL SCRIPT EJECUTABLE DINÁMICO (Sincronizado con GitHub)
+    function descargarScriptLocal(idLocal) {
+      const contenidoHTML = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Control - ${localId.toUpperCase()}</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-  <style>
-    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 15px; max-width: 900px; margin: 0 auto; }
-    h1, h2, h3 { color: #ffe600; text-align: center; margin-top: 5px; }
-    .status-bar { background: #222; padding: 10px; border-radius: 6px; text-align: center; font-size: 14px; color: #aaa; border: 1px solid #333; margin-bottom: 15px; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-    .tab-btn { flex: 1; min-width: 100px; padding: 14px; background: #2a2a2a; color: #fff; border: none; font-weight: bold; font-size: 15px; cursor: pointer; border-radius: 6px; }
-    .tab-btn.active { background: #ffe600; color: #000; }
-    .sec { display: none; }
-    .sec.active { display: block; }
-    .card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
-    input, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #444; box-sizing: border-box; }
-    input { background: #2a2a2a; color: #fff; }
-    button { background: #ffe600; color: #000; font-weight: bold; border: none; cursor: pointer; }
-    .btn-green { background: #4CAF50; color: white; font-size: 16px; padding: 12px; }
-    .btn-blue { background: #2196F3; color: white; }
-    .btn-red { background: #f44336; color: white; width: auto; padding: 5px 10px; }
-    
-    .cocina-card { background: #1a1a1a; border-left: 10px solid #ffe600; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
-    .cocina-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
-    .mesa-badge-lg { background: #ffe600; color: #000; font-size: 26px; font-weight: bold; padding: 5px 15px; border-radius: 6px; }
-    .cocina-items { font-size: 22px; line-height: 1.6; margin: 15px 0; padding-left: 25px; font-weight: bold; color: #fff; }
-    .cocina-total { font-size: 24px; color: #4CAF50; text-align: right; }
-
-    #qr-box { background: #fff; padding: 15px; border-radius: 8px; display: inline-block; margin-top: 10px; }
-    #qr-box img { margin: 0 auto; }
-    
-    .table-historial { width: 100%; border-collapse: collapse; margin-top: 10px; text-align: left; }
-    .table-historial th, .table-historial td { border: 1px solid #333; padding: 10px; }
-    .table-historial th { background: #2a2a2a; color: #ffe600; }
-  </style>
-</head>
-<body>
-
-  <h1>Panel - ${localId.toUpperCase()}</h1>
-
-  <div id="login-sec" class="card">
-    <label>Contraseña de Administración:</label>
-    <input type="password" id="pass-input" value="${passwordCliente}">
-    <button onclick="iniciarSesion()">Ingresar al Panel</button>
-  </div>
-
-  <div id="app-sec" style="display:none;">
-    <div class="status-bar">
-      <span>🔑 Identificador: <strong>${localId.toUpperCase()}</strong></span> | 
-      <span>📅 Servicio Activo Hasta: <strong style="color:#4CAF50;">${fechaVencimiento}</strong></span>
-    </div>
-
-    <div class="tabs">
-      <button class="tab-btn active" onclick="verTab('cocina')">🍳 Cocina</button>
-      <button class="tab-btn" onclick="verTab('garzon')">🤵 Garzón</button>
-      <button class="tab-btn" onclick="verTab('beneficios')">🏆 Beneficios</button>
-      <button class="tab-btn" onclick="verTab('qr')">📱 Generar QR</button>
-      <button class="tab-btn" onclick="verTab('menu')">🍔 Editar Menú</button>
-    </div>
-
-    <!-- 1. VISTA DE COCINA -->
-    <div id="tab-cocina" class="sec active">
-      <h2>🍳 Comandas de Cocina</h2>
-      <div id="lista-pedidos-cocina">Cargando pedidos...</div>
-    </div>
-
-    <!-- 2. VISTA DE GARZÓN -->
-    <div id="tab-garzon" class="sec">
-      <h2>🤵 Pedidos Activos para Entrega</h2>
-      <div id="lista-pedidos-garzon">Cargando comandas...</div>
-    </div>
-
-    <!-- 3. HISTORIAL Y BENEFICIOS DE GARZONES -->
-    <div id="tab-beneficios" class="sec">
-      <h2>🏆 Historial de Entregas y Beneficios de Garzones</h2>
-      <div class="card">
-        <button class="btn-blue" onclick="cargarHistorialGarzones()">🔄 Actualizar Historial de Entregas</button>
-        <div id="tabla-beneficios-container" style="margin-top:15px;"></div>
-      </div>
-    </div>
-
-    <!-- 4. GENERADOR DE QR -->
-    <div id="tab-qr" class="sec">
-      <h2>📱 Generador de QR para Mesas</h2>
-      <div class="card" style="text-align: center;">
-        <label>Número de Mesa:</label>
-        <input type="number" id="num-mesa" value="1" min="1" style="text-align: center; font-size: 20px;" onchange="generarQR()">
-        <button class="btn-blue" onclick="generarQR()">Generar Código QR</button>
-        <div style="margin-top: 15px;">
-          <div id="qr-box"></div>
-          <p id="qr-link-txt" style="font-size: 13px; color: #aaa; margin-top: 10px; word-break: break-all;"></p>
-          <button class="btn-green" style="max-width:300px; margin-top:10px;" onclick="descargarQR()">📥 Descargar QR en Imagen</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5. EDICIÓN DE MENÚ -->
-    <div id="tab-menu" class="sec">
-      <h2>🍔 Editor de Categorías y Productos</h2>
-      <div class="card">
-        <h3>+ Nueva Categoría</h3>
-        <input type="text" id="nueva-cat" placeholder="Ej: Hamburguesas, Bebidas...">
-        <button onclick="agregarCategoria()">Agregar Categoría</button>
-      </div>
-      <div id="editor-menu"></div>
-      <button class="btn-green" style="margin-top:15px; padding:15px;" onclick="guardarMenu()">💾 Guardar Menú en Servidor</button>
-    </div>
-  </div>
-
+  <meta http-equiv="refresh" content="0; url=${URL_BASE_GITHUB}?local=${idLocal}">
+  <title>Cargando Restaurante...</title>
   <script>
-    const API_URL = "${API_URL}";
-    const BASE_URL = "${BASE_URL}";
-    const LOCAL_ID = "${localId}";
-    let menuData = [];
-
-    function iniciarSesion() {
-      document.getElementById('login-sec').style.display = 'none';
-      document.getElementById('app-sec').style.display = 'block';
-      cargarCocina();
-      cargarGarzon();
-      cargarMenu();
-      generarQR();
-      setInterval(() => { cargarCocina(); cargarGarzon(); }, 4000);
-    }
-
-    function verTab(tabName) {
-      const tabs = ['cocina', 'garzon', 'beneficios', 'qr', 'menu'];
-      tabs.forEach((t, i) => {
-        const btn = document.querySelectorAll('.tab-btn')[i];
-        const sec = document.getElementById('tab-' + t);
-        if (t === tabName) {
-          btn.classList.add('active');
-          sec.classList.add('active');
-        } else {
-          btn.classList.remove('active');
-          sec.classList.remove('active');
-        }
-      });
-      if(tabName === 'qr') generarQR();
-      if(tabName === 'beneficios') cargarHistorialGarzones();
-    }
-
-    async function cargarCocina() {
-      try {
-        const res = await fetch(API_URL + '/pedidos?local=' + LOCAL_ID);
-        const pedidos = await res.json();
-        const cont = document.getElementById('lista-pedidos-cocina');
-        if (!Array.isArray(pedidos) || pedidos.length === 0) {
-          cont.innerHTML = '<p style="text-align:center; color:#888; font-size: 18px;">No hay pedidos pendientes en cocina.</p>';
-          return;
-        }
-        cont.innerHTML = pedidos.map(p => {
-          const items = p.items.map(i => '<li>' + i.nombre + '</li>').join('');
-          return '<div class="cocina-card">' +
-            '<div class="cocina-header">' +
-              '<span class="mesa-badge-lg">Mesa ' + p.mesa + '</span>' +
-              '<span style="color:#aaa; font-size: 18px;">⏰ ' + (p.hora || '') + '</span>' +
-            '</div>' +
-            '<ul class="cocina-items">' + items + '</ul>' +
-            '<div class="cocina-total"><strong>Total: $' + (p.total || 0).toLocaleString('es-CL') + '</strong></div>' +
-          '</div>';
-        }).join('');
-      } catch(e) {}
-    }
-
-    async function cargarGarzon() {
-      try {
-        const res = await fetch(API_URL + '/pedidos?local=' + LOCAL_ID);
-        const pedidos = await res.json();
-        const cont = document.getElementById('lista-pedidos-garzon');
-        if (!Array.isArray(pedidos) || pedidos.length === 0) {
-          cont.innerHTML = '<p style="text-align:center; color:#888; font-size: 18px;">Sin comandas pendientes por entregar.</p>';
-          return;
-        }
-        cont.innerHTML = pedidos.map(p => {
-          const items = p.items.map(i => '<li>' + i.nombre + '</li>').join('');
-          return '<div class="card" id="pedido-card-' + p.id + '">' +
-            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-              '<span class="mesa-badge-lg" style="font-size:20px;">Mesa ' + p.mesa + '</span>' +
-              '<small style="color:#aaa; font-size:16px;">' + (p.hora || '') + '</small>' +
-            '</div>' +
-            '<ul style="margin:15px 0; padding-left:25px; font-size:18px;">' + items + '</ul>' +
-            '<div style="margin-top:10px;">' +
-              '<label style="font-size:13px; color:#ffe600;">RUT del Garzón para entregar:</label>' +
-              '<input type="text" id="rut-garzon-' + p.id + '" placeholder="Ej: 18234567-8" style="margin-bottom:8px;">' +
-              '<button class="btn-green" onclick="entregarYBorrarOrden(' + p.id + ')">✅ Marcar Entregado (Borrar de Cocina)</button>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      } catch(e) {}
-    }
-
-    async function entregarYBorrarOrden(id) {
-      const rutInput = document.getElementById('rut-garzon-' + id);
-      const rutGarzon = rutInput ? rutInput.value.trim() : "";
-      if (!rutGarzon) return alert("Por favor ingresa el RUT del garzón antes de entregar.");
-
-      try {
-        const res = await fetch(API_URL + '/pedidos/entregar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: LOCAL_ID, id: id, rutGarzon: rutGarzon })
-        });
-        
-        // Guardar registro en almacenamiento local para historial acumulativo de beneficios
-        guardarHistorialLocal(rutGarzon, id);
-
-        // Remueve la orden visualmente al instante
-        const el = document.getElementById('pedido-card-' + id);
-        if (el) el.remove();
-
-        cargarCocina();
-        cargarGarzon();
-      } catch(e) {
-        alert("Error al procesar la entrega.");
-      }
-    }
-
-    function guardarHistorialLocal(rut, pedidoId) {
-      const key = 'historial_garzones_' + LOCAL_ID;
-      let data = JSON.parse(localStorage.getItem(key) || '[]');
-      data.push({ rut: rut, pedidoId: pedidoId, fecha: new Date().toLocaleString('es-CL') });
-      localStorage.setItem(key, JSON.stringify(data));
-    }
-
-    function cargarHistorialGarzones() {
-      const key = 'historial_garzones_' + LOCAL_ID;
-      const data = JSON.parse(localStorage.getItem(key) || '[]');
-      const cont = document.getElementById('tabla-beneficios-container');
-
-      if (data.length === 0) {
-        cont.innerHTML = '<p style="color:#aaa; text-align:center;">No hay historial registrado aún.</p>';
-        return;
-      }
-
-      // Agrupar entregas por RUT
-      const contex = {};
-      data.forEach(item => {
-        contex[item.rut] = (contex[item.rut] || 0) + 1;
-      });
-
-      let rows = '';
-      for (const [rut, cantidad] of Object.entries(contex)) {
-        rows += '<tr>' +
-          '<td>' + rut + '</td>' +
-          '<td><strong>' + cantidad + ' comandas</strong></td>' +
-          '<td><span style="color:#4CAF50; font-weight:bold;">$' + (cantidad * 500).toLocaleString('es-CL') + '</span> (Comisión sugerida)</td>' +
-        '</tr>';
-      }
-
-      cont.innerHTML = '<table class="table-historial">' +
-        '<thead><tr><th>RUT Garzón</th><th>Órdenes Entregadas</th><th>Beneficio / Comisión</th></tr></thead>' +
-        '<tbody>' + rows + '</tbody>' +
-      '</table>';
-    }
-
-    function generarQR() {
-      const mesa = document.getElementById('num-mesa').value || 1;
-      const urlFinal = BASE_URL + '/index.html?local=' + LOCAL_ID + '&mesa=' + mesa;
-      const box = document.getElementById('qr-box');
-      box.innerHTML = "";
-      if (typeof QRCode !== 'undefined') {
-        new QRCode(box, { text: urlFinal, width: 220, height: 220 });
-      } else {
-        box.innerHTML = '<p style="color:red;">Cargando librería QR...</p>';
-      }
-      document.getElementById('qr-link-txt').innerText = urlFinal;
-    }
-
-    function descargarQR() {
-      const img = document.querySelector('#qr-box img');
-      const canvas = document.querySelector('#qr-box canvas');
-      const mesa = document.getElementById('num-mesa').value || 1;
-      let url = "";
-      
-      if (img && img.src) url = img.src;
-      else if (canvas) url = canvas.toDataURL("image/png");
-
-      if (!url) return alert("Primero genera un código QR.");
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'QR_Mesa_' + mesa + '_' + LOCAL_ID + '.png';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    async function cargarMenu() {
-      try {
-        const res = await fetch(API_URL + '/menu?local=' + LOCAL_ID);
-        menuData = await res.json();
-        renderMenu();
-      } catch(e) {}
-    }
-
-    function renderMenu() {
-      const cont = document.getElementById('editor-menu');
-      if(!Array.isArray(menuData)) menuData = [];
-      cont.innerHTML = menuData.map((cat, cIdx) => {
-        const prods = (cat.productos || []).map((prod, pIdx) => 
-          '<div style="display:flex; gap:5px; margin-bottom:5px;">' +
-            '<input type="text" value="' + prod.nombre + '" onchange="menuData['+cIdx+'].productos['+pIdx+'].nombre=this.value">' +
-            '<input type="number" value="' + prod.precio + '" style="width:100px;" onchange="menuData['+cIdx+'].productos['+pIdx+'].precio=Number(this.value)">' +
-            '<button class="btn-red" onclick="eliminarProd('+cIdx+','+pIdx+')">X</button>' +
-          '</div>'
-        ).join('');
-
-        return '<div class="card">' +
-          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-            '<h3>' + cat.categoria + '</h3>' +
-            '<button class="btn-red" onclick="eliminarCat('+cIdx+')">Eliminar Categoría</button>' +
-          '</div>' +
-          '<div style="margin:10px 0;">' + prods + '</div>' +
-          '<button onclick="agregarProd('+cIdx+')">+ Agregar Producto</button>' +
-        '</div>';
-      }).join('');
-    }
-
-    function agregarCategoria() {
-      const val = document.getElementById('nueva-cat').value.trim();
-      if(!val) return;
-      menuData.push({ categoria: val, productos: [] });
-      document.getElementById('nueva-cat').value = '';
-      renderMenu();
-    }
-
-    function agregarProd(cIdx) {
-      if(!menuData[cIdx].productos) menuData[cIdx].productos = [];
-      menuData[cIdx].productos.push({ nombre: 'Nuevo Producto', precio: 1000 });
-      renderMenu();
-    }
-
-    function eliminarCat(cIdx) { menuData.splice(cIdx, 1); renderMenu(); }
-    function eliminarProd(cIdx, pIdx) { menuData[cIdx].productos.splice(pIdx, 1); renderMenu(); }
-
-    async function guardarMenu() {
-      const pass = document.getElementById('pass-input').value;
-      const res = await fetch(API_URL + '/menu', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ local: LOCAL_ID, password: pass, menu: menuData })
-      });
-      if(res.ok) alert('¡Menú guardado correctamente en el servidor!');
-      else alert('Error al guardar el menú. Revisa la contraseña.');
-    }
+    window.location.href = "${URL_BASE_GITHUB}?local=${idLocal}";
   <\/script>
+</head>
+<body style="font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #f4f6f8;">
+  <h2>Cargando la aplicación del restaurante...</h2>
+  <p>Si no redirige automáticamente en unos segundos, <a href="${URL_BASE_GITHUB}?local=${idLocal}">haz clic aquí</a>.</p>
 </body>
 </html>`;
 
-      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `admin_${localId}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    async function descargarRespaldo() {
-      const clave = document.getElementById('clave-maestra').value;
-      const res = await fetch(`${API_URL}/superadmin/backup?clave=${clave}`);
-      const data = await res.json();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-      a.download = `Respaldo_Menu.json`;
-      a.click();
-    }
-
-    async function restaurarServidor() {
-      const clave = document.getElementById('clave-maestra').value;
-      const file = document.getElementById('archivo-json').files[0];
-      if (!file) return alert("Selecciona un archivo JSON.");
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        await fetch(`${API_URL}/superadmin/restore`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clave, backupData: JSON.parse(e.target.result) })
-        });
-        alert("¡Base de datos restaurada!");
-        cargarListadoLocales();
-      };
-      reader.readAsText(file);
+      const blob = new Blob([contenidoHTML], { type: 'text/html' });
+      const enlace = document.createElement('a');
+      enlace.href = URL.createObjectURL(blob);
+      enlace.download = `index_${idLocal}.html`;
+      enlace.click();
     }
   </script>
 </body>
