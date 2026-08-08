@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - Generador de Locales</title>
+  <title>SuperAdmin - Gestión de Restoranes</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -15,7 +15,7 @@
       --text-muted: #a0a0b0;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
     body {
       background-color: var(--bg-dark);
@@ -23,19 +23,25 @@
       padding: 20px;
     }
 
-    .container { max-width: 600px; margin: 0 auto; }
+    .container { max-width: 700px; margin: 0 auto; }
 
     .card {
       background: var(--card-bg);
-      border: 1px solid var(--neon-orange);
+      border: 1px solid rgba(255, 85, 0, 0.3);
       border-radius: 12px;
       padding: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
     }
 
-    h1 { font-size: 20px; color: var(--neon-yellow); margin-bottom: 15px; text-transform: uppercase; }
+    h1, h2 {
+      font-size: 18px;
+      color: var(--neon-yellow);
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-    label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
+    label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
     input {
       width: 100%; padding: 12px; background: #14141a; border: 1px solid #333;
       color: #fff; border-radius: 6px; font-size: 15px; margin-bottom: 15px;
@@ -43,67 +49,239 @@
 
     button {
       background: var(--grad-neon); border: none; color: #000;
-      padding: 14px; font-weight: bold; width: 100%; border-radius: 6px; cursor: pointer; font-size: 15px;
+      padding: 12px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px;
+      transition: opacity 0.2s;
     }
+    button:hover { opacity: 0.9; }
+
+    .btn-block { width: 100%; font-size: 15px; padding: 14px; }
 
     .result-box {
       display: none; background: #121218; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-top: 15px;
     }
 
     .link-item { margin-bottom: 12px; word-break: break-all; }
-    .link-item span { color: var(--neon-yellow); font-size: 12px; display: block; }
+    .link-item span { color: var(--neon-yellow); font-size: 12px; display: block; font-weight: bold; }
     .link-item a { color: #fff; text-decoration: underline; font-size: 13px; }
+
+    .local-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #14141a;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border-left: 3px solid var(--neon-orange);
+    }
+
+    .btn-download {
+      background: #222;
+      color: var(--neon-yellow);
+      border: 1px solid var(--neon-yellow);
+      font-size: 12px;
+      padding: 8px 12px;
+    }
+    .btn-download:hover {
+      background: var(--neon-yellow);
+      color: #000;
+    }
   </style>
 </head>
 <body>
 
   <div class="container">
+    
+    <!-- CREAR NUEVO LOCAL -->
     <div class="card">
-      <h1>⚡ SuperAdmin: Crear Cliente</h1>
+      <h1>⚡ Crear Nuevo Restoran / Local</h1>
       
-      <label>Nombre del Nuevo Local / Cliente</label>
-      <input type="text" id="nombre-local" placeholder="Ej: sushi-valpo o bar-central">
+      <label>Nombre del Restoran / Cliente</label>
+      <input type="text" id="nombre-local" placeholder="Ej: Sushi Valpo, Bar Central, Don Pepe">
 
-      <button onclick="generarEnlaces()">🚀 Registrar Local y Generar Enlaces</button>
+      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Crear Restoran y Generar Script</button>
 
       <div id="resultado" class="result-box">
-        <h3 style="color:var(--neon-orange); margin-bottom:10px;">Enlaces Creados para el Cliente:</h3>
+        <h3 style="color:var(--neon-orange); margin-bottom:12px;">✅ Restoran Registrado Exitosamente</h3>
         
         <div class="link-item">
-          <span>1. Panel de Administración del Cliente (Entrega este link):</span>
+          <span>Panel Admin Principal del Cliente:</span>
           <a id="link-admin" target="_blank"></a>
         </div>
 
         <div class="link-item">
-          <span>2. Carta Pública (QR de Mesas):</span>
+          <span>URL Carta Pública (Mesa 1):</span>
           <a id="link-cliente" target="_blank"></a>
         </div>
+
+        <button class="btn-block" style="margin-top: 10px; background: #00e676; color: #000;" onclick="descargarScriptActual()">
+          📥 Descargar Script Único (.txt)
+        </button>
       </div>
     </div>
+
+    <!-- LISTA DE LOCALES REGISTRADOS -->
+    <div class="card">
+      <h2>📜 Locales Creados en el Sistema</h2>
+      <div id="lista-locales">Cargando restoranes...</div>
+    </div>
+
   </div>
 
   <script>
-    function generarEnlaces() {
-      const input = document.getElementById('nombre-local').value.trim();
-      if (!input) {
-        alert('Ingresa el nombre del local.');
+    const API_URL = "https://appmenu-tavr.onrender.com/api";
+    let ultimoLocalCreado = null;
+
+    // Cargar la lista de locales creados al iniciar la página
+    document.addEventListener("DOMContentLoaded", () => {
+      cargarLocales();
+    });
+
+    // Formatea nombres a identificadores limpios (ej: "Bar Don Pepe" -> "bar-don-pepe")
+    function formatearIdLocal(texto) {
+      return texto.toLowerCase().trim().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    }
+
+    async function registrarNuevoLocal() {
+      const inputNombre = document.getElementById('nombre-local').value;
+      if (!inputNombre.trim()) {
+        alert('Por favor ingresa el nombre del restoran.');
         return;
       }
 
-      // Limpia el texto para crearlo como ID (ejemplo: "Bar Central" -> "bar-central")
-      const localId = input.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const localId = formatearIdLocal(inputNombre);
       const baseUrl = window.location.origin;
 
-      const urlAdmin = `${baseUrl}/admin.html?local=${localId}`;
-      const urlCliente = `${baseUrl}/index.html?local=${localId}&mesa=1`;
+      // Registrar una categoría base o inicial en el backend para dar de alta el local
+      try {
+        await fetch(`${API_URL}/menu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            local: localId,
+            categoria: 'Bebidas',
+            nombre: 'Agua Mineral',
+            precio: 1500
+          })
+        });
 
-      document.getElementById('link-admin').href = urlAdmin;
-      document.getElementById('link-admin').innerText = urlAdmin;
+        ultimoLocalCreado = {
+          nombre: inputNombre.trim(),
+          id: localId
+        };
 
-      document.getElementById('link-cliente').href = urlCliente;
-      document.getElementById('link-cliente').innerText = urlCliente;
+        const urlAdmin = `${baseUrl}/admin.html?local=${localId}`;
+        const urlCliente = `${baseUrl}/index.html?local=${localId}&mesa=1`;
 
-      document.getElementById('resultado').style.display = 'block';
+        document.getElementById('link-admin').href = urlAdmin;
+        document.getElementById('link-admin').innerText = urlAdmin;
+
+        document.getElementById('link-cliente').href = urlCliente;
+        document.getElementById('link-cliente').innerText = urlCliente;
+
+        document.getElementById('resultado').style.display = 'block';
+        document.getElementById('nombre-local').value = '';
+
+        // Recargar la lista de la base de datos
+        cargarLocales();
+
+      } catch (err) {
+        alert('Error al registrar el local en el servidor.');
+      }
+    }
+
+    async function cargarLocales() {
+      const contenedor = document.getElementById('lista-locales');
+      try {
+        const res = await fetch(`${API_URL}/locales`);
+        let locales = [];
+        
+        if (res.ok) {
+          locales = await res.json();
+        }
+
+        if (!locales || locales.length === 0) {
+          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay restoranes registrados aún.</p>`;
+          return;
+        }
+
+        contenedor.innerHTML = locales.map(loc => {
+          const localId = typeof loc === 'string' ? loc : loc.id || loc.local;
+          const nombreMostrar = localId.replace(/-/g, ' ').toUpperCase();
+
+          return `
+            <div class="local-row">
+              <div>
+                <strong>${nombreMostrar}</strong>
+                <div style="font-size:11px; color:var(--text-muted)">ID: ${localId}</div>
+              </div>
+              <button class="btn-download" onclick="generarYDescargarTXT('${nombreMostrar}', '${localId}')">
+                📥 Descargar Script
+              </button>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        contenedor.innerHTML = `<p style="color:var(--text-muted)">No se pudo obtener la lista de locales o el servidor no soporta /api/locales aún.</p>`;
+      }
+    }
+
+    function descargarScriptActual() {
+      if (ultimoLocalCreado) {
+        generarYDescargarTXT(ultimoLocalCreado.nombre, ultimoLocalCreado.id);
+      }
+    }
+
+    function generarYDescargarTXT(nombreLocal, localId) {
+      const baseUrl = window.location.origin;
+
+      const textoScript = `=====================================================
+FICHA Y SCRIPT DE CONFIGURACIÓN DE RESTORAN
+=====================================================
+NOMBRE RESTORAN : ${nombreLocal}
+ID SISTEMA      : ${localId}
+FECHA REGISTRO  : ${new Date().toLocaleDateString('es-CL')}
+
+-----------------------------------------------------
+1. PANEL DE ADMINISTRACIÓN Y CONTROL (ENTREGAR AL CLIENTE)
+-----------------------------------------------------
+Acceso completo para agregar menú, ver ventas, cocina y garzón:
+${baseUrl}/admin.html?local=${localId}
+
+-----------------------------------------------------
+2. PANTALLAS DE TRABAJO INDEPENDIENTES
+-----------------------------------------------------
+• Pantalla Cocina (Tablet/Monitor Cocina):
+  ${baseUrl}/cocina.html?local=${localId}
+
+• Pantalla Garzón (Teléfono Garzones):
+  ${baseUrl}/garzon.html?local=${localId}
+
+-----------------------------------------------------
+3. CARTA PÚBLICA PARA CLIENTES (CÓDIGOS QR)
+-----------------------------------------------------
+Enlace genérico para la Mesa 1 (Cambiar &mesa=X para cada mesa):
+${baseUrl}/index.html?local=${localId}&mesa=1
+
+Estructura de URLs para tus Mesas:
+Mesa 1: ${baseUrl}/index.html?local=${localId}&mesa=1
+Mesa 2: ${baseUrl}/index.html?local=${localId}&mesa=2
+Mesa 3: ${baseUrl}/index.html?local=${localId}&mesa=3
+Mesa 4: ${baseUrl}/index.html?local=${localId}&mesa=4
+Mesa 5: ${baseUrl}/index.html?local=${localId}&mesa=5
+
+=====================================================
+Guardar este archivo como respaldo de entrega.
+=====================================================`;
+
+      const blob = new Blob([textoScript], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Script_${localId}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   </script>
 </body>
