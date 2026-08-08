@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Control - Restaurante</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Librerías para generación de QR y PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     :root {
       --bg-color: #080b10;
@@ -14,6 +19,7 @@
       --neon-orange: #ff9900;
       --neon-purple: #7000ff;
       --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
       --border-color: rgba(0, 240, 255, 0.2);
     }
 
@@ -32,20 +38,21 @@
       border-bottom: 2px solid var(--neon-blue);
       display: flex;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
       padding: 10px;
       position: sticky;
       top: 0;
       z-index: 100;
+      flex-wrap: wrap;
     }
 
     .tab-btn {
       font-family: 'Orbitron', sans-serif;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       background: transparent;
       color: var(--text-main);
       border: 1px solid var(--border-color);
-      padding: 10px 18px;
+      padding: 8px 14px;
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -80,10 +87,102 @@
 
     iframe {
       width: 100%;
-      height: 75vh;
+      height: 78vh;
       border: none;
       border-radius: 8px;
+      background: #080b10;
     }
+
+    /* ESTILOS PANEL GENERADOR DE QR */
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .qr-card {
+      background: rgba(8, 11, 16, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .qr-card h3 {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--neon-blue);
+      font-size: 1rem;
+      margin-bottom: 15px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    input {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px;
+      color: #fff;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .btn-action {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      font-weight: bold;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.3s ease;
+      width: 100%;
+    }
+
+    .btn-blue { background: var(--neon-blue); color: #000; }
+    .btn-green { background: var(--neon-green); color: #000; }
+    .btn-purple { background: var(--neon-purple); color: #fff; }
+
+    .btn-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+    }
+
+    #qr-preview {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      background: #fff;
+      border-radius: 8px;
+      margin-top: 15px;
+      min-height: 220px;
+    }
+
+    #qr-preview p {
+      color: #000;
+      font-weight: 900;
+      font-family: 'Orbitron', sans-serif;
+      margin-top: 10px;
+      font-size: 1.1rem;
+    }
+
+    #qrcode-hidden { display: none; }
   </style>
 </head>
 <body>
@@ -94,6 +193,7 @@
     <button class="tab-btn" onclick="cambiarPestana('cocina', this)">👨‍🍳 Cocina</button>
     <button class="tab-btn" onclick="cambiarPestana('garzon', this)">🤵 Garzón</button>
     <button class="tab-btn" onclick="cambiarPestana('historial', this)">📜 Historial</button>
+    <button class="tab-btn" onclick="cambiarPestana('qr', this)">📱 Menú & Códigos QR</button>
   </nav>
 
   <div class="container">
@@ -120,31 +220,230 @@
 
     <!-- PESTAÑA 4: HISTORIAL -->
     <div id="tab-historial" class="tab-content">
-      <h2>📜 Historial de Ventas</h2>
+      <h2>📜 Historial de Ventas y Pedidos</h2>
       <hr style="border-color: var(--border-color); margin: 15px 0;">
       <iframe id="frame-historial"></iframe>
     </div>
+
+    <!-- PESTAÑA 5: MENÚ CLIENTE & DENEGADOR DE CÓDIGOS QR -->
+    <div id="tab-qr" class="tab-content">
+      <h2>📱 Menú Digital y Generador de Códigos QR para Mesas</h2>
+      <hr style="border-color: var(--border-color); margin: 15px 0;">
+
+      <div class="qr-grid">
+        <!-- SECCIÓN ENLACE DIRECTO -->
+        <div class="qr-card">
+          <h3>🔗 URL Menú del Cliente</h3>
+          <div class="form-group">
+            <label>Enlace Público:</label>
+            <input type="text" id="url-menu-input" readonly>
+          </div>
+          <button class="btn-action btn-blue" onclick="copiarUrlMenu()">📋 Copiar Link del Menú</button>
+          <button class="btn-action btn-purple" style="margin-top: 10px;" onclick="abrirMenuCliente()">🌐 Ver Carta Digital</button>
+        </div>
+
+        <!-- SECCIÓN GENERAR QR INDIVIDUAL -->
+        <div class="qr-card">
+          <h3>🖼️ QR Individual por Mesa</h3>
+          <div class="form-group">
+            <label>Número de Mesa:</label>
+            <input type="number" id="num-mesa-ind" value="1" min="1">
+          </div>
+          <button class="btn-action btn-green" onclick="generarQRIndividual()">⚡ Generar Vista Previa</button>
+          
+          <div id="qr-preview">
+            <div id="qr-canvas"></div>
+            <p id="qr-label-preview">MESA 1</p>
+          </div>
+          <button class="btn-action btn-blue" style="margin-top: 10px;" onclick="descargarQRImagen()">📥 Descargar Imagen PNG</button>
+        </div>
+
+        <!-- SECCIÓN GENERAR PDF POR RANGO -->
+        <div class="qr-card">
+          <h3>📄 Generar PDF por Rango (5x5 cm)</h3>
+          <div class="form-group">
+            <label>Desde la Mesa N°:</label>
+            <input type="number" id="mesa-desde" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label>Hasta la Mesa N°:</label>
+            <input type="number" id="mesa-hasta" value="13" min="1">
+          </div>
+          <button class="btn-action btn-green" onclick="generarPDFRangos()">📄 Descargar PDF Imprimible</button>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+            * Genera tarjetas listas para cortar de 5 x 5 cm con el logo/QR y la leyenda "Mesa X".
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- Contenedor oculto para renderizado técnico de QR -->
+  <div id="qrcode-hidden"></div>
 
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const localActual = urlParams.get('local') || localStorage.getItem('localId') || 'demo';
     const BASE_URL = "https://cybernovala.github.io/AppMenu";
+    const URL_CLIENTE = `${BASE_URL}/index.html?local=${localActual}`;
 
-    // Cargar los módulos correspondientes en cada iframe manteniendo el parámetro ?local=
-    document.getElementById('frame-admin').src = `${BASE_URL}/index.html?local=${localActual}`;
+    // Cargar URL en los marcos e input
+    document.getElementById('frame-admin').src = `${BASE_URL}/index.html?local=${localActual}&view=admin`;
     document.getElementById('frame-cocina').src = `${BASE_URL}/cocina.html?local=${localActual}`;
     document.getElementById('frame-garzon').src = `${BASE_URL}/garzon.html?local=${localActual}`;
-    document.getElementById('frame-historial').src = `${BASE_URL}/historial.html?local=${localActual}`;
+    document.getElementById('frame-historial').src = `${BASE_URL}/index.html?local=${localActual}&view=historial#historial`;
+    document.getElementById('url-menu-input').value = URL_CLIENTE;
 
+    // Cambiar de pestaña
     function cambiarPestana(nombrePestana, boton) {
-      // Ocultar todas las pestañas
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
 
-      // Mostrar pestaña activa
       document.getElementById(`tab-${nombrePestana}`).classList.add('active');
       boton.classList.add('active');
+
+      if (nombrePestana === 'qr') {
+        generarQRIndividual();
+      }
+    }
+
+    function copiarUrlMenu() {
+      const input = document.getElementById('url-menu-input');
+      input.select();
+      document.execCommand('copy');
+      alert('✅ Enlace copiado al portapapeles');
+    }
+
+    function abrirMenuCliente() {
+      window.open(URL_CLIENTE, '_blank');
+    }
+
+    // GENERADOR QR INDIVIDUAL
+    let qrObj = null;
+    function generarQRIndividual() {
+      const mesa = document.getElementById('num-mesa-ind').value || '1';
+      const urlFinal = `${URL_CLIENTE}&mesa=${mesa}`;
+      const qrDiv = document.getElementById('qr-canvas');
+      
+      qrDiv.innerHTML = "";
+      document.getElementById('qr-label-preview').innerText = `MESA ${mesa}`;
+
+      qrObj = new QRCode(qrDiv, {
+        text: urlFinal,
+        width: 150,
+        height: 150,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function descargarQRImagen() {
+      const mesa = document.getElementById('num-mesa-ind').value || '1';
+      const img = document.querySelector('#qr-canvas img');
+      if (!img) return alert("Genera primero la vista previa del QR");
+
+      // Crear canvas con leyenda Mesa
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 300;
+      canvas.height = 360;
+
+      // Fondo blanco
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Dibujar QR
+      ctx.drawImage(img, 25, 20, 250, 250);
+
+      // Dibujar Texto
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`MESA ${mesa}`, canvas.width / 2, 320);
+
+      // Descargar PNG
+      const enlace = document.createElement('a');
+      enlace.download = `QR_Mesa_${mesa}_${localActual}.png`;
+      enlace.href = canvas.toDataURL('image/png');
+      enlace.click();
+    }
+
+    // GENERADOR DE RANGOS EN PDF (MIRA CADA MESA COMO 5x5 CM)
+    async function generarPDFRangos() {
+      const desde = parseInt(document.getElementById('mesa-desde').value);
+      const hasta = parseInt(document.getElementById('mesa-hasta').value);
+
+      if (isNaN(desde) || isNaN(hasta) || desde > hasta) {
+        return alert("Ingresa un rango válido de mesas.");
+      }
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit: 'cm', format: 'a4' }); // Hoja A4 en centímetros
+
+      // Parámetros de diseño (A4 = 21 x 29.7 cm)
+      const tarjetaAncho = 5;
+      const tarjetaAlto = 6; // 5 cm de QR + 1 cm de Leyenda
+      const margenX = 1;
+      const margenY = 1;
+      const columnas = 3;
+      const filas = 4;
+
+      let colActual = 0;
+      let filaActual = 0;
+
+      const tempDiv = document.getElementById('qrcode-hidden');
+
+      for (let i = desde; i <= hasta; i++) {
+        tempDiv.innerHTML = "";
+        const urlMesa = `${URL_CLIENTE}&mesa=${i}`;
+
+        // Generar QR temporal
+        new QRCode(tempDiv, {
+          text: urlMesa,
+          width: 200,
+          height: 200,
+          colorDark: "#000000",
+          colorLight: "#ffffff"
+        });
+
+        // Esperar a que renderice la imagen
+        await new Promise(r => setTimeout(r, 100));
+        const imgQr = tempDiv.querySelector('img').src;
+
+        // Posición actual en la hoja
+        const x = margenX + (colActual * (tarjetaAncho + 1.5));
+        const y = margenY + (filaActual * (tarjetaAlto + 0.8));
+
+        // Dibujar borde guía punteado para corte
+        pdf.setLineWidth(0.02);
+        pdf.setDrawColor(180, 180, 180);
+        pdf.rect(x, y, tarjetaAncho, tarjetaAlto);
+
+        // Insertar imagen QR (5 x 5 cm)
+        pdf.addImage(imgQr, 'PNG', x + 0.25, y + 0.25, 4.5, 4.5);
+
+        // Insertar Leyenda MESA X
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`MESA ${i}`, x + (tarjetaAncho / 2), y + 5.4, { align: "center" });
+
+        colActual++;
+        if (colActual >= columnas) {
+          colActual = 0;
+          filaActual++;
+        }
+
+        // Nueva página si se llena la cuadrícula
+        if (filaActual >= filas && i < hasta) {
+          pdf.addPage();
+          colActual = 0;
+          filaActual = 0;
+        }
+      }
+
+      pdf.save(`QR_Mesas_${desde}_a_${hasta}_${localActual}.pdf`);
     }
   </script>
 </body>
