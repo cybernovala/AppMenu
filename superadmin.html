@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - Gestión</title>
+  <title>SuperAdmin - Generador de Locales</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -20,231 +20,90 @@
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
-      padding: 15px;
+      padding: 20px;
     }
 
     .container { max-width: 600px; margin: 0 auto; }
 
-    .section-card {
+    .card {
       background: var(--card-bg);
-      border: 1px solid rgba(255, 85, 0, 0.3);
+      border: 1px solid var(--neon-orange);
       border-radius: 12px;
-      padding: 15px;
+      padding: 20px;
       margin-bottom: 20px;
     }
 
-    h2 {
-      font-size: 18px;
-      color: var(--neon-yellow);
-      margin-bottom: 15px;
-      text-transform: uppercase;
-    }
+    h1 { font-size: 20px; color: var(--neon-yellow); margin-bottom: 15px; text-transform: uppercase; }
 
-    .form-group { margin-bottom: 12px; }
-    label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      background: #14141a;
-      border: 1px solid #333;
-      color: #fff;
-      border-radius: 6px;
-      font-size: 14px;
+    label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
+    input {
+      width: 100%; padding: 12px; background: #14141a; border: 1px solid #333;
+      color: #fff; border-radius: 6px; font-size: 15px; margin-bottom: 15px;
     }
 
     button {
-      background: var(--grad-neon);
-      border: none;
-      color: #000;
-      padding: 12px;
-      font-weight: bold;
-      width: 100%;
-      border-radius: 6px;
-      cursor: pointer;
+      background: var(--grad-neon); border: none; color: #000;
+      padding: 14px; font-weight: bold; width: 100%; border-radius: 6px; cursor: pointer; font-size: 15px;
     }
 
-    .item-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #14141a;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 8px;
+    .result-box {
+      display: none; background: #121218; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-top: 15px;
     }
 
-    .btn-del {
-      background: #ff3333;
-      color: white;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 4px;
-      width: auto;
-      cursor: pointer;
-    }
-
-    .module-view { display: none; }
-    .module-view.active { display: block; }
+    .link-item { margin-bottom: 12px; word-break: break-all; }
+    .link-item span { color: var(--neon-yellow); font-size: 12px; display: block; }
+    .link-item a { color: #fff; text-decoration: underline; font-size: 13px; }
   </style>
 </head>
 <body>
 
   <div class="container">
-    
-    <!-- MÓDULO PRODUCTOS -->
-    <div id="modulo-productos" class="module-view">
-      <div class="section-card">
-        <h2>➕ Agregar Producto</h2>
-        <div class="form-group">
-          <label>Categoría</label>
-          <input type="text" id="prod-categoria" placeholder="Ej: Bebidas, Comida">
-        </div>
-        <div class="form-group">
-          <label>Nombre del Producto</label>
-          <input type="text" id="prod-nombre" placeholder="Ej: Hamburguesa Doble">
-        </div>
-        <div class="form-group">
-          <label>Precio ($)</label>
-          <input type="number" id="prod-precio" placeholder="Ej: 5900">
-        </div>
-        <button onclick="guardarProducto()">Guardar Producto</button>
-      </div>
+    <div class="card">
+      <h1>⚡ SuperAdmin: Crear Cliente</h1>
+      
+      <label>Nombre del Nuevo Local / Cliente</label>
+      <input type="text" id="nombre-local" placeholder="Ej: sushi-valpo o bar-central">
 
-      <div class="section-card">
-        <h2>📋 Lista de Productos</h2>
-        <div id="lista-productos">Cargando...</div>
+      <button onclick="generarEnlaces()">🚀 Registrar Local y Generar Enlaces</button>
+
+      <div id="resultado" class="result-box">
+        <h3 style="color:var(--neon-orange); margin-bottom:10px;">Enlaces Creados para el Cliente:</h3>
+        
+        <div class="link-item">
+          <span>1. Panel de Administración del Cliente (Entrega este link):</span>
+          <a id="link-admin" target="_blank"></a>
+        </div>
+
+        <div class="link-item">
+          <span>2. Carta Pública (QR de Mesas):</span>
+          <a id="link-cliente" target="_blank"></a>
+        </div>
       </div>
     </div>
-
-    <!-- MÓDULO HISTORIAL -->
-    <div id="modulo-historial" class="module-view">
-      <div class="section-card">
-        <h2>📜 Historial de Ventas</h2>
-        <div id="lista-historial">Cargando ventas...</div>
-      </div>
-    </div>
-
   </div>
 
   <script>
-    const API_URL = "https://appmenu-tavr.onrender.com/api";
-    const urlParams = new URLSearchParams(window.location.search);
-    const localId = urlParams.get('local') || 'default';
-    const vistaSolicitada = urlParams.get('view') || 'productos';
-
-    // Activar la vista solicitada por el iframe
-    if (vistaSolicitada === 'historial') {
-      document.getElementById('modulo-historial').classList.add('active');
-      cargarHistorial();
-    } else {
-      document.getElementById('modulo-productos').classList.add('active');
-      cargarProductos();
-    }
-
-    async function cargarProductos() {
-      try {
-        const res = await fetch(`${API_URL}/menu?local=${localId}`);
-        const data = await res.json();
-        const cont = document.getElementById('lista-productos');
-        
-        if (!data.length) {
-          cont.innerHTML = `<p style="color:var(--text-muted)">No hay productos registrados.</p>`;
-          return;
-        }
-
-        let html = '';
-        data.forEach(cat => {
-          html += `<h4 style="color:var(--neon-orange); margin:10px 0;">${cat.categoria}</h4>`;
-          cat.productos.forEach(p => {
-            html += `
-              <div class="item-row">
-                <div>
-                  <strong>${p.nombre}</strong> - $${p.precio.toLocaleString('es-CL')}
-                </div>
-                <button class="btn-del" onclick="eliminarProducto('${cat.categoria}', '${p.nombre}')">Eliminar</button>
-              </div>
-            `;
-          });
-        });
-        cont.innerHTML = html;
-      } catch (err) {
-        document.getElementById('lista-productos').innerHTML = 'Error al cargar productos.';
-      }
-    }
-
-    async function guardarProducto() {
-      const categoria = document.getElementById('prod-categoria').value.trim();
-      const nombre = document.getElementById('prod-nombre').value.trim();
-      const precio = parseFloat(document.getElementById('prod-precio').value);
-
-      if (!categoria || !nombre || isNaN(precio)) {
-        alert('Completa todos los campos correctamente.');
+    function generarEnlaces() {
+      const input = document.getElementById('nombre-local').value.trim();
+      if (!input) {
+        alert('Ingresa el nombre del local.');
         return;
       }
 
-      try {
-        const res = await fetch(`${API_URL}/menu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, categoria, nombre, precio })
-        });
+      // Limpia el texto para crearlo como ID (ejemplo: "Bar Central" -> "bar-central")
+      const localId = input.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const baseUrl = window.location.origin;
 
-        if (res.ok) {
-          alert('Producto guardado con éxito');
-          document.getElementById('prod-nombre').value = '';
-          document.getElementById('prod-precio').value = '';
-          cargarProductos();
-        } else {
-          alert('Error al guardar producto');
-        }
-      } catch (err) {
-        alert('Error de conexión');
-      }
-    }
+      const urlAdmin = `${baseUrl}/admin.html?local=${localId}`;
+      const urlCliente = `${baseUrl}/index.html?local=${localId}&mesa=1`;
 
-    async function eliminarProducto(categoria, nombre) {
-      if (!confirm(`¿Eliminar ${nombre}?`)) return;
+      document.getElementById('link-admin').href = urlAdmin;
+      document.getElementById('link-admin').innerText = urlAdmin;
 
-      try {
-        const res = await fetch(`${API_URL}/menu`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, categoria, nombre })
-        });
+      document.getElementById('link-cliente').href = urlCliente;
+      document.getElementById('link-cliente').innerText = urlCliente;
 
-        if (res.ok) {
-          cargarProductos();
-        } else {
-          alert('Error al eliminar');
-        }
-      } catch (err) {
-        alert('Error de conexión');
-      }
-    }
-
-    async function cargarHistorial() {
-      try {
-        const res = await fetch(`${API_URL}/pedidos?local=${localId}&estado=entregado`);
-        const pedidos = await res.json();
-        const cont = document.getElementById('lista-historial');
-
-        if (!pedidos.length) {
-          cont.innerHTML = `<p style="color:var(--text-muted)">No hay historial de ventas registradadas.</p>`;
-          return;
-        }
-
-        cont.innerHTML = pedidos.map(p => `
-          <div class="item-row" style="flex-direction:column; align-items:flex-start; gap:5px;">
-            <div style="display:flex; justify-content:space-between; width:100%;">
-              <strong style="color:var(--neon-yellow)">MESA ${p.mesa}</strong>
-              <span style="color:var(--text-muted); font-size:12px;">${new Date(p.fecha || Date.now()).toLocaleTimeString()}</span>
-            </div>
-            <div>Total: $${p.total ? p.total.toLocaleString('es-CL') : '0'}</div>
-          </div>
-        `).join('');
-      } catch (err) {
-        document.getElementById('lista-historial').innerHTML = 'Error al cargar historial.';
-      }
+      document.getElementById('resultado').style.display = 'block';
     }
   </script>
 </body>
