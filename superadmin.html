@@ -3,255 +3,248 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ SuperAdmin - CyberControl System</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <title>SuperAdmin - Gestión</title>
   <style>
     :root {
-      --bg-color: #080b10;
-      --card-bg: rgba(15, 23, 42, 0.75);
-      --neon-blue: #00f0ff;
-      --neon-green: #00ff66;
-      --neon-purple: #7000ff;
-      --neon-pink: #ff007f;
-      --text-main: #e2e8f0;
-      --text-muted: #94a3b8;
-      --border-color: rgba(0, 240, 255, 0.2);
+      --bg-dark: #08080a;
+      --card-bg: rgba(18, 18, 22, 0.95);
+      --neon-orange: #ff5500;
+      --neon-yellow: #ffea00;
+      --grad-neon: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
+      --text-main: #ffffff;
+      --text-muted: #a0a0b0;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
 
     body {
-      font-family: 'Rajdhani', sans-serif;
-      background-color: var(--bg-color);
+      background-color: var(--bg-dark);
       color: var(--text-main);
-      min-height: 100vh;
-      padding: 30px 20px;
+      padding: 15px;
     }
 
-    .container { max-width: 1100px; margin: 0 auto; }
-    header { text-align: center; margin-bottom: 35px; }
+    .container { max-width: 600px; margin: 0 auto; }
 
-    h1 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 2.2rem;
-      color: #fff;
-      text-transform: uppercase;
-      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
-    }
-
-    .card {
+    .section-card {
       background: var(--card-bg);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border-color);
+      border: 1px solid rgba(255, 85, 0, 0.3);
       border-radius: 12px;
-      padding: 25px;
-      margin-bottom: 25px;
+      padding: 15px;
+      margin-bottom: 20px;
     }
 
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    label { font-size: 0.9rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    h2 {
+      font-size: 18px;
+      color: var(--neon-yellow);
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
 
-    input {
-      background: rgba(8, 11, 16, 0.8);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 12px 15px;
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      background: #14141a;
+      border: 1px solid #333;
       color: #fff;
-      font-family: 'Rajdhani', sans-serif;
+      border-radius: 6px;
+      font-size: 14px;
     }
 
     button {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.85rem;
-      font-weight: 700;
-      padding: 10px 16px;
+      background: var(--grad-neon);
       border: none;
+      color: #000;
+      padding: 12px;
+      font-weight: bold;
+      width: 100%;
       border-radius: 6px;
       cursor: pointer;
     }
 
-    .btn-main { background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue)); color: #fff; }
-    .btn-download { background: rgba(0, 255, 102, 0.1); border: 1px solid var(--neon-green); color: var(--neon-green); }
-    .btn-download:hover { background: var(--neon-green); color: #000; }
-    .btn-renew { background: rgba(255, 0, 127, 0.1); border: 1px solid var(--neon-pink); color: var(--neon-pink); margin-right: 8px; }
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #14141a;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
 
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th { font-family: 'Orbitron', sans-serif; color: var(--neon-blue); padding: 14px; text-align: left; border-bottom: 2px solid var(--border-color); }
-    td { padding: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .btn-del {
+      background: #ff3333;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      width: auto;
+      cursor: pointer;
+    }
 
-    .badge { padding: 5px 10px; border-radius: 20px; font-weight: 700; font-family: 'Orbitron'; font-size: 0.7rem; }
-    .badge-success { background: rgba(0, 255, 102, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
-    .badge-danger { background: rgba(255, 0, 127, 0.15); color: var(--neon-pink); border: 1px solid var(--neon-pink); }
+    .module-view { display: none; }
+    .module-view.active { display: block; }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <header>
-      <h1>🛡️ SUPERADMIN CONTROL</h1>
-    </header>
-
-    <div class="card">
-      <h2>🔑 01. Autenticación Maestra</h2>
-      <div class="form-grid">
+    
+    <!-- MÓDULO PRODUCTOS -->
+    <div id="modulo-productos" class="module-view">
+      <div class="section-card">
+        <h2>➕ Agregar Producto</h2>
         <div class="form-group">
-          <label for="claveMaestra">Clave Maestra:</label>
-          <input type="password" id="claveMaestra" value="superadmin123">
+          <label>Categoría</label>
+          <input type="text" id="prod-categoria" placeholder="Ej: Bebidas, Comida">
         </div>
+        <div class="form-group">
+          <label>Nombre del Producto</label>
+          <input type="text" id="prod-nombre" placeholder="Ej: Hamburguesa Doble">
+        </div>
+        <div class="form-group">
+          <label>Precio ($)</label>
+          <input type="number" id="prod-precio" placeholder="Ej: 5900">
+        </div>
+        <button onclick="guardarProducto()">Guardar Producto</button>
       </div>
-      <button class="btn-main" onclick="cargarLocales()">🔄 Sincronizar Locales</button>
-    </div>
 
-    <div class="card">
-      <h2>⚡ 02. Alta de Nuevo Restaurante</h2>
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="nuevoLocal">ID del Local (sin espacios):</label>
-          <input type="text" id="nuevoLocal" placeholder="Ej: don_pepe">
-        </div>
-        <div class="form-group">
-          <label for="passwordCliente">Contraseña para el Cliente:</label>
-          <input type="password" id="passwordCliente" placeholder="Ej: pass1234">
-        </div>
+      <div class="section-card">
+        <h2>📋 Lista de Productos</h2>
+        <div id="lista-productos">Cargando...</div>
       </div>
-      <button class="btn-main" onclick="crearLocal()">🚀 Desplegar Restaurante</button>
     </div>
 
-    <div class="card">
-      <h2>📊 03. Estado de Nodos Registrados</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>ID Local</th>
-            <th>Vencimiento</th>
-            <th>Días</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="tablaLocales">
-          <tr>
-            <td colspan="5" style="text-align:center;">Carga los datos ingresando la clave maestra.</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- MÓDULO HISTORIAL -->
+    <div id="modulo-historial" class="module-view">
+      <div class="section-card">
+        <h2>📜 Historial de Ventas</h2>
+        <div id="lista-historial">Cargando ventas...</div>
+      </div>
     </div>
+
   </div>
 
   <script>
-    const BACKEND_URL = "https://appmenu-tavr.onrender.com"; 
-    const URL_BASE_GITHUB = "https://cybernovala.github.io/AppMenu/admin.html";
+    const API_URL = "https://appmenu-tavr.onrender.com/api";
+    const urlParams = new URLSearchParams(window.location.search);
+    const localId = urlParams.get('local') || 'default';
+    const vistaSolicitada = urlParams.get('view') || 'productos';
 
-    async function cargarLocales() {
-      const clave = document.getElementById("claveMaestra").value;
-      if (!clave) return alert("Ingresa la clave maestra");
+    // Activar la vista solicitada por el iframe
+    if (vistaSolicitada === 'historial') {
+      document.getElementById('modulo-historial').classList.add('active');
+      cargarHistorial();
+    } else {
+      document.getElementById('modulo-productos').classList.add('active');
+      cargarProductos();
+    }
 
+    async function cargarProductos() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/superadmin/locales?clave=${encodeURIComponent(clave)}`);
+        const res = await fetch(`${API_URL}/menu?local=${localId}`);
         const data = await res.json();
-        if (!res.ok) return alert(data.error);
+        const cont = document.getElementById('lista-productos');
+        
+        if (!data.length) {
+          cont.innerHTML = `<p style="color:var(--text-muted)">No hay productos registrados.</p>`;
+          return;
+        }
 
-        const tbody = document.getElementById("tablaLocales");
-        tbody.innerHTML = "";
-
-        data.forEach(local => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td><strong style="color: var(--neon-blue); font-family: 'Orbitron';">${local.id}</strong></td>
-            <td>${local.fechaVencimiento}</td>
-            <td><strong>${local.diasRestantes}</strong> d</td>
-            <td>
-              <span class="badge ${local.activo ? 'badge-success' : 'badge-danger'}">
-                ${local.activo ? 'ONLINE' : 'SUSPENDIDO'}
-              </span>
-            </td>
-            <td>
-              <button class="btn-renew" onclick="renovarPago('${local.id}')">➕ 30 Días</button>
-              <button class="btn-download" onclick="descargarScriptLocal('${local.id}')">📥 Descargar Script Único</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
+        let html = '';
+        data.forEach(cat => {
+          html += `<h4 style="color:var(--neon-orange); margin:10px 0;">${cat.categoria}</h4>`;
+          cat.productos.forEach(p => {
+            html += `
+              <div class="item-row">
+                <div>
+                  <strong>${p.nombre}</strong> - $${p.precio.toLocaleString('es-CL')}
+                </div>
+                <button class="btn-del" onclick="eliminarProducto('${cat.categoria}', '${p.nombre}')">Eliminar</button>
+              </div>
+            `;
+          });
         });
+        cont.innerHTML = html;
       } catch (err) {
-        alert("Error al conectar con Render");
+        document.getElementById('lista-productos').innerHTML = 'Error al cargar productos.';
       }
     }
 
-    async function crearLocal() {
-      const claveSuperAdmin = document.getElementById("claveMaestra").value;
-      const local = document.getElementById("nuevoLocal").value.trim().toLowerCase().replace(/\s+/g, '_');
-      const passwordCliente = document.getElementById("passwordCliente").value;
+    async function guardarProducto() {
+      const categoria = document.getElementById('prod-categoria').value.trim();
+      const nombre = document.getElementById('prod-nombre').value.trim();
+      const precio = parseFloat(document.getElementById('prod-precio').value);
 
-      if (!local || !passwordCliente) return alert("Rellena todos los campos");
+      if (!categoria || !nombre || isNaN(precio)) {
+        alert('Completa todos los campos correctamente.');
+        return;
+      }
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/superadmin/crear-local`, {
+        const res = await fetch(`${API_URL}/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ claveSuperAdmin, local, passwordCliente })
+          body: JSON.stringify({ local: localId, categoria, nombre, precio })
         });
 
-        const data = await res.json();
         if (res.ok) {
-          alert(`✅ Restaurante '${local}' creado correctamente`);
-          document.getElementById("nuevoLocal").value = "";
-          document.getElementById("passwordCliente").value = "";
-          descargarScriptLocal(local);
-          cargarLocales();
+          alert('Producto guardado con éxito');
+          document.getElementById('prod-nombre').value = '';
+          document.getElementById('prod-precio').value = '';
+          cargarProductos();
         } else {
-          alert(data.error);
+          alert('Error al guardar producto');
         }
       } catch (err) {
-        alert("Error de conexión");
+        alert('Error de conexión');
       }
     }
 
-    async function renovarPago(local) {
-      const claveSuperAdmin = document.getElementById("claveMaestra").value;
-      if (!confirm(`¿Renovar 30 días para '${local}'?`)) return;
+    async function eliminarProducto(categoria, nombre) {
+      if (!confirm(`¿Eliminar ${nombre}?`)) return;
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/superadmin/renovar-pago`, {
-          method: 'POST',
+        const res = await fetch(`${API_URL}/menu`, {
+          method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ claveSuperAdmin, local })
+          body: JSON.stringify({ local: localId, categoria, nombre })
         });
 
         if (res.ok) {
-          alert("✅ Licencia renovada");
-          cargarLocales();
+          cargarProductos();
+        } else {
+          alert('Error al eliminar');
         }
       } catch (err) {
-        alert("Error al renovar");
+        alert('Error de conexión');
       }
     }
 
-    function descargarScriptLocal(idLocal) {
-      const urlIntegrada = `${URL_BASE_GITHUB}?local=${idLocal}&admin=true`;
+    async function cargarHistorial() {
+      try {
+        const res = await fetch(`${API_URL}/pedidos?local=${localId}&estado=entregado`);
+        const pedidos = await res.json();
+        const cont = document.getElementById('lista-historial');
 
-      const contenidoHTML = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Acceso Sistema - ${idLocal}</title>
-  <script>
-    localStorage.setItem('localId', '${idLocal}');
-    localStorage.setItem('esAdmin', 'true');
-    window.location.href = "${urlIntegrada}";
-  <\/script>
-</head>
-<body style="font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #080b10; color: #00f0ff;">
-  <h2>Cargando Sistema Integrado para '${idLocal}'...</h2>
-  <p style="color: #94a3b8;">Si no redirige automáticamente, <a href="${urlIntegrada}" style="color: #00ff66;">haz clic aquí</a>.</p>
-</body>
-</html>`;
+        if (!pedidos.length) {
+          cont.innerHTML = `<p style="color:var(--text-muted)">No hay historial de ventas registradadas.</p>`;
+          return;
+        }
 
-      const blob = new Blob([contenidoHTML], { type: 'text/html' });
-      const enlace = document.createElement('a');
-      enlace.href = URL.createObjectURL(blob);
-      enlace.download = `sistema_${idLocal}.html`;
-      enlace.click();
+        cont.innerHTML = pedidos.map(p => `
+          <div class="item-row" style="flex-direction:column; align-items:flex-start; gap:5px;">
+            <div style="display:flex; justify-content:space-between; width:100%;">
+              <strong style="color:var(--neon-yellow)">MESA ${p.mesa}</strong>
+              <span style="color:var(--text-muted); font-size:12px;">${new Date(p.fecha || Date.now()).toLocaleTimeString()}</span>
+            </div>
+            <div>Total: $${p.total ? p.total.toLocaleString('es-CL') : '0'}</div>
+          </div>
+        `).join('');
+      } catch (err) {
+        document.getElementById('lista-historial').innerHTML = 'Error al cargar historial.';
+      }
     }
   </script>
 </body>
