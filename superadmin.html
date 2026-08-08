@@ -18,11 +18,7 @@
       --border-color: rgba(0, 240, 255, 0.2);
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Rajdhani', sans-serif;
@@ -35,15 +31,9 @@
       padding: 30px 20px;
     }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
+    .container { max-width: 1100px; margin: 0 auto; }
 
-    header {
-      text-align: center;
-      margin-bottom: 35px;
-    }
+    header { text-align: center; margin-bottom: 35px; }
 
     h1 {
       font-family: 'Orbitron', sans-serif;
@@ -53,10 +43,6 @@
       color: #fff;
       text-transform: uppercase;
       text-shadow: 0 0 10px rgba(0, 240, 255, 0.5), 0 0 20px rgba(0, 240, 255, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
     }
 
     .subtitle {
@@ -70,14 +56,12 @@
     .card {
       background: var(--card-bg);
       backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 25px;
       margin-bottom: 25px;
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
       position: relative;
-      overflow: hidden;
     }
 
     .card::before {
@@ -92,10 +76,6 @@
       font-size: 1.2rem;
       color: #fff;
       margin-bottom: 20px;
-      letter-spacing: 1px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
     }
 
     .form-grid {
@@ -105,18 +85,13 @@
       margin-bottom: 20px;
     }
 
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
 
     label {
       font-size: 0.9rem;
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 1px;
     }
 
     input {
@@ -128,12 +103,6 @@
       font-family: 'Rajdhani', sans-serif;
       font-size: 1rem;
       outline: none;
-      transition: all 0.3s ease;
-    }
-
-    input:focus {
-      border-color: var(--neon-blue);
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
     }
 
     button {
@@ -147,10 +116,6 @@
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
     }
 
     .btn-main {
@@ -170,55 +135,26 @@
       color: var(--neon-green);
     }
 
-    .btn-download:hover {
-      background: var(--neon-green);
-      color: #000;
-      box-shadow: 0 0 15px rgba(0, 255, 102, 0.5);
-    }
-
     .btn-renew {
       background: rgba(255, 0, 127, 0.1);
       border: 1px solid var(--neon-pink);
       color: var(--neon-pink);
+      margin-right: 8px;
     }
 
-    .btn-renew:hover {
-      background: var(--neon-pink);
-      color: #fff;
-      box-shadow: 0 0 15px rgba(ff, 0, 127, 0.5);
-    }
-
-    .table-container {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 
     th {
       font-family: 'Orbitron', sans-serif;
       font-size: 0.8rem;
       color: var(--neon-blue);
       text-transform: uppercase;
-      letter-spacing: 1px;
       padding: 14px;
       text-align: left;
       border-bottom: 2px solid var(--border-color);
-      background: rgba(0, 0, 0, 0.3);
     }
 
-    td {
-      padding: 14px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      font-size: 1rem;
-    }
-
-    tr:hover {
-      background: rgba(0, 240, 255, 0.03);
-    }
+    td { padding: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 
     .badge {
       font-family: 'Orbitron', sans-serif;
@@ -226,26 +162,10 @@
       padding: 5px 10px;
       border-radius: 20px;
       font-weight: 700;
-      letter-spacing: 1px;
-      display: inline-block;
     }
 
-    .badge-success {
-      background: rgba(0, 255, 102, 0.15);
-      color: var(--neon-green);
-      border: 1px solid var(--neon-green);
-    }
-
-    .badge-danger {
-      background: rgba(255, 0, 127, 0.15);
-      color: var(--neon-pink);
-      border: 1px solid var(--neon-pink);
-    }
-
-    .actions-cell {
-      display: flex;
-      gap: 10px;
-    }
+    .badge-success { background: rgba(0, 255, 102, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .badge-danger { background: rgba(255, 0, 127, 0.15); color: var(--neon-pink); border: 1px solid var(--neon-pink); }
   </style>
 </head>
 <body>
@@ -253,94 +173,76 @@
   <div class="container">
     <header>
       <h1>🛡️ SUPERADMIN CONTROL</h1>
-      <div class="subtitle">Gestión de Suscripciones & Servidores Neurales</div>
+      <div class="subtitle">Gestión de Suscripciones & Servidores</div>
     </header>
 
-    <!-- SECCIÓN CLAVE MAESTRA -->
     <div class="card">
       <h2>🔑 01. Autenticación Maestra</h2>
       <div class="form-grid">
         <div class="form-group">
           <label for="claveMaestra">Clave Maestra:</label>
-          <input type="password" id="claveMaestra" value="superadmin123" placeholder="Ingresa clave maestra">
+          <input type="password" id="claveMaestra" value="superadmin123">
         </div>
       </div>
-      <button class="btn-main" onclick="cargarLocales()">🔄 Sincronizar Base de Datos</button>
+      <button class="btn-main" onclick="cargarLocales()">🔄 Sincronizar Locales</button>
     </div>
 
-    <!-- SECCIÓN CREAR LOCAL -->
     <div class="card">
       <h2>⚡ 02. Alta de Nuevo Restaurante</h2>
       <div class="form-grid">
         <div class="form-group">
-          <label for="nuevoLocal">ID del Local (Único/Sin espacios):</label>
-          <input type="text" id="nuevoLocal" placeholder="Ej: don_pepe_centro">
+          <label for="nuevoLocal">ID del Local (sin espacios):</label>
+          <input type="text" id="nuevoLocal" placeholder="Ej: don_pepe">
         </div>
         <div class="form-group">
           <label for="passwordCliente">Contraseña para el Cliente:</label>
           <input type="password" id="passwordCliente" placeholder="Ej: pass1234">
         </div>
       </div>
-      <button class="btn-main" onclick="crearLocal()">🚀 Desplegar Restaurante (30 Días)</button>
+      <button class="btn-main" onclick="crearLocal()">🚀 Desplegar Restaurante</button>
     </div>
 
-    <!-- LISTA DE LOCALES -->
     <div class="card">
       <h2>📊 03. Estado de Nodos Registrados</h2>
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>ID Local</th>
-              <th>Creación</th>
-              <th>Vencimiento</th>
-              <th>Días Restantes</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tablaLocales">
-            <tr>
-              <td colspan="6" style="text-align:center; color: var(--text-muted);">
-                Esperando sincronización... Presiona "Sincronizar Base de Datos".
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID Local</th>
+            <th>Vencimiento</th>
+            <th>Días Restantes</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaLocales">
+          <tr>
+            <td colspan="5" style="text-align:center; color: var(--text-muted);">Haz clic en Sincronizar Locales.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
   <script>
-    // URL DE TU BACKEND EN RENDER
     const BACKEND_URL = "https://appmenu-tavr.onrender.com"; 
-
-    // URL PÚBLICA DE TU FRONTEND EN GITHUB PAGES
     const URL_BASE_GITHUB = "https://cybernovala.github.io/AppMenu/index.html";
 
     async function cargarLocales() {
       const clave = document.getElementById("claveMaestra").value;
-      if (!clave) return alert("⚠️ Ingresa la clave maestra");
+      if (!clave) return alert("Ingresa la clave maestra");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/superadmin/locales?clave=${encodeURIComponent(clave)}`);
         const data = await res.json();
-
-        if (!res.ok) return alert("❌ Error: " + (data.error || "Clave errónea o fallo en servidor"));
+        if (!res.ok) return alert(data.error);
 
         const tbody = document.getElementById("tablaLocales");
         tbody.innerHTML = "";
-
-        if (data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">No hay nodos registrados en la red.</td></tr>`;
-          return;
-        }
 
         data.forEach(local => {
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td><strong style="color: var(--neon-blue); font-family: 'Orbitron';">${local.id}</strong></td>
-            <td>${local.fechaCreacion}</td>
             <td>${local.fechaVencimiento}</td>
             <td><strong>${local.diasRestantes}</strong> d</td>
             <td>
@@ -349,16 +251,14 @@
               </span>
             </td>
             <td>
-              <div class="actions-cell">
-                <button class="btn-renew" onclick="renovarPago('${local.id}')">➕ 30 Días</button>
-                <button class="btn-download" onclick="descargarScriptLocal('${local.id}')">📥 Script</button>
-              </div>
+              <button class="btn-renew" onclick="renovarPago('${local.id}')">➕ 30 Días</button>
+              <button class="btn-download" onclick="descargarScriptLocal('${local.id}')">📥 Script Admin</button>
             </td>
           `;
           tbody.appendChild(tr);
         });
       } catch (err) {
-        alert("❌ Error de comunicación con la API de Render");
+        alert("Error de conexión con Render");
       }
     }
 
@@ -367,7 +267,7 @@
       const local = document.getElementById("nuevoLocal").value.trim().toLowerCase().replace(/\s+/g, '_');
       const passwordCliente = document.getElementById("passwordCliente").value;
 
-      if (!local || !passwordCliente) return alert("⚠️ Rellena todos los campos");
+      if (!local || !passwordCliente) return alert("Rellena todos los campos");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/superadmin/crear-local`, {
@@ -378,22 +278,22 @@
 
         const data = await res.json();
         if (res.ok) {
-          alert(`✅ Nodo '${local}' activado hasta: ${data.fechaVencimiento}`);
+          alert(`✅ Restaurante '${local}' activado`);
           document.getElementById("nuevoLocal").value = "";
           document.getElementById("passwordCliente").value = "";
           descargarScriptLocal(local);
           cargarLocales();
         } else {
-          alert("❌ " + data.error);
+          alert(data.error);
         }
       } catch (err) {
-        alert("❌ Error de red al desplegar restaurante");
+        alert("Error al conectar");
       }
     }
 
     async function renovarPago(local) {
       const claveSuperAdmin = document.getElementById("claveMaestra").value;
-      if (!confirm(`¿Extender licencia 30 días para '${local}'?`)) return;
+      if (!confirm(`¿Renovar 30 días para '${local}'?`)) return;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/superadmin/renovar-pago`, {
@@ -402,39 +302,39 @@
           body: JSON.stringify({ claveSuperAdmin, local })
         });
 
-        const data = await res.json();
         if (res.ok) {
-          alert(`✅ Licencia renovada. Nueva fecha: ${data.nuevaFecha}`);
+          alert("✅ Licencia renovada");
           cargarLocales();
-        } else {
-          alert("❌ " + data.error);
         }
       } catch (err) {
-        alert("❌ Error al renovar servicio");
+        alert("Error de red");
       }
     }
 
-    // DESCARGA DEL ACCESO DIRECTO DINÁMICO
+    // DESCARGA DEL ACCESO DIRECTO QUE ABRE EL PANEL DE ADMINISTRACIÓN COMPLETO
     function descargarScriptLocal(idLocal) {
+      // Forzamos el parámetro 'admin=true' para activar las pestañas (Cocina, Garzón, Menú, Historial)
+      const urlPanel = `${URL_BASE_GITHUB}?local=${idLocal}&admin=true`;
+
       const contenidoHTML = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Accediendo a ${idLocal}...</title>
+  <title>Cargando Panel de Control - ${idLocal}</title>
   <script>
-    window.location.href = "${URL_BASE_GITHUB}?local=${idLocal}";
+    window.location.href = "${urlPanel}";
   <\/script>
 </head>
 <body style="font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #080b10; color: #00f0ff;">
-  <h2>Iniciando enlace neural con '${idLocal}'...</h2>
-  <p style="color: #94a3b8;">Si la redirección no es automática, <a href="${URL_BASE_GITHUB}?local=${idLocal}" style="color: #00ff66;">haz clic aquí</a>.</p>
+  <h2>Abriendo Panel Principal del Restaurante '${idLocal}'...</h2>
+  <p style="color: #94a3b8;">Si no redirige automáticamente, <a href="${urlPanel}" style="color: #00ff66;">haz clic aquí para ingresar</a>.</p>
 </body>
 </html>`;
 
       const blob = new Blob([contenidoHTML], { type: 'text/html' });
       const enlace = document.createElement('a');
       enlace.href = URL.createObjectURL(blob);
-      enlace.download = `index_${idLocal}.html`;
+      enlace.download = `admin_${idLocal}.html`;
       enlace.click();
     }
   </script>
