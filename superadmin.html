@@ -23,34 +23,20 @@
     body {
       font-family: 'Rajdhani', sans-serif;
       background-color: var(--bg-color);
-      background-image: 
-        radial-gradient(circle at 15% 15%, rgba(112, 0, 255, 0.15) 0%, transparent 40%),
-        radial-gradient(circle at 85% 85%, rgba(0, 240, 255, 0.15) 0%, transparent 40%);
       color: var(--text-main);
       min-height: 100vh;
       padding: 30px 20px;
     }
 
     .container { max-width: 1100px; margin: 0 auto; }
-
     header { text-align: center; margin-bottom: 35px; }
 
     h1 {
       font-family: 'Orbitron', sans-serif;
       font-size: 2.2rem;
-      font-weight: 900;
-      letter-spacing: 3px;
       color: #fff;
       text-transform: uppercase;
-      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5), 0 0 20px rgba(0, 240, 255, 0.3);
-    }
-
-    .subtitle {
-      font-size: 1rem;
-      color: var(--neon-blue);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-top: 5px;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
     }
 
     .card {
@@ -60,39 +46,11 @@
       border-radius: 12px;
       padding: 25px;
       margin-bottom: 25px;
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-      position: relative;
     }
 
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; width: 4px; height: 100%;
-      background: linear-gradient(180deg, var(--neon-blue), var(--neon-purple));
-    }
-
-    h2 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.2rem;
-      color: #fff;
-      margin-bottom: 20px;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
-
-    label {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-    }
+    label { font-size: 0.9rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
 
     input {
       background: rgba(8, 11, 16, 0.8);
@@ -101,69 +59,28 @@
       padding: 12px 15px;
       color: #fff;
       font-family: 'Rajdhani', sans-serif;
-      font-size: 1rem;
-      outline: none;
     }
 
     button {
       font-family: 'Orbitron', sans-serif;
       font-size: 0.85rem;
       font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 12px 20px;
+      padding: 10px 16px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      transition: all 0.3s ease;
     }
 
-    .btn-main {
-      background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue));
-      color: #fff;
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-    }
-
-    .btn-main:hover {
-      box-shadow: 0 0 25px rgba(0, 240, 255, 0.6);
-      transform: translateY(-2px);
-    }
-
-    .btn-download {
-      background: rgba(0, 255, 102, 0.1);
-      border: 1px solid var(--neon-green);
-      color: var(--neon-green);
-    }
-
-    .btn-renew {
-      background: rgba(255, 0, 127, 0.1);
-      border: 1px solid var(--neon-pink);
-      color: var(--neon-pink);
-      margin-right: 8px;
-    }
+    .btn-main { background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue)); color: #fff; }
+    .btn-download { background: rgba(0, 255, 102, 0.1); border: 1px solid var(--neon-green); color: var(--neon-green); }
+    .btn-download:hover { background: var(--neon-green); color: #000; }
+    .btn-renew { background: rgba(255, 0, 127, 0.1); border: 1px solid var(--neon-pink); color: var(--neon-pink); margin-right: 8px; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-
-    th {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.8rem;
-      color: var(--neon-blue);
-      text-transform: uppercase;
-      padding: 14px;
-      text-align: left;
-      border-bottom: 2px solid var(--border-color);
-    }
-
+    th { font-family: 'Orbitron', sans-serif; color: var(--neon-blue); padding: 14px; text-align: left; border-bottom: 2px solid var(--border-color); }
     td { padding: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 
-    .badge {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.7rem;
-      padding: 5px 10px;
-      border-radius: 20px;
-      font-weight: 700;
-    }
-
+    .badge { padding: 5px 10px; border-radius: 20px; font-weight: 700; font-family: 'Orbitron'; font-size: 0.7rem; }
     .badge-success { background: rgba(0, 255, 102, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
     .badge-danger { background: rgba(255, 0, 127, 0.15); color: var(--neon-pink); border: 1px solid var(--neon-pink); }
   </style>
@@ -173,7 +90,6 @@
   <div class="container">
     <header>
       <h1>🛡️ SUPERADMIN CONTROL</h1>
-      <div class="subtitle">Gestión de Suscripciones & Servidores</div>
     </header>
 
     <div class="card">
@@ -209,14 +125,14 @@
           <tr>
             <th>ID Local</th>
             <th>Vencimiento</th>
-            <th>Días Restantes</th>
+            <th>Días</th>
             <th>Estado</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="tablaLocales">
           <tr>
-            <td colspan="5" style="text-align:center; color: var(--text-muted);">Haz clic en Sincronizar Locales.</td>
+            <td colspan="5" style="text-align:center;">Carga los datos ingresando la clave maestra.</td>
           </tr>
         </tbody>
       </table>
@@ -252,13 +168,13 @@
             </td>
             <td>
               <button class="btn-renew" onclick="renovarPago('${local.id}')">➕ 30 Días</button>
-              <button class="btn-download" onclick="descargarScriptLocal('${local.id}')">📥 Script Admin</button>
+              <button class="btn-download" onclick="descargarScriptLocal('${local.id}')">📥 Descargar Script Único</button>
             </td>
           `;
           tbody.appendChild(tr);
         });
       } catch (err) {
-        alert("Error de conexión con Render");
+        alert("Error al conectar con Render");
       }
     }
 
@@ -278,7 +194,7 @@
 
         const data = await res.json();
         if (res.ok) {
-          alert(`✅ Restaurante '${local}' activado`);
+          alert(`✅ Restaurante '${local}' creado correctamente`);
           document.getElementById("nuevoLocal").value = "";
           document.getElementById("passwordCliente").value = "";
           descargarScriptLocal(local);
@@ -287,7 +203,7 @@
           alert(data.error);
         }
       } catch (err) {
-        alert("Error al conectar");
+        alert("Error de conexión");
       }
     }
 
@@ -307,34 +223,34 @@
           cargarLocales();
         }
       } catch (err) {
-        alert("Error de red");
+        alert("Error al renovar");
       }
     }
 
-    // DESCARGA DEL ACCESO DIRECTO QUE ABRE EL PANEL DE ADMINISTRACIÓN COMPLETO
+    // DESCARGA DE SCRIPT ÚNICO INTEGRADO
     function descargarScriptLocal(idLocal) {
-      // Forzamos el parámetro 'admin=true' para activar las pestañas (Cocina, Garzón, Menú, Historial)
-      const urlPanel = `${URL_BASE_GITHUB}?local=${idLocal}&admin=true`;
+      const urlIntegrada = `${URL_BASE_GITHUB}?local=${idLocal}`;
 
       const contenidoHTML = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Cargando Panel de Control - ${idLocal}</title>
+  <title>Acceso Sistema - ${idLocal}</title>
   <script>
-    window.location.href = "${urlPanel}";
+    localStorage.setItem('localId', '${idLocal}');
+    window.location.href = "${urlIntegrada}";
   <\/script>
 </head>
 <body style="font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #080b10; color: #00f0ff;">
-  <h2>Abriendo Panel Principal del Restaurante '${idLocal}'...</h2>
-  <p style="color: #94a3b8;">Si no redirige automáticamente, <a href="${urlPanel}" style="color: #00ff66;">haz clic aquí para ingresar</a>.</p>
+  <h2>Cargando Sistema Integrado para '${idLocal}'...</h2>
+  <p style="color: #94a3b8;">Si no redirige automáticamente, <a href="${urlIntegrada}" style="color: #00ff66;">haz clic aquí</a>.</p>
 </body>
 </html>`;
 
       const blob = new Blob([contenidoHTML], { type: 'text/html' });
       const enlace = document.createElement('a');
       enlace.href = URL.createObjectURL(blob);
-      enlace.download = `admin_${idLocal}.html`;
+      enlace.download = `sistema_${idLocal}.html`;
       enlace.click();
     }
   </script>
