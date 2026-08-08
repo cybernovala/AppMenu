@@ -3,76 +3,312 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel SuperAdmin - Gestión de Locales</title>
+  <title>⚡ SuperAdmin - CyberControl System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f8f9fa; color: #333; }
-    h1, h2 { color: #2c3e50; }
-    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .form-group { margin-bottom: 12px; }
-    label { display: block; font-weight: bold; margin-bottom: 4px; }
-    input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    button { background-color: #007bff; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    button:hover { background-color: #0056b3; }
-    .btn-download { background-color: #28a745; margin-left: 8px; }
-    .btn-download:hover { background-color: #218838; }
-    .btn-renew { background-color: #ffc107; color: #212529; margin-left: 8px; }
-    .btn-renew:hover { background-color: #e0a800; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
-    th { background-color: #e9ecef; }
-    .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
-    .badge-success { background-color: #d4edda; color: #155724; }
-    .badge-danger { background-color: #f8d7da; color: #721c24; }
+    :root {
+      --bg-color: #080b10;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --neon-blue: #00f0ff;
+      --neon-green: #00ff66;
+      --neon-purple: #7000ff;
+      --neon-pink: #ff007f;
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border-color: rgba(0, 240, 255, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background-color: var(--bg-color);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(112, 0, 255, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(0, 240, 255, 0.15) 0%, transparent 40%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #fff;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5), 0 0 20px rgba(0, 240, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: var(--neon-blue);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 5px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 25px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 4px; height: 100%;
+      background: linear-gradient(180deg, var(--neon-blue), var(--neon-purple));
+    }
+
+    h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      color: #fff;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    input {
+      background: rgba(8, 11, 16, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px 15px;
+      color: #fff;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      border-color: var(--neon-blue);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    }
+
+    button {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-main {
+      background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue));
+      color: #fff;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    }
+
+    .btn-main:hover {
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.6);
+      transform: translateY(-2px);
+    }
+
+    .btn-download {
+      background: rgba(0, 255, 102, 0.1);
+      border: 1px solid var(--neon-green);
+      color: var(--neon-green);
+    }
+
+    .btn-download:hover {
+      background: var(--neon-green);
+      color: #000;
+      box-shadow: 0 0 15px rgba(0, 255, 102, 0.5);
+    }
+
+    .btn-renew {
+      background: rgba(255, 0, 127, 0.1);
+      border: 1px solid var(--neon-pink);
+      color: var(--neon-pink);
+    }
+
+    .btn-renew:hover {
+      background: var(--neon-pink);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(ff, 0, 127, 0.5);
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      color: var(--neon-blue);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 14px;
+      text-align: left;
+      border-bottom: 2px solid var(--border-color);
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 1rem;
+    }
+
+    tr:hover {
+      background: rgba(0, 240, 255, 0.03);
+    }
+
+    .badge {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      display: inline-block;
+    }
+
+    .badge-success {
+      background: rgba(0, 255, 102, 0.15);
+      color: var(--neon-green);
+      border: 1px solid var(--neon-green);
+    }
+
+    .badge-danger {
+      background: rgba(255, 0, 127, 0.15);
+      color: var(--neon-pink);
+      border: 1px solid var(--neon-pink);
+    }
+
+    .actions-cell {
+      display: flex;
+      gap: 10px;
+    }
   </style>
 </head>
 <body>
 
-  <h1>🛡️ Panel SuperAdmin - Control de Suscripciones</h1>
+  <div class="container">
+    <header>
+      <h1>🛡️ SUPERADMIN CONTROL</h1>
+      <div class="subtitle">Gestión de Suscripciones & Servidores Neurales</div>
+    </header>
 
-  <!-- SECCIÓN CLAVE MAESTRA -->
-  <div class="card">
-    <h2>1. Autenticación</h2>
-    <div class="form-group">
-      <label for="claveMaestra">Clave Maestra:</label>
-      <input type="password" id="claveMaestra" value="superadmin123" placeholder="Ingresa la clave maestra">
+    <!-- SECCIÓN CLAVE MAESTRA -->
+    <div class="card">
+      <h2>🔑 01. Autenticación Maestra</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="claveMaestra">Clave Maestra:</label>
+          <input type="password" id="claveMaestra" value="superadmin123" placeholder="Ingresa clave maestra">
+        </div>
+      </div>
+      <button class="btn-main" onclick="cargarLocales()">🔄 Sincronizar Base de Datos</button>
     </div>
-    <button onclick="cargarLocales()">Cargar / Refrescar Lista de Locales</button>
-  </div>
 
-  <!-- SECCIÓN CREAR LOCAL -->
-  <div class="card">
-    <h2>2. Crear Nuevo Restaurante</h2>
-    <div class="form-group">
-      <label for="nuevoLocal">Nombre / ID del Local (sin espacios):</label>
-      <input type="text" id="nuevoLocal" placeholder="Ej: restaurante_don_pepe">
+    <!-- SECCIÓN CREAR LOCAL -->
+    <div class="card">
+      <h2>⚡ 02. Alta de Nuevo Restaurante</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="nuevoLocal">ID del Local (Único/Sin espacios):</label>
+          <input type="text" id="nuevoLocal" placeholder="Ej: don_pepe_centro">
+        </div>
+        <div class="form-group">
+          <label for="passwordCliente">Contraseña para el Cliente:</label>
+          <input type="password" id="passwordCliente" placeholder="Ej: pass1234">
+        </div>
+      </div>
+      <button class="btn-main" onclick="crearLocal()">🚀 Desplegar Restaurante (30 Días)</button>
     </div>
-    <div class="form-group">
-      <label for="passwordCliente">Contraseña para el Administrador del Local:</label>
-      <input type="password" id="passwordCliente" placeholder="Ej: clave1234">
-    </div>
-    <button onclick="crearLocal()">Crear Local y Activar 30 Días</button>
-  </div>
 
-  <!-- LISTA DE LOCALES -->
-  <div class="card">
-    <h2>3. Estado de Locales Registrados</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>ID Local</th>
-          <th>Fecha Creación</th>
-          <th>Vencimiento</th>
-          <th>Días Restantes</th>
-          <th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tablaLocales">
-        <tr>
-          <td colspan="6" style="text-align:center;">Ingresa la Clave Maestra y presiona "Cargar"</td>
-        </tr>
-      </tbody>
-    </table>
+    <!-- LISTA DE LOCALES -->
+    <div class="card">
+      <h2>📊 03. Estado de Nodos Registrados</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID Local</th>
+              <th>Creación</th>
+              <th>Vencimiento</th>
+              <th>Días Restantes</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaLocales">
+            <tr>
+              <td colspan="6" style="text-align:center; color: var(--text-muted);">
+                Esperando sincronización... Presiona "Sincronizar Base de Datos".
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -84,43 +320,45 @@
 
     async function cargarLocales() {
       const clave = document.getElementById("claveMaestra").value;
-      if (!clave) return alert("Ingresa la clave maestra");
+      if (!clave) return alert("⚠️ Ingresa la clave maestra");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/superadmin/locales?clave=${encodeURIComponent(clave)}`);
         const data = await res.json();
 
-        if (!res.ok) return alert(data.error || "Error al cargar locales");
+        if (!res.ok) return alert("❌ Error: " + (data.error || "Clave errónea o fallo en servidor"));
 
         const tbody = document.getElementById("tablaLocales");
         tbody.innerHTML = "";
 
         if (data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No hay restaurantes registrados.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">No hay nodos registrados en la red.</td></tr>`;
           return;
         }
 
         data.forEach(local => {
           const tr = document.createElement("tr");
           tr.innerHTML = `
-            <td><strong>${local.id}</strong></td>
+            <td><strong style="color: var(--neon-blue); font-family: 'Orbitron';">${local.id}</strong></td>
             <td>${local.fechaCreacion}</td>
             <td>${local.fechaVencimiento}</td>
-            <td>${local.diasRestantes} días</td>
+            <td><strong>${local.diasRestantes}</strong> d</td>
             <td>
               <span class="badge ${local.activo ? 'badge-success' : 'badge-danger'}">
-                ${local.activo ? 'ACTIVO' : 'SUSPENDIDO'}
+                ${local.activo ? 'ONLINE' : 'SUSPENDIDO'}
               </span>
             </td>
             <td>
-              <button class="btn-renew" onclick="renovarPago('${local.id}')">➕ 30 Días</button>
-              <button class="btn-download" onclick="descargarScriptLocal('${local.id}')">📥 Descargar Script</button>
+              <div class="actions-cell">
+                <button class="btn-renew" onclick="renovarPago('${local.id}')">➕ 30 Días</button>
+                <button class="btn-download" onclick="descargarScriptLocal('${local.id}')">📥 Script</button>
+              </div>
             </td>
           `;
           tbody.appendChild(tr);
         });
       } catch (err) {
-        alert("Error de conexión con el servidor de Render");
+        alert("❌ Error de comunicación con la API de Render");
       }
     }
 
@@ -129,7 +367,7 @@
       const local = document.getElementById("nuevoLocal").value.trim().toLowerCase().replace(/\s+/g, '_');
       const passwordCliente = document.getElementById("passwordCliente").value;
 
-      if (!local || !passwordCliente) return alert("Completa el nombre y la contraseña del local");
+      if (!local || !passwordCliente) return alert("⚠️ Rellena todos los campos");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/superadmin/crear-local`, {
@@ -140,22 +378,22 @@
 
         const data = await res.json();
         if (res.ok) {
-          alert(`✅ Restaurante creado con éxito. Vence el: ${data.fechaVencimiento}`);
+          alert(`✅ Nodo '${local}' activado hasta: ${data.fechaVencimiento}`);
           document.getElementById("nuevoLocal").value = "";
           document.getElementById("passwordCliente").value = "";
-          descargarScriptLocal(local); // Descargar acceso directo automáticamente
+          descargarScriptLocal(local);
           cargarLocales();
         } else {
-          alert("Error: " + data.error);
+          alert("❌ " + data.error);
         }
       } catch (err) {
-        alert("Error al conectar con el servidor");
+        alert("❌ Error de red al desplegar restaurante");
       }
     }
 
     async function renovarPago(local) {
       const claveSuperAdmin = document.getElementById("claveMaestra").value;
-      if (!confirm(`¿Confirmas la recepción del pago para renovar 30 días a '${local}'?`)) return;
+      if (!confirm(`¿Extender licencia 30 días para '${local}'?`)) return;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/superadmin/renovar-pago`, {
@@ -166,31 +404,30 @@
 
         const data = await res.json();
         if (res.ok) {
-          alert(`✅ Pago registrado. Nueva fecha de vencimiento: ${data.nuevaFecha}`);
+          alert(`✅ Licencia renovada. Nueva fecha: ${data.nuevaFecha}`);
           cargarLocales();
         } else {
-          alert("Error: " + data.error);
+          alert("❌ " + data.error);
         }
       } catch (err) {
-        alert("Error al procesar la renovación");
+        alert("❌ Error al renovar servicio");
       }
     }
 
-    // GENERADOR DEL SCRIPT EJECUTABLE DINÁMICO (Sincronizado con GitHub)
+    // DESCARGA DEL ACCESO DIRECTO DINÁMICO
     function descargarScriptLocal(idLocal) {
       const contenidoHTML = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=${URL_BASE_GITHUB}?local=${idLocal}">
-  <title>Cargando Restaurante...</title>
+  <title>Accediendo a ${idLocal}...</title>
   <script>
     window.location.href = "${URL_BASE_GITHUB}?local=${idLocal}";
   <\/script>
 </head>
-<body style="font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #f4f6f8;">
-  <h2>Cargando la aplicación del restaurante...</h2>
-  <p>Si no redirige automáticamente en unos segundos, <a href="${URL_BASE_GITHUB}?local=${idLocal}">haz clic aquí</a>.</p>
+<body style="font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #080b10; color: #00f0ff;">
+  <h2>Iniciando enlace neural con '${idLocal}'...</h2>
+  <p style="color: #94a3b8;">Si la redirección no es automática, <a href="${URL_BASE_GITHUB}?local=${idLocal}" style="color: #00ff66;">haz clic aquí</a>.</p>
 </body>
 </html>`;
 
