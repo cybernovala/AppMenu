@@ -227,9 +227,8 @@
       }
     }
 
-    // DESCARGA DE SCRIPT ÚNICO INTEGRADO
     function descargarScriptLocal(idLocal) {
-      const urlIntegrada = `${URL_BASE_GITHUB}?local=${idLocal}`;
+      const urlIntegrada = `${URL_BASE_GITHUB}?local=${idLocal}&admin=true`;
 
       const contenidoHTML = `<!DOCTYPE html>
 <html lang="es">
@@ -238,6 +237,7 @@
   <title>Acceso Sistema - ${idLocal}</title>
   <script>
     localStorage.setItem('localId', '${idLocal}');
+    localStorage.setItem('esAdmin', 'true');
     window.location.href = "${urlIntegrada}";
   <\/script>
 </head>

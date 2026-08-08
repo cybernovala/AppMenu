@@ -6,7 +6,7 @@
   <title>Sistema de Control - Restaurante</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Librerías para generación de QR y PDF -->
+  <!-- Librerías para QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -32,7 +32,7 @@
       min-height: 100vh;
     }
 
-    /* BARRA SUPERIOR DE PESTAÑAS INTEGRADAS */
+    /* BARRA SUPERIOR DE PESTAÑAS */
     .top-nav {
       background: rgba(15, 23, 42, 0.95);
       border-bottom: 2px solid var(--neon-blue);
@@ -71,7 +71,6 @@
       padding: 0 15px;
     }
 
-    /* SECCIONES / PESTAÑAS */
     .tab-content {
       display: none;
       background: var(--card-bg);
@@ -93,7 +92,7 @@
       background: #080b10;
     }
 
-    /* ESTILOS PANEL GENERADOR DE QR */
+    /* HERRAMIENTA QR */
     .qr-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -157,11 +156,6 @@
     .btn-green { background: var(--neon-green); color: #000; }
     .btn-purple { background: var(--neon-purple); color: #fff; }
 
-    .btn-action:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
-    }
-
     #qr-preview {
       display: flex;
       flex-direction: column;
@@ -187,7 +181,6 @@
 </head>
 <body>
 
-  <!-- NAVEGACIÓN PRINCIPAL -->
   <nav class="top-nav">
     <button class="tab-btn active" onclick="cambiarPestana('productos', this)">⚙️ Productos & Valores</button>
     <button class="tab-btn" onclick="cambiarPestana('cocina', this)">👨‍🍳 Cocina</button>
@@ -197,7 +190,7 @@
   </nav>
 
   <div class="container">
-    <!-- PESTAÑA 1: PRODUCTOS / ADMIN -->
+    <!-- PESTAÑA 1: PRODUCTOS -->
     <div id="tab-productos" class="tab-content active">
       <h2>⚙️ Panel de Gestión de Productos</h2>
       <hr style="border-color: var(--border-color); margin: 15px 0;">
@@ -225,13 +218,12 @@
       <iframe id="frame-historial"></iframe>
     </div>
 
-    <!-- PESTAÑA 5: MENÚ CLIENTE & DENEGADOR DE CÓDIGOS QR -->
+    <!-- PESTAÑA 5: CÓDIGOS QR -->
     <div id="tab-qr" class="tab-content">
-      <h2>📱 Menú Digital y Generador de Códigos QR para Mesas</h2>
+      <h2>📱 Menú Digital y Generador de Códigos QR</h2>
       <hr style="border-color: var(--border-color); margin: 15px 0;">
 
       <div class="qr-grid">
-        <!-- SECCIÓN ENLACE DIRECTO -->
         <div class="qr-card">
           <h3>🔗 URL Menú del Cliente</h3>
           <div class="form-group">
@@ -242,7 +234,6 @@
           <button class="btn-action btn-purple" style="margin-top: 10px;" onclick="abrirMenuCliente()">🌐 Ver Carta Digital</button>
         </div>
 
-        <!-- SECCIÓN GENERAR QR INDIVIDUAL -->
         <div class="qr-card">
           <h3>🖼️ QR Individual por Mesa</h3>
           <div class="form-group">
@@ -258,7 +249,6 @@
           <button class="btn-action btn-blue" style="margin-top: 10px;" onclick="descargarQRImagen()">📥 Descargar Imagen PNG</button>
         </div>
 
-        <!-- SECCIÓN GENERAR PDF POR RANGO -->
         <div class="qr-card">
           <h3>📄 Generar PDF por Rango (5x5 cm)</h3>
           <div class="form-group">
@@ -270,15 +260,11 @@
             <input type="number" id="mesa-hasta" value="13" min="1">
           </div>
           <button class="btn-action btn-green" onclick="generarPDFRangos()">📄 Descargar PDF Imprimible</button>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
-            * Genera tarjetas listas para cortar de 5 x 5 cm con el logo/QR y la leyenda "Mesa X".
-          </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Contenedor oculto para renderizado técnico de QR -->
   <div id="qrcode-hidden"></div>
 
   <script>
@@ -287,14 +273,18 @@
     const BASE_URL = "https://cybernovala.github.io/AppMenu";
     const URL_CLIENTE = `${BASE_URL}/index.html?local=${localActual}`;
 
-    // Cargar URL en los marcos e input
-    document.getElementById('frame-admin').src = `${BASE_URL}/index.html?local=${localActual}&view=admin`;
+    // Configuración de LocalStorage local
+    localStorage.setItem('localId', localActual);
+    localStorage.setItem('esAdmin', 'true');
+
+    // Carga de marcos forzando los parámetros de vista
+    document.getElementById('frame-admin').src = `${BASE_URL}/index.html?local=${localActual}&admin=true&view=admin#admin`;
     document.getElementById('frame-cocina').src = `${BASE_URL}/cocina.html?local=${localActual}`;
     document.getElementById('frame-garzon').src = `${BASE_URL}/garzon.html?local=${localActual}`;
-    document.getElementById('frame-historial').src = `${BASE_URL}/index.html?local=${localActual}&view=historial#historial`;
+    document.getElementById('frame-historial').src = `${BASE_URL}/index.html?local=${localActual}&admin=true&view=historial#historial`;
+    
     document.getElementById('url-menu-input').value = URL_CLIENTE;
 
-    // Cambiar de pestaña
     function cambiarPestana(nombrePestana, boton) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -318,7 +308,6 @@
       window.open(URL_CLIENTE, '_blank');
     }
 
-    // GENERADOR QR INDIVIDUAL
     let qrObj = null;
     function generarQRIndividual() {
       const mesa = document.getElementById('num-mesa-ind').value || '1';
@@ -341,35 +330,28 @@
     function descargarQRImagen() {
       const mesa = document.getElementById('num-mesa-ind').value || '1';
       const img = document.querySelector('#qr-canvas img');
-      if (!img) return alert("Genera primero la vista previa del QR");
+      if (!img) return alert("Genera primero el código QR");
 
-      // Crear canvas con leyenda Mesa
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = 300;
       canvas.height = 360;
 
-      // Fondo blanco
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Dibujar QR
       ctx.drawImage(img, 25, 20, 250, 250);
 
-      // Dibujar Texto
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 28px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(`MESA ${mesa}`, canvas.width / 2, 320);
 
-      // Descargar PNG
       const enlace = document.createElement('a');
       enlace.download = `QR_Mesa_${mesa}_${localActual}.png`;
       enlace.href = canvas.toDataURL('image/png');
       enlace.click();
     }
 
-    // GENERADOR DE RANGOS EN PDF (MIRA CADA MESA COMO 5x5 CM)
     async function generarPDFRangos() {
       const desde = parseInt(document.getElementById('mesa-desde').value);
       const hasta = parseInt(document.getElementById('mesa-hasta').value);
@@ -379,11 +361,10 @@
       }
 
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ unit: 'cm', format: 'a4' }); // Hoja A4 en centímetros
+      const pdf = new jsPDF({ unit: 'cm', format: 'a4' });
 
-      // Parámetros de diseño (A4 = 21 x 29.7 cm)
       const tarjetaAncho = 5;
-      const tarjetaAlto = 6; // 5 cm de QR + 1 cm de Leyenda
+      const tarjetaAlto = 6;
       const margenX = 1;
       const margenY = 1;
       const columnas = 3;
@@ -398,7 +379,6 @@
         tempDiv.innerHTML = "";
         const urlMesa = `${URL_CLIENTE}&mesa=${i}`;
 
-        // Generar QR temporal
         new QRCode(tempDiv, {
           text: urlMesa,
           width: 200,
@@ -407,23 +387,18 @@
           colorLight: "#ffffff"
         });
 
-        // Esperar a que renderice la imagen
         await new Promise(r => setTimeout(r, 100));
         const imgQr = tempDiv.querySelector('img').src;
 
-        // Posición actual en la hoja
         const x = margenX + (colActual * (tarjetaAncho + 1.5));
         const y = margenY + (filaActual * (tarjetaAlto + 0.8));
 
-        // Dibujar borde guía punteado para corte
         pdf.setLineWidth(0.02);
         pdf.setDrawColor(180, 180, 180);
         pdf.rect(x, y, tarjetaAncho, tarjetaAlto);
 
-        // Insertar imagen QR (5 x 5 cm)
         pdf.addImage(imgQr, 'PNG', x + 0.25, y + 0.25, 4.5, 4.5);
 
-        // Insertar Leyenda MESA X
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(12);
         pdf.setTextColor(0, 0, 0);
@@ -435,7 +410,6 @@
           filaActual++;
         }
 
-        // Nueva página si se llena la cuadrícula
         if (filaActual >= filas && i < hasta) {
           pdf.addPage();
           colActual = 0;
