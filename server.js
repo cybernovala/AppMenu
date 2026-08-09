@@ -4,7 +4,7 @@ const cors = require('cors');
 
 const app = express();
 
-// --- 1. CONFIGURACIÓN CORS ---
+// --- 1. CONFIGURACIÓN CORS AMIGABLE ---
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -14,7 +14,7 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json());
 
-// --- 2. CONEXIÓN A MONGO DB ---
+// --- 2. CONEXIÓN A MONGO DB ATLAS ---
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:juan2073@cluster0.w3kjxzs.mongodb.net/appmenu?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
@@ -32,7 +32,7 @@ const LocalSchema = new mongoose.Schema({
   fechaVencimiento: Date
 }, { strict: false, timestamps: true });
 
-// Esquema para la colección de menú ('menus')
+// Esquema para la colección de productos ('menus')
 const MenuSchema = new mongoose.Schema({
   local: { type: String, required: true, index: true },
   categoria: { type: String, default: 'General' },
@@ -44,30 +44,28 @@ const MenuSchema = new mongoose.Schema({
 const Local = mongoose.models.Local || mongoose.model('Local', LocalSchema, 'locals');
 const Menu = mongoose.models.Menu || mongoose.model('Menu', MenuSchema, 'menus');
 
-// --- 4. RUTAS API ---
+// --- 4. RUTAS DE LA API ---
 
-// 1. OBTENER LISTA DE CLIENTES DESDE LA COLECCIÓN 'locals' (Y RESPALDO EN 'menus')
+// 4.1 Obtener todos los clientes (Consulta la colección 'locals' y 'menus')
 app.get('/api/locales', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       return res.status(200).json([]);
     }
 
-    // A. Consultar la colección 'locals'
+    // A. Consultar colección 'locals'
     const docsLocals = await Local.find({}).lean();
-    
-    // Extraer identificadores de los documentos guardados en 'locals'
     let listaLocales = docsLocals.map(doc => {
       return doc.local || doc.slug || doc.id || doc.nombre || null;
     }).filter(Boolean);
 
-    // B. Respaldo: Si la colección 'locals' estuviera vacía, buscar distintivos en 'menus'
+    // B. Respaldo: Si 'locals' no da resultados, buscar en 'menus'
     if (listaLocales.length === 0) {
       const distinctMenus = await Menu.distinct('local');
       listaLocales = (distinctMenus || []).filter(item => item && item !== 'default');
     }
 
-    // Eliminar duplicados
+    // Normalizar y quitar duplicados
     const localesUnicos = [...new Set(listaLocales)];
 
     return res.status(200).json(localesUnicos);
@@ -77,7 +75,7 @@ app.get('/api/locales', async (req, res) => {
   }
 });
 
-// 2. OBTENER MENÚ DE UN LOCAL
+// 4.2 Obtener los productos/menú de un cliente específico
 app.get('/api/menu', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -94,12 +92,12 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
-// 3. REGISTRAR CLIENTE TANTO EN 'locals' COMO EN 'menus'
+// 4.3 Crear nuevo producto o registrar nuevo local
 app.post('/api/menu', async (req, res) => {
   try {
     const { local, fechaVencimiento, nombre, precio, categoria } = req.body;
 
-    // Guardar en la colección 'locals'
+    // Registrar en colección 'locals' para que aparezca en SuperAdmin
     if (local) {
       await Local.updateOne(
         { local: local },
@@ -114,7 +112,7 @@ app.post('/api/menu', async (req, res) => {
       );
     }
 
-    // Guardar producto en la colección 'menus'
+    // Guardar el producto en la colección 'menus'
     const nuevoPlato = new Menu({
       local: local || 'default',
       categoria: categoria || 'General',
@@ -132,7 +130,22 @@ app.post('/api/menu', async (req, res) => {
   }
 });
 
-// 4. ELIMINAR PRODUCTO
+// 4.4 Editar/Actualizar un producto existente
+app.put('/api/menu/:id', async (req, res) => {
+  try {
+    const productoActualizado = await Menu.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    return res.status(200).json(productoActualizado);
+  } catch (err) {
+    console.error("❌ Error en PUT /api/menu:", err.message);
+    return res.status(500).json({ error: 'Error al actualizar producto' });
+  }
+});
+
+// 4.5 Eliminar un producto
 app.delete('/api/menu/:id', async (req, res) => {
   try {
     await Menu.findByIdAndDelete(req.params.id);
@@ -143,12 +156,12 @@ app.delete('/api/menu/:id', async (req, res) => {
   }
 });
 
-// Ruta de diagnóstico
+// Ruta base
 app.get('/', (req, res) => {
-  res.send('🚀 API AppMenu lista y vinculada a la colección locals.');
+  res.send('🚀 API AppMenu ejecutándose perfectamente.');
 });
 
-// --- 5. PUERTO Y ARRANQUE ---
+// --- 5. ARRANQUE DEL SERVIDOR ---
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
