@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - Gestión de Restoranes</title>
+  <title>SuperAdmin - AppMenu</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -123,6 +123,8 @@
 
   <script>
     const API_URL = "https://appmenu-tavr.onrender.com/api";
+    const GITHUB_PAGES_URL = "https://cybernovala.github.io/AppMenu";
+
     let ultimoLocalCreado = null;
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -142,7 +144,6 @@
 
       const localId = formatearIdLocal(inputNombre);
       
-      // Cálculo de fecha de vencimiento (30 días)
       const fechaCreacion = new Date();
       const fechaVencimiento = new Date();
       fechaVencimiento.setDate(fechaCreacion.getDate() + 30);
@@ -175,7 +176,7 @@
         cargarLocales();
 
       } catch (err) {
-        alert('Error al comunicar con el servidor.');
+        alert('Error al comunicar con el servidor Render.');
       }
     }
 
@@ -218,7 +219,7 @@
         }).join('');
 
       } catch (err) {
-        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error al cargar la lista de locales.</p>`;
+        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error al cargar la lista de locales desde la API.</p>`;
       }
     }
 
@@ -228,10 +229,8 @@
       }
     }
 
-    // Genera y descarga un archivo .html listo para ejecutar e ingresar al sistema en GitHub
     function generarYDescargarHTML(nombreLocal, localId, fechaVenc) {
-      const baseUrl = window.location.origin;
-      const urlAdminGitHub = `${baseUrl}/admin.html?local=${localId}`;
+      const urlAdminAbsoluta = `${GITHUB_PAGES_URL}/admin.html?local=${localId}`;
 
       const contenidoHTML = `<!DOCTYPE html>
 <html lang="es">
@@ -274,14 +273,11 @@
 <body>
   <div class="box">
     <h1>${nombreLocal}</h1>
-    <p>Haz clic en el botón para ingresar al Menú Principal y Panel de Control Web en GitHub Pages.</p>
-    <a href="${urlAdminGitHub}" target="_blank">🚀 Entrar al Sistema Web</a>
+    <p>Redirigiendo al Panel Principal del Restaurante...</p>
+    <a href="${urlAdminAbsoluta}">Ingresar Directamente</a>
   </div>
   <script>
-    // Redirección automática al ejecutar el archivo
-    setTimeout(() => {
-      window.location.href = "${urlAdminGitHub}";
-    }, 1500);
+    window.location.href = "${urlAdminAbsoluta}";
   <\/script>
 </body>
 </html>`;
