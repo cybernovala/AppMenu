@@ -23,7 +23,7 @@
       padding: 20px;
     }
 
-    .container { max-width: 700px; margin: 0 auto; }
+    .container { max-width: 750px; margin: 0 auto; }
 
     .card {
       background: var(--card-bg);
@@ -60,10 +60,6 @@
       display: none; background: #121218; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-top: 15px;
     }
 
-    .link-item { margin-bottom: 12px; word-break: break-all; }
-    .link-item span { color: var(--neon-yellow); font-size: 12px; display: block; font-weight: bold; }
-    .link-item a { color: #fff; text-decoration: underline; font-size: 13px; }
-
     .local-row {
       display: flex;
       justify-content: space-between;
@@ -73,6 +69,12 @@
       border-radius: 8px;
       margin-bottom: 10px;
       border-left: 3px solid var(--neon-orange);
+    }
+
+    .venc-tag {
+      font-size: 12px;
+      color: var(--neon-yellow);
+      margin-top: 4px;
     }
 
     .btn-download {
@@ -92,37 +94,28 @@
 
   <div class="container">
     
-    <!-- CREAR NUEVO LOCAL -->
+    <!-- REGISTRAR LOCAL Y CREAR CONTRATO -->
     <div class="card">
-      <h1>⚡ Crear Nuevo Restoran / Local</h1>
+      <h1>⚡ Crear Nuevo Restoran (Contrato 30 Días)</h1>
       
-      <label>Nombre del Restoran / Cliente</label>
-      <input type="text" id="nombre-local" placeholder="Ej: Sushi Valpo, Bar Central, Don Pepe">
+      <label>Nombre Comercial del Restoran / Cliente</label>
+      <input type="text" id="nombre-local" placeholder="Ej: Sushi Valpo, Bar Central">
 
-      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Crear Restoran y Generar Script</button>
+      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Registrar Local y Generar Script</button>
 
       <div id="resultado" class="result-box">
-        <h3 style="color:var(--neon-orange); margin-bottom:12px;">✅ Restoran Registrado Exitosamente</h3>
+        <h3 style="color:var(--neon-orange); margin-bottom:12px;">✅ Local Creado Exitosamente</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" id="info-vencimiento"></p>
         
-        <div class="link-item">
-          <span>Panel Admin Principal del Cliente:</span>
-          <a id="link-admin" target="_blank"></a>
-        </div>
-
-        <div class="link-item">
-          <span>URL Carta Pública (Mesa 1):</span>
-          <a id="link-cliente" target="_blank"></a>
-        </div>
-
-        <button class="btn-block" style="margin-top: 10px; background: #00e676; color: #000;" onclick="descargarScriptActual()">
+        <button class="btn-block" style="background: #00e676; color: #000;" onclick="descargarScriptActual()">
           📥 Descargar Script Único (.txt)
         </button>
       </div>
     </div>
 
-    <!-- LISTA DE LOCALES REGISTRADOS -->
+    <!-- LISTA DE LOCALES CREADOS -->
     <div class="card">
-      <h2>📜 Locales Creados en el Sistema</h2>
+      <h2>📜 Locales Creados y Fechas de Vencimiento</h2>
       <div id="lista-locales">Cargando restoranes...</div>
     </div>
 
@@ -132,61 +125,61 @@
     const API_URL = "https://appmenu-tavr.onrender.com/api";
     let ultimoLocalCreado = null;
 
-    // Cargar la lista de locales creados al iniciar la página
     document.addEventListener("DOMContentLoaded", () => {
       cargarLocales();
     });
 
-    // Formatea nombres a identificadores limpios (ej: "Bar Don Pepe" -> "bar-don-pepe")
     function formatearIdLocal(texto) {
       return texto.toLowerCase().trim().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
     }
 
     async function registrarNuevoLocal() {
-      const inputNombre = document.getElementById('nombre-local').value;
-      if (!inputNombre.trim()) {
+      const inputNombre = document.getElementById('nombre-local').value.trim();
+      if (!inputNombre) {
         alert('Por favor ingresa el nombre del restoran.');
         return;
       }
 
       const localId = formatearIdLocal(inputNombre);
-      const baseUrl = window.location.origin;
+      
+      // Fecha actual y calculo a +30 días para vencimiento
+      const fechaCreacion = new Date();
+      const fechaVencimiento = new Date();
+      fechaVencimiento.setDate(fechaCreacion.getDate() + 30);
 
-      // Registrar una categoría base o inicial en el backend para dar de alta el local
+      const fechaVencISO = fechaVencimiento.toISOString();
+
       try {
+        // Inicialización en base de datos registrando el local con fecha de vencimiento
         await fetch(`${API_URL}/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             local: localId,
-            categoria: 'Bebidas',
-            nombre: 'Agua Mineral',
-            precio: 1500
+            categoria: 'Inicio',
+            nombre: 'Producto de Muestra',
+            precio: 1000,
+            fechaVencimiento: fechaVencISO
           })
         });
 
+        // Respaldar fecha de creación/vencimiento localmente
+        localStorage.setItem(`venc_${localId}`, fechaVencimiento.getTime());
+
         ultimoLocalCreado = {
-          nombre: inputNombre.trim(),
-          id: localId
+          nombre: inputNombre,
+          id: localId,
+          vencimiento: fechaVencimiento.toLocaleDateString('es-CL')
         };
 
-        const urlAdmin = `${baseUrl}/admin.html?local=${localId}`;
-        const urlCliente = `${baseUrl}/index.html?local=${localId}&mesa=1`;
-
-        document.getElementById('link-admin').href = urlAdmin;
-        document.getElementById('link-admin').innerText = urlAdmin;
-
-        document.getElementById('link-cliente').href = urlCliente;
-        document.getElementById('link-cliente').innerText = urlCliente;
-
+        document.getElementById('info-vencimiento').innerText = `Vencimiento de Mensualidad: ${fechaVencimiento.toLocaleDateString('es-CL')}`;
         document.getElementById('resultado').style.display = 'block';
         document.getElementById('nombre-local').value = '';
 
-        // Recargar la lista de la base de datos
         cargarLocales();
 
       } catch (err) {
-        alert('Error al registrar el local en el servidor.');
+        alert('Error al conectar con el servidor.');
       }
     }
 
@@ -208,14 +201,26 @@
         contenedor.innerHTML = locales.map(loc => {
           const localId = typeof loc === 'string' ? loc : loc.id || loc.local;
           const nombreMostrar = localId.replace(/-/g, ' ').toUpperCase();
+          
+          // Cálculo de vencimiento basado en respaldo o estimación a 30 días
+          const timestampGuardado = localStorage.getItem(`venc_${localId}`);
+          let fVenc;
+          if (timestampGuardado) {
+            fVenc = new Date(parseInt(timestampGuardado));
+          } else {
+            fVenc = new Date();
+            fVenc.setDate(fVenc.getDate() + 30);
+          }
+
+          const fechaFormateada = fVenc.toLocaleDateString('es-CL');
 
           return `
             <div class="local-row">
               <div>
                 <strong>${nombreMostrar}</strong>
-                <div style="font-size:11px; color:var(--text-muted)">ID: ${localId}</div>
+                <div class="venc-tag">📅 Vencimiento Mensualidad: ${fechaFormateada}</div>
               </div>
-              <button class="btn-download" onclick="generarYDescargarTXT('${nombreMostrar}', '${localId}')">
+              <button class="btn-download" onclick="generarYDescargarTXT('${nombreMostrar}', '${localId}', '${fechaFormateada}')">
                 📥 Descargar Script
               </button>
             </div>
@@ -223,56 +228,52 @@
         }).join('');
 
       } catch (err) {
-        contenedor.innerHTML = `<p style="color:var(--text-muted)">No se pudo obtener la lista de locales o el servidor no soporta /api/locales aún.</p>`;
+        contenedor.innerHTML = `<p style="color:var(--text-muted)">No se pudo cargar la lista de locales.</p>`;
       }
     }
 
     function descargarScriptActual() {
       if (ultimoLocalCreado) {
-        generarYDescargarTXT(ultimoLocalCreado.nombre, ultimoLocalCreado.id);
+        generarYDescargarTXT(ultimoLocalCreado.nombre, ultimoLocalCreado.id, ultimoLocalCreado.vencimiento);
       }
     }
 
-    function generarYDescargarTXT(nombreLocal, localId) {
+    function generarYDescargarTXT(nombreLocal, localId, fechaVenc) {
       const baseUrl = window.location.origin;
 
       const textoScript = `=====================================================
-FICHA Y SCRIPT DE CONFIGURACIÓN DE RESTORAN
+SCRIPT ÚNICO Y CONFIGURACIÓN DE RESTORAN
 =====================================================
-NOMBRE RESTORAN : ${nombreLocal}
-ID SISTEMA      : ${localId}
-FECHA REGISTRO  : ${new Date().toLocaleDateString('es-CL')}
+CLIENTE / RESTORAN  : ${nombreLocal}
+ID SISTEMA          : ${localId}
+FECHA VENCIMIENTO   : ${fechaVenc}
 
 -----------------------------------------------------
-1. PANEL DE ADMINISTRACIÓN Y CONTROL (ENTREGAR AL CLIENTE)
+1. PANEL DE CONTROL Y ADMINISTRACIÓN GENERAL
 -----------------------------------------------------
-Acceso completo para agregar menú, ver ventas, cocina y garzón:
+Este enlace abre el Panel Central para gestionar Productos,
+Categorías, Historial, QR Garzón y Rango de Mesas:
 ${baseUrl}/admin.html?local=${localId}
 
 -----------------------------------------------------
-2. PANTALLAS DE TRABAJO INDEPENDIENTES
+2. PANTALLA DE COCINA
 -----------------------------------------------------
-• Pantalla Cocina (Tablet/Monitor Cocina):
-  ${baseUrl}/cocina.html?local=${localId}
-
-• Pantalla Garzón (Teléfono Garzones):
-  ${baseUrl}/garzon.html?local=${localId}
+Enlace para la pantalla o Tablet en Cocina:
+${baseUrl}/cocina.html?local=${localId}
 
 -----------------------------------------------------
-3. CARTA PÚBLICA PARA CLIENTES (CÓDIGOS QR)
+3. PANTALLA DE GARZONES (TURNO)
 -----------------------------------------------------
-Enlace genérico para la Mesa 1 (Cambiar &mesa=X para cada mesa):
+Enlace directo para Garzones:
+${baseUrl}/garzon.html?local=${localId}
+
+-----------------------------------------------------
+4. CARTA PÚBLICA DE CLIENTES (MESA 1)
+-----------------------------------------------------
 ${baseUrl}/index.html?local=${localId}&mesa=1
 
-Estructura de URLs para tus Mesas:
-Mesa 1: ${baseUrl}/index.html?local=${localId}&mesa=1
-Mesa 2: ${baseUrl}/index.html?local=${localId}&mesa=2
-Mesa 3: ${baseUrl}/index.html?local=${localId}&mesa=3
-Mesa 4: ${baseUrl}/index.html?local=${localId}&mesa=4
-Mesa 5: ${baseUrl}/index.html?local=${localId}&mesa=5
-
 =====================================================
-Guardar este archivo como respaldo de entrega.
+Guarde este archivo como respaldo para la entrega al cliente.
 =====================================================`;
 
       const blob = new Blob([textoScript], { type: 'text/plain;charset=utf-8' });
