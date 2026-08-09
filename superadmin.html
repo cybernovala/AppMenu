@@ -94,7 +94,7 @@
 
   <div class="container">
     
-    <!-- CREACIÓN DE CLIENTES / LOCALES -->
+    <!-- CREACIÓN DE CLIENTES -->
     <div class="card">
       <h1>⚡ Crear Nuevo Restoran / Cliente</h1>
       
@@ -113,9 +113,9 @@
       </div>
     </div>
 
-    <!-- LISTADO DE CLIENTES REGISTRADOS -->
+    <!-- LISTADO DE CLIENTES EN MONGO -->
     <div class="card">
-      <h2>📜 Clientes Registrados y Vencimientos</h2>
+      <h2>📜 Clientes Registrados en MongoDB</h2>
       <div id="lista-locales">Cargando restoranes...</div>
     </div>
 
@@ -176,27 +176,39 @@
         cargarLocales();
 
       } catch (err) {
-        alert('Error al comunicar con el servidor Render.');
+        alert('Error al comunicar con el servidor.');
       }
     }
 
     async function cargarLocales() {
       const contenedor = document.getElementById('lista-locales');
       try {
-        const res = await fetch(`${API_URL}/locales`);
-        let locales = [];
+        let localesList = [];
         
-        if (res.ok) {
-          locales = await res.json();
+        // Intentar consultar endpoint directo de locales
+        const resLocales = await fetch(`${API_URL}/locales`);
+        if (resLocales.ok) {
+          localesList = await resLocales.json();
         }
 
-        if (!locales || locales.length === 0) {
-          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay clientes registrados aún.</p>`;
+        // Si no responde o está vacío, obtener los locales únicos desde el menú
+        if (!localesList || localesList.length === 0) {
+          const resMenu = await fetch(`${API_URL}/menu`);
+          if (resMenu.ok) {
+            const todosLosPlatos = await resMenu.json();
+            localesList = [...new Set(todosLosPlatos.map(item => item.local).filter(Boolean))];
+          }
+        }
+
+        if (!localesList || localesList.length === 0) {
+          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay clientes registrados aún en MongoDB.</p>`;
           return;
         }
 
-        contenedor.innerHTML = locales.map(loc => {
-          const localId = typeof loc === 'string' ? loc : loc.id || loc.local;
+        contenedor.innerHTML = localesList.map(item => {
+          const localId = typeof item === 'string' ? item : (item.id || item.local || item._id);
+          if (!localId) return '';
+
           const nombreMostrar = localId.replace(/-/g, ' ').toUpperCase();
           
           const timestampGuardado = localStorage.getItem(`venc_${localId}`);
@@ -219,7 +231,7 @@
         }).join('');
 
       } catch (err) {
-        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error al cargar la lista de locales desde la API.</p>`;
+        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error al cargar la lista desde MongoDB.</p>`;
       }
     }
 
@@ -273,7 +285,7 @@
 <body>
   <div class="box">
     <h1>${nombreLocal}</h1>
-    <p>Redirigiendo al Panel Principal del Restaurante...</p>
+    <p>Redirigiendo al Panel de Control Web...</p>
     <a href="${urlAdminAbsoluta}">Ingresar Directamente</a>
   </div>
   <script>
