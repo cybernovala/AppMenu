@@ -57,7 +57,7 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 13px;
-      transition: transform 0.1s, opacity 0.2s;
+      transition: opacity 0.2s;
     }
     .btn:hover { opacity: 0.9; }
     .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
@@ -80,12 +80,9 @@
       text-transform: uppercase;
     }
 
-    .form-inline {
-      display: flex;
-      gap: 10px;
-    }
+    .form-inline { display: flex; gap: 10px; }
 
-    input, select {
+    input {
       flex: 1;
       padding: 10px 12px;
       background: #181822;
@@ -95,7 +92,7 @@
       font-size: 14px;
     }
 
-    /* TARJETAS DE CATEGORÍAS */
+    /* TARJETAS DE CATEGORÍA */
     .category-card {
       background: var(--card-bg);
       border: 1px solid var(--border-color);
@@ -119,9 +116,7 @@
       color: var(--neon-yellow);
     }
 
-    .product-list {
-      padding: 15px;
-    }
+    .product-list { padding: 15px; }
 
     .product-item {
       display: flex;
@@ -134,28 +129,10 @@
       margin-bottom: 10px;
     }
 
-    .product-info {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .product-title {
-      font-weight: 600;
-      font-size: 15px;
-      color: #fff;
-    }
-
-    .product-price {
-      font-size: 14px;
-      color: var(--neon-yellow);
-      font-weight: bold;
-    }
-
-    .product-actions {
-      display: flex;
-      gap: 8px;
-    }
+    .product-info { display: flex; flex-direction: column; gap: 3px; }
+    .product-title { font-weight: 600; font-size: 15px; color: #fff; }
+    .product-price { font-size: 14px; color: var(--neon-yellow); font-weight: bold; }
+    .product-actions { display: flex; gap: 8px; }
 
     /* FORMULARIO AGREGAR PRODUCTO */
     .add-product-box {
@@ -167,11 +144,9 @@
       flex-wrap: wrap;
     }
 
-    .add-product-box input {
-      min-width: 140px;
-    }
+    .add-product-box input { min-width: 140px; }
 
-    /* MODAL DE EDICIÓN DE PRODUCTO */
+    /* MODAL DE EDICIÓN */
     .modal {
       display: none;
       position: fixed;
@@ -191,18 +166,8 @@
       max-width: 400px;
     }
 
-    .modal-content h3 {
-      color: var(--neon-yellow);
-      margin-bottom: 15px;
-    }
-
-    .modal-content label {
-      display: block;
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 10px;
-      margin-bottom: 4px;
-    }
+    .modal-content h3 { color: var(--neon-yellow); margin-bottom: 15px; }
+    .modal-content label { display: block; font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -222,7 +187,7 @@
     <div class="section-card">
       <h3>📁 Crear Nueva Categoría</h3>
       <div class="form-inline">
-        <input type="text" id="nueva-categoria" placeholder="Ej: Entradas, Bebidas, Roll Especial">
+        <input type="text" id="nueva-categoria" placeholder="Ej: Entradas, Bebidas, Promociones">
         <button class="btn" onclick="crearCategoria()">+ Agregar Categoría</button>
       </div>
     </div>
@@ -238,7 +203,8 @@
   <div class="modal" id="modal-editar">
     <div class="modal-content">
       <h3>✏️ Editar Producto</h3>
-      <input type="hidden" id="edit-id">
+      <input type="hidden" id="edit-cat-orig">
+      <input type="hidden" id="edit-index-orig">
       
       <label>Nombre del Producto</label>
       <input type="text" id="edit-nombre">
@@ -259,52 +225,49 @@
   <script>
     const API_URL = "https://appmenu-tavr.onrender.com/api";
     
-    // Extraer parámetro ?local= de la URL
+    // Obtener parámetro ?local= de la URL (ej: "mongo")
     const params = new URLSearchParams(window.location.search);
-    const localId = params.get('local') || 'sushi-valpo';
+    const localId = params.get('local') || 'mongo';
 
-    let productosLocales = [];
+    let productosPlanos = [];
     let categoriasSet = new Set();
 
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById('lbl-local-nombre').innerText = localId.replace(/-/g, ' ').toUpperCase();
+      document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
       cargarProductos();
     });
 
-    // 1. CARGAR PRODUCTOS DESDE MONGO DB
+    // 1. OBTIENE EL MENÚ DESDE MONGO
     async function cargarProductos() {
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
 
       try {
         const respuesta = await fetch(`${API_URL}/menu?local=${localId}`);
-        productosLocales = await respuesta.json();
+        productosPlanos = await respuesta.json();
 
-        // Extraer categorías existentes en el menú
         categoriasSet.clear();
-        productosLocales.forEach(p => {
+        productosPlanos.forEach(p => {
           if (p.categoria) categoriasSet.add(p.categoria);
         });
 
-        // Si no existen categorías aún, poner una por defecto
         if (categoriasSet.size === 0) {
           categoriasSet.add("General");
         }
 
         renderizarCategorias();
-
       } catch (err) {
-        contenedor.innerHTML = '<p style="color: #ff3344; text-align: center;">Error al conectar con la API en Render.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; text-align: center;">Error al conectar con la API.</p>';
       }
     }
 
-    // 2. MOSTRAR CATEGORÍAS Y PRODUCTOS EN PANTALLA
+    // 2. RENDERIZA LAS CATEGORÍAS Y SUS PRODUCTOS
     function renderizarCategorias() {
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '';
 
       categoriasSet.forEach(catNombre => {
-        const productosCat = productosLocales.filter(p => p.categoria === catNombre);
+        const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
 
         const catCard = document.createElement('div');
         catCard.className = 'category-card';
@@ -316,24 +279,27 @@
           </div>
 
           <div class="product-list">
-            ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos guardados en esta categoría.</p>' : ''}
-            ${productosCat.map(prod => `
-              <div class="product-item">
-                <div class="product-info">
-                  <span class="product-title">${prod.nombre}</span>
-                  <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
+            ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>' : ''}
+            ${productosCat.map((prod, idx) => {
+              // Obtener el índice dentro de su categoría específica
+              const subIndex = productosCat.findIndex(p => p === prod);
+              return `
+                <div class="product-item">
+                  <div class="product-info">
+                    <span class="product-title">${prod.nombre}</span>
+                    <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
+                  </div>
+                  <div class="product-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${subIndex})">🗑️ Eliminar</button>
+                  </div>
                 </div>
-                <div class="product-actions">
-                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${prod._id}', '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio}, '${prod.categoria.replace(/'/g, "\\'")}')">✏️ Editar</button>
-                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${prod._id}')">🗑️ Eliminar</button>
-                </div>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
 
-          <!-- FORMULARIO AGREGAR PRODUCTO A ESTA CATEGORÍA -->
           <div class="add-product-box">
-            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto/bebida" style="flex:2;">
+            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
             <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
             <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
           </div>
@@ -343,7 +309,7 @@
       });
     }
 
-    // 3. AGREGAR CATEGORÍA LOCAL
+    // 3. CREAR CATEGORÍA EN LA PANTALLA
     function crearCategoria() {
       const inputCat = document.getElementById('nueva-categoria');
       const nombreCat = inputCat.value.trim();
@@ -358,7 +324,7 @@
       renderizarCategorias();
     }
 
-    // 4. GUARDAR PRODUCTO EN MONGO DB
+    // 4. GUARDAR PRODUCTO NUEVO EN MONGO DB
     async function agregarProducto(categoria) {
       const inputNombre = document.getElementById(`nuevo-nombre-${categoria}`);
       const inputPrecio = document.getElementById(`nuevo-precio-${categoria}`);
@@ -367,7 +333,7 @@
       const precio = parseFloat(inputPrecio.value);
 
       if (!nombre || isNaN(precio)) {
-        alert("Por favor completa el nombre y un precio válido.");
+        alert("Ingresa un nombre y un precio válido.");
         return;
       }
 
@@ -388,35 +354,39 @@
           inputPrecio.value = '';
           cargarProductos();
         } else {
-          alert("Error al guardar el producto en MongoDB.");
+          alert("Error al guardar en MongoDB.");
         }
       } catch (err) {
-        alert("Error de conexión al servidor.");
+        alert("Error de conexión.");
       }
     }
 
     // 5. ELIMINAR PRODUCTO DE MONGO DB
-    async function eliminarProducto(id) {
-      if (!confirm("¿Estás seguro de que deseas eliminar este producto?")) return;
+    async function eliminarProducto(categoria, index) {
+      if (!confirm("¿Deseas eliminar este producto del menú?")) return;
 
       try {
-        const res = await fetch(`${API_URL}/menu/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${API_URL}/menu/del?local=${localId}&categoria=${encodeURIComponent(categoria)}&index=${index}`, {
+          method: 'DELETE'
+        });
+
         if (res.ok) {
           cargarProductos();
         } else {
           alert("Error al eliminar el producto.");
         }
       } catch (err) {
-        alert("Error de conexión al servidor.");
+        alert("Error de conexión.");
       }
     }
 
-    // 6. FUNCIONES MODAL Y EDICIÓN DE PRODUCTO
-    function abrirModalEdicion(id, nombre, precio, categoria) {
-      document.getElementById('edit-id').value = id;
+    // 6. FUNCIONES MODAL DE EDICIÓN
+    function abrirModalEdicion(catOrig, indexOrig, nombre, precio) {
+      document.getElementById('edit-cat-orig').value = catOrig;
+      document.getElementById('edit-index-orig').value = indexOrig;
       document.getElementById('edit-nombre').value = nombre;
       document.getElementById('edit-precio').value = precio;
-      document.getElementById('edit-categoria').value = categoria;
+      document.getElementById('edit-categoria').value = catOrig;
       document.getElementById('modal-editar').style.display = 'flex';
     }
 
@@ -425,21 +395,29 @@
     }
 
     async function guardarEdicion() {
-      const id = document.getElementById('edit-id').value;
-      const nombre = document.getElementById('edit-nombre').value.trim();
-      const precio = parseFloat(document.getElementById('edit-precio').value);
-      const categoria = document.getElementById('edit-categoria').value.trim();
+      const catOrig = document.getElementById('edit-cat-orig').value;
+      const indexOrig = document.getElementById('edit-index-orig').value;
+      const nuevoNombre = document.getElementById('edit-nombre').value.trim();
+      const nuevoPrecio = parseFloat(document.getElementById('edit-precio').value);
+      const nuevaCategoria = document.getElementById('edit-categoria').value.trim();
 
-      if (!nombre || isNaN(precio) || !categoria) {
-        alert("Por favor completa todos los campos correctamente.");
+      if (!nuevoNombre || isNaN(nuevoPrecio) || !nuevaCategoria) {
+        alert("Por favor completa los campos correctamente.");
         return;
       }
 
       try {
-        const res = await fetch(`${API_URL}/menu/${id}`, {
+        const res = await fetch(`${API_URL}/menu/edit`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, precio, categoria })
+          body: JSON.stringify({
+            local: localId,
+            categoriaOriginal: catOrig,
+            indexOriginal: Number(indexOrig),
+            nuevoNombre: nuevoNombre,
+            nuevoPrecio: nuevoPrecio,
+            nuevaCategoria: nuevaCategoria
+          })
         });
 
         if (res.ok) {
@@ -449,7 +427,7 @@
           alert("Error al actualizar el producto.");
         }
       } catch (err) {
-        alert("Error de conexión con el servidor.");
+        alert("Error de conexión.");
       }
     }
   </script>
