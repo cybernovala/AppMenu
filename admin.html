@@ -3,204 +3,456 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración - AppMenu</title>
+  <title>Panel de Administración - Gestión de Menú</title>
   <style>
     :root {
-      --bg-dark: #08080a;
-      --card-bg: rgba(18, 18, 22, 0.95);
+      --bg-dark: #09090c;
+      --card-bg: #121218;
       --neon-orange: #ff5500;
       --neon-yellow: #ffea00;
-      --grad-neon: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
+      --grad-neon: linear-gradient(135deg, #ff5500, #ffea00);
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
+      --border-color: rgba(255, 85, 0, 0.25);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
 
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
-      padding: 20px;
+      padding: 15px;
     }
 
     .container { max-width: 800px; margin: 0 auto; }
 
-    header {
+    /* HEADER */
+    .header-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 25px;
-      border-bottom: 1px solid #333;
-      padding-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 10px;
     }
 
-    h1 { color: var(--neon-yellow); font-size: 22px; }
+    .local-title {
+      font-size: 22px;
+      color: var(--neon-yellow);
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
 
-    .nav-links {
+    .btn {
+      background: var(--grad-neon);
+      border: none;
+      color: #000;
+      padding: 10px 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
+    .btn-danger { background: #ff3344; color: #fff; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* SECCIÓN CREAR CATEGORÍA */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+
+    .section-card h3 {
+      font-size: 15px;
+      color: var(--neon-orange);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .form-inline {
       display: flex;
       gap: 10px;
     }
 
-    .nav-btn {
-      background: #14141a;
-      border: 1px solid var(--neon-orange);
+    input, select {
+      flex: 1;
+      padding: 10px 12px;
+      background: #181822;
+      border: 1px solid #333;
       color: #fff;
-      padding: 8px 14px;
       border-radius: 6px;
-      text-decoration: none;
-      font-size: 13px;
+      font-size: 14px;
+    }
+
+    /* TARJETAS DE CATEGORÍAS */
+    .category-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .category-header {
+      background: rgba(255, 85, 0, 0.08);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 85, 0, 0.2);
+    }
+
+    .category-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--neon-yellow);
+    }
+
+    .product-list {
+      padding: 15px;
+    }
+
+    .product-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #16161e;
+      border: 1px solid #262630;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .product-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .product-title {
+      font-weight: 600;
+      font-size: 15px;
+      color: #fff;
+    }
+
+    .product-price {
+      font-size: 14px;
+      color: var(--neon-yellow);
       font-weight: bold;
     }
 
-    .nav-btn:hover {
-      background: var(--neon-orange);
-      color: #000;
+    .product-actions {
+      display: flex;
+      gap: 8px;
     }
 
-    .card {
-      background: var(--card-bg);
-      border: 1px solid #333;
+    /* FORMULARIO AGREGAR PRODUCTO */
+    .add-product-box {
+      background: #14141c;
+      border-top: 1px dashed #333;
+      padding: 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .add-product-box input {
+      min-width: 140px;
+    }
+
+    /* MODAL DE EDICIÓN DE PRODUCTO */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: #16161e;
+      border: 1px solid var(--neon-orange);
+      padding: 25px;
       border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
+      width: 90%;
+      max-width: 400px;
     }
 
-    label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
-    input, select {
-      width: 100%; padding: 10px; background: #14141a; border: 1px solid #333;
-      color: #fff; border-radius: 6px; margin-bottom: 12px;
+    .modal-content h3 {
+      color: var(--neon-yellow);
+      margin-bottom: 15px;
     }
 
-    button.btn-submit {
-      width: 100%; background: var(--grad-neon); border: none; color: #000;
-      padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;
+    .modal-content label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      margin-bottom: 4px;
     }
-
-    .item-row {
-      display: flex; justify-content: space-between; align-items: center;
-      background: #14141a; padding: 10px 15px; border-radius: 6px; margin-bottom: 8px;
-    }
-
-    .btn-delete { background: #ff3333; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <header>
+    
+    <!-- HEADER -->
+    <div class="header-bar">
       <div>
-        <h1 id="titulo-local">Cargando Local...</h1>
-        <p style="font-size: 12px; color: var(--text-muted);">Panel General de Gestión</p>
+        <span style="font-size: 12px; color: var(--text-muted);">Administrando Cliente:</span>
+        <div class="local-title" id="lbl-local-nombre">CARGANDO...</div>
       </div>
-
-      <!-- NAVEGACIÓN CORREGIDA SIN ERROR 404 -->
-      <nav class="nav-links">
-        <a id="link-cocina" class="nav-btn" href="#">👨‍🍳 Cocina</a>
-        <a id="link-garzon" class="nav-btn" href="#">🤵 Garzón</a>
-        <a id="link-menu" class="nav-btn" href="#" target="_blank">📖 Ver Carta</a>
-      </nav>
-    </header>
-
-    <!-- AGREGAR PLATOS -->
-    <div class="card">
-      <h2 style="font-size: 16px; color: var(--neon-yellow); margin-bottom: 12px;">➕ Agregar Nuevo Producto</h2>
-      
-      <label>Nombre del Producto</label>
-      <input type="text" id="nombre" placeholder="Ej: Hamburguesa Doble">
-
-      <label>Categoría</label>
-      <input type="text" id="categoria" placeholder="Ej: Comida, Bebida, Postre">
-
-      <label>Precio ($)</label>
-      <input type="number" id="precio" placeholder="Ej: 5990">
-
-      <button class="btn-submit" onclick="agregarPlato()">Guardar Producto</button>
+      <button class="btn btn-secondary btn-sm" onclick="cargarProductos()">🔄 Recargar Menú</button>
     </div>
 
-    <!-- LISTADO -->
-    <div class="card">
-      <h2 style="font-size: 16px; color: var(--neon-yellow); margin-bottom: 12px;">📋 Menú Actual</h2>
-      <div id="lista-menu">Cargando menú...</div>
+    <!-- CREAR CATEGORÍA -->
+    <div class="section-card">
+      <h3>📁 Crear Nueva Categoría</h3>
+      <div class="form-inline">
+        <input type="text" id="nueva-categoria" placeholder="Ej: Entradas, Bebidas, Roll Especial">
+        <button class="btn" onclick="crearCategoria()">+ Agregar Categoría</button>
+      </div>
+    </div>
+
+    <!-- LISTADO DE CATEGORÍAS Y PRODUCTOS -->
+    <div id="contenedor-categorias">
+      <p style="color: var(--text-muted); text-align: center;">Cargando menú de MongoDB...</p>
+    </div>
+
+  </div>
+
+  <!-- MODAL DE EDICIÓN -->
+  <div class="modal" id="modal-editar">
+    <div class="modal-content">
+      <h3>✏️ Editar Producto</h3>
+      <input type="hidden" id="edit-id">
+      
+      <label>Nombre del Producto</label>
+      <input type="text" id="edit-nombre">
+
+      <label>Precio ($)</label>
+      <input type="number" id="edit-precio">
+
+      <label>Categoría</label>
+      <input type="text" id="edit-categoria">
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn" style="flex:1;" onclick="guardarEdicion()">Guardar Cambios</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      </div>
     </div>
   </div>
 
   <script>
     const API_URL = "https://appmenu-tavr.onrender.com/api";
+    
+    // Extraer parámetro ?local= de la URL
     const params = new URLSearchParams(window.location.search);
-    const currentLocal = params.get('local') || 'default';
+    const localId = params.get('local') || 'sushi-valpo';
+
+    let productosLocales = [];
+    let categoriasSet = new Set();
 
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById('titulo-local').innerText = `Local: ${currentLocal.replace(/-/g, ' ').toUpperCase()}`;
-      
-      // Mantiene el parámetro 'local' en todos los enlaces del menú
-      document.getElementById('link-cocina').href = `cocina.html?local=${currentLocal}`;
-      document.getElementById('link-garzon').href = `garzon.html?local=${currentLocal}`;
-      document.getElementById('link-menu').href = `index.html?local=${currentLocal}`;
-
-      cargarMenu();
+      document.getElementById('lbl-local-nombre').innerText = localId.replace(/-/g, ' ').toUpperCase();
+      cargarProductos();
     });
 
-    async function cargarMenu() {
-      const lista = document.getElementById('lista-menu');
-      try {
-        const res = await fetch(`${API_URL}/menu?local=${currentLocal}`);
-        const platos = await res.json();
+    // 1. CARGAR PRODUCTOS DESDE MONGO DB
+    async function cargarProductos() {
+      const contenedor = document.getElementById('contenedor-categorias');
+      contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
 
-        if (!platos || platos.length === 0) {
-          lista.innerHTML = `<p style="color:var(--text-muted)">No hay productos creados en este local.</p>`;
-          return;
+      try {
+        const respuesta = await fetch(`${API_URL}/menu?local=${localId}`);
+        productosLocales = await respuesta.json();
+
+        // Extraer categorías existentes en el menú
+        categoriasSet.clear();
+        productosLocales.forEach(p => {
+          if (p.categoria) categoriasSet.add(p.categoria);
+        });
+
+        // Si no existen categorías aún, poner una por defecto
+        if (categoriasSet.size === 0) {
+          categoriasSet.add("General");
         }
 
-        lista.innerHTML = platos.map(p => `
-          <div class="item-row">
-            <div>
-              <strong>${p.nombre}</strong> <span style="font-size: 12px; color: var(--text-muted);">(${p.categoria})</span>
-              <div style="color: var(--neon-yellow); font-size: 13px;">$${p.precio}</div>
-            </div>
-            <button class="btn-delete" onclick="eliminarPlato('${p._id}')">Eliminar</button>
-          </div>
-        `).join('');
+        renderizarCategorias();
 
       } catch (err) {
-        lista.innerHTML = `<p style="color:var(--text-muted)">Error al cargar el menú.</p>`;
+        contenedor.innerHTML = '<p style="color: #ff3344; text-align: center;">Error al conectar con la API en Render.</p>';
       }
     }
 
-    async function agregarPlato() {
-      const nombre = document.getElementById('nombre').value.trim();
-      const categoria = document.getElementById('categoria').value.trim() || 'General';
-      const precio = document.getElementById('precio').value;
+    // 2. MOSTRAR CATEGORÍAS Y PRODUCTOS EN PANTALLA
+    function renderizarCategorias() {
+      const contenedor = document.getElementById('contenedor-categorias');
+      contenedor.innerHTML = '';
 
-      if (!nombre || !precio) {
-        alert('Por favor completa el nombre y el precio.');
+      categoriasSet.forEach(catNombre => {
+        const productosCat = productosLocales.filter(p => p.categoria === catNombre);
+
+        const catCard = document.createElement('div');
+        catCard.className = 'category-card';
+
+        catCard.innerHTML = `
+          <div class="category-header">
+            <span class="category-name">📂 ${catNombre}</span>
+            <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
+          </div>
+
+          <div class="product-list">
+            ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos guardados en esta categoría.</p>' : ''}
+            ${productosCat.map(prod => `
+              <div class="product-item">
+                <div class="product-info">
+                  <span class="product-title">${prod.nombre}</span>
+                  <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
+                </div>
+                <div class="product-actions">
+                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${prod._id}', '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio}, '${prod.categoria.replace(/'/g, "\\'")}')">✏️ Editar</button>
+                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${prod._id}')">🗑️ Eliminar</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- FORMULARIO AGREGAR PRODUCTO A ESTA CATEGORÍA -->
+          <div class="add-product-box">
+            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto/bebida" style="flex:2;">
+            <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
+            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
+          </div>
+        `;
+
+        contenedor.appendChild(catCard);
+      });
+    }
+
+    // 3. AGREGAR CATEGORÍA LOCAL
+    function crearCategoria() {
+      const inputCat = document.getElementById('nueva-categoria');
+      const nombreCat = inputCat.value.trim();
+
+      if (!nombreCat) {
+        alert("Ingresa un nombre para la categoría.");
+        return;
+      }
+
+      categoriasSet.add(nombreCat);
+      inputCat.value = '';
+      renderizarCategorias();
+    }
+
+    // 4. GUARDAR PRODUCTO EN MONGO DB
+    async function agregarProducto(categoria) {
+      const inputNombre = document.getElementById(`nuevo-nombre-${categoria}`);
+      const inputPrecio = document.getElementById(`nuevo-precio-${categoria}`);
+
+      const nombre = inputNombre.value.trim();
+      const precio = parseFloat(inputPrecio.value);
+
+      if (!nombre || isNaN(precio)) {
+        alert("Por favor completa el nombre y un precio válido.");
         return;
       }
 
       try {
-        await fetch(`${API_URL}/menu`, {
+        const res = await fetch(`${API_URL}/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: currentLocal, nombre, categoria, precio: Number(precio) })
+          body: JSON.stringify({
+            local: localId,
+            categoria: categoria,
+            nombre: nombre,
+            precio: precio
+          })
         });
 
-        document.getElementById('nombre').value = '';
-        document.getElementById('precio').value = '';
-        cargarMenu();
-
+        if (res.ok) {
+          inputNombre.value = '';
+          inputPrecio.value = '';
+          cargarProductos();
+        } else {
+          alert("Error al guardar el producto en MongoDB.");
+        }
       } catch (err) {
-        alert('Error al guardar el producto.');
+        alert("Error de conexión al servidor.");
       }
     }
 
-    async function eliminarPlato(id) {
-      if (!confirm('¿Deseas eliminar este producto?')) return;
+    // 5. ELIMINAR PRODUCTO DE MONGO DB
+    async function eliminarProducto(id) {
+      if (!confirm("¿Estás seguro de que deseas eliminar este producto?")) return;
+
       try {
-        await fetch(`${API_URL}/menu/${id}`, { method: 'DELETE' });
-        cargarMenu();
+        const res = await fetch(`${API_URL}/menu/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          cargarProductos();
+        } else {
+          alert("Error al eliminar el producto.");
+        }
       } catch (err) {
-        alert('Error al eliminar.');
+        alert("Error de conexión al servidor.");
+      }
+    }
+
+    // 6. FUNCIONES MODAL Y EDICIÓN DE PRODUCTO
+    function abrirModalEdicion(id, nombre, precio, categoria) {
+      document.getElementById('edit-id').value = id;
+      document.getElementById('edit-nombre').value = nombre;
+      document.getElementById('edit-precio').value = precio;
+      document.getElementById('edit-categoria').value = categoria;
+      document.getElementById('modal-editar').style.display = 'flex';
+    }
+
+    function cerrarModal() {
+      document.getElementById('modal-editar').style.display = 'none';
+    }
+
+    async function guardarEdicion() {
+      const id = document.getElementById('edit-id').value;
+      const nombre = document.getElementById('edit-nombre').value.trim();
+      const precio = parseFloat(document.getElementById('edit-precio').value);
+      const categoria = document.getElementById('edit-categoria').value.trim();
+
+      if (!nombre || isNaN(precio) || !categoria) {
+        alert("Por favor completa todos los campos correctamente.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/menu/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, precio, categoria })
+        });
+
+        if (res.ok) {
+          cerrarModal();
+          cargarProductos();
+        } else {
+          alert("Error al actualizar el producto.");
+        }
+      } catch (err) {
+        alert("Error de conexión con el servidor.");
       }
     }
   </script>
+
 </body>
 </html>
