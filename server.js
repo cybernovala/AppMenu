@@ -4,61 +4,80 @@ const cors = require('cors');
 
 const app = express();
 
-// --- 1. CONFIGURACIÓN DE CORS COMPLETA Y GLOBAL ---
+// --- 1. CONFIGURACIÓN CORS ---
 app.use(cors({
-  origin: '*', // Permite peticiones desde GitHub Pages (o cualquier origen)
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Habilitar pre-flight para todas las rutas
 app.options('*', cors());
-
 app.use(express.json());
 
 // --- 2. CONEXIÓN A MONGO DB ---
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:juan2073@cluster0.mongodb.net/appmenu?retryWrites=true&w=majority";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:juan2073@cluster0.w3kjxzs.mongodb.net/appmenu?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB Conectado Exitosamente'))
   .catch(err => console.error('❌ Error crítico al conectar a MongoDB:', err));
 
-// --- 3. ESQUEMA Y MODELO ---
+// --- 3. ESQUEMAS Y MODELOS ---
+
+// Esquema para la colección de clientes/locales ('locals')
+const LocalSchema = new mongoose.Schema({
+  nombre: String,
+  local: String,
+  id: String,
+  slug: String,
+  fechaVencimiento: Date
+}, { strict: false, timestamps: true });
+
+// Esquema para la colección de menú ('menus')
 const MenuSchema = new mongoose.Schema({
   local: { type: String, required: true, index: true },
   categoria: { type: String, default: 'General' },
   nombre: { type: String, default: 'Producto Inicial' },
   precio: { type: Number, default: 0 },
   fechaVencimiento: { type: Date }
-}, { timestamps: true });
+}, { strict: false, timestamps: true });
 
-// Evita duplicar o redefinir el modelo si Node se reinicia
-const Menu = mongoose.models.Menu || mongoose.model('Menu', MenuSchema);
+const Local = mongoose.models.Local || mongoose.model('Local', LocalSchema, 'locals');
+const Menu = mongoose.models.Menu || mongoose.model('Menu', MenuSchema, 'menus');
 
-// --- 4. RUTAS API DE LOCALES / CLIENTES ---
+// --- 4. RUTAS API ---
 
-// Endpoint para obtener todos los clientes creados
+// 1. OBTENER LISTA DE CLIENTES DESDE LA COLECCIÓN 'locals' (Y RESPALDO EN 'menus')
 app.get('/api/locales', async (req, res) => {
   try {
-    // Si la conexión a Mongo no está lista, responder con arreglo vacío en lugar de crash 500
     if (mongoose.connection.readyState !== 1) {
-      console.warn("⚠️ MongoDB aún no está completamente conectado.");
       return res.status(200).json([]);
     }
 
-    // Obtener valores únicos del campo 'local'
-    const locales = await Menu.distinct('local');
-    const filtrados = (locales || []).filter(item => item && item !== 'default');
+    // A. Consultar la colección 'locals'
+    const docsLocals = await Local.find({}).lean();
     
-    return res.status(200).json(filtrados);
+    // Extraer identificadores de los documentos guardados en 'locals'
+    let listaLocales = docsLocals.map(doc => {
+      return doc.local || doc.slug || doc.id || doc.nombre || null;
+    }).filter(Boolean);
+
+    // B. Respaldo: Si la colección 'locals' estuviera vacía, buscar distintivos en 'menus'
+    if (listaLocales.length === 0) {
+      const distinctMenus = await Menu.distinct('local');
+      listaLocales = (distinctMenus || []).filter(item => item && item !== 'default');
+    }
+
+    // Eliminar duplicados
+    const localesUnicos = [...new Set(listaLocales)];
+
+    return res.status(200).json(localesUnicos);
   } catch (err) {
     console.error("❌ Error en GET /api/locales:", err.message);
-    // Devuelve 200 con un arreglo vacío para evitar bloquar el JS del frontend
     return res.status(200).json([]);
   }
 });
 
-// Endpoint para obtener platos/menú
+// 2. OBTENER MENÚ DE UN LOCAL
 app.get('/api/menu', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -67,7 +86,7 @@ app.get('/api/menu', async (req, res) => {
 
     const { local } = req.query;
     const filtro = local ? { local } : {};
-    const platos = await Menu.find(filtro);
+    const platos = await Menu.find(filtro).lean();
     return res.status(200).json(platos || []);
   } catch (err) {
     console.error("❌ Error en GET /api/menu:", err.message);
@@ -75,19 +94,45 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
-// Endpoint para crear platos o nuevos locales
+// 3. REGISTRAR CLIENTE TANTO EN 'locals' COMO EN 'menus'
 app.post('/api/menu', async (req, res) => {
   try {
-    const nuevoPlato = new Menu(req.body);
+    const { local, fechaVencimiento, nombre, precio, categoria } = req.body;
+
+    // Guardar en la colección 'locals'
+    if (local) {
+      await Local.updateOne(
+        { local: local },
+        { 
+          $set: { 
+            local: local, 
+            nombre: local,
+            fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null 
+          } 
+        },
+        { upsert: true }
+      );
+    }
+
+    // Guardar producto en la colección 'menus'
+    const nuevoPlato = new Menu({
+      local: local || 'default',
+      categoria: categoria || 'General',
+      nombre: nombre || 'Producto Inicial',
+      precio: precio || 1000,
+      fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null
+    });
+
     await nuevoPlato.save();
     return res.status(201).json(nuevoPlato);
+
   } catch (err) {
     console.error("❌ Error en POST /api/menu:", err.message);
     return res.status(500).json({ error: 'Error al guardar en MongoDB', detalle: err.message });
   }
 });
 
-// Endpoint para eliminar un producto
+// 4. ELIMINAR PRODUCTO
 app.delete('/api/menu/:id', async (req, res) => {
   try {
     await Menu.findByIdAndDelete(req.params.id);
@@ -98,13 +143,13 @@ app.delete('/api/menu/:id', async (req, res) => {
   }
 });
 
-// Ruta base de diagnóstico
+// Ruta de diagnóstico
 app.get('/', (req, res) => {
-  res.send('🚀 API AppMenu funcionando correctamente.');
+  res.send('🚀 API AppMenu lista y vinculada a la colección locals.');
 });
 
-// --- 5. INICIALIZACIÓN DEL SERVIDOR ---
-const PORT = process.env.PORT || 3000;
+// --- 5. PUERTO Y ARRANQUE ---
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
 });
