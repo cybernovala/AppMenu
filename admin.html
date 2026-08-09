@@ -2,8 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Panel de Administración</title>
+  <!-- Librería externa para generación dinámica de QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -15,13 +17,25 @@
       --text-muted: #a0a0b0;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
 
     body, html {
       height: 100%;
       width: 100%;
       background-color: var(--bg-dark);
       color: var(--text-main);
+    }
+
+    /* Banner Alerta Vencimiento Mensualidad */
+    #banner-vencimiento {
+      display: none;
+      background: #ff3333;
+      color: #fff;
+      text-align: center;
+      padding: 12px;
+      font-weight: bold;
+      font-size: 13px;
+      border-bottom: 2px solid #fff;
     }
 
     .admin-layout {
@@ -38,11 +52,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-shrink: 0;
     }
 
     .brand-title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
       background: var(--grad-neon);
       -webkit-background-clip: text;
@@ -55,18 +68,17 @@
       background: #101015;
       border-bottom: 1px solid #222;
       overflow-x: auto;
-      flex-shrink: 0;
     }
     .tabs-bar::-webkit-scrollbar { display: none; }
 
     .tab-btn {
       flex: 1;
-      min-width: 110px;
-      padding: 12px 10px;
+      min-width: 90px;
+      padding: 12px 8px;
       background: transparent;
       border: none;
       color: var(--text-muted);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
       cursor: pointer;
       text-align: center;
@@ -82,16 +94,13 @@
 
     .content-area {
       flex: 1;
-      position: relative;
       overflow-y: auto;
       padding: 15px;
     }
 
-    /* Vistas directas */
     .view-panel { display: none; }
     .view-panel.active { display: block; }
 
-    /* Estilos de Formularios y Listas */
     .section-card {
       background: var(--card-bg);
       border: 1px solid rgba(255, 85, 0, 0.3);
@@ -100,7 +109,7 @@
       margin-bottom: 15px;
     }
 
-    h2 { font-size: 16px; color: var(--neon-yellow); margin-bottom: 12px; text-transform: uppercase; }
+    h2 { font-size: 15px; color: var(--neon-yellow); margin-bottom: 12px; text-transform: uppercase; }
 
     .form-group { margin-bottom: 10px; }
     label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
@@ -120,35 +129,59 @@
     }
 
     .btn-del {
-      background: #ff3333; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;
+      background: #ff3333; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
     }
 
-    iframe { width: 100%; height: 100%; border: none; min-height: 80vh; }
+    /* Estilos Generador de QR */
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .qr-card {
+      background: #14141a;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #333;
+    }
+
+    .qr-card div { margin: 0 auto 8px auto; }
+
+    iframe { width: 100%; height: 75vh; border: none; border-radius: 8px; }
   </style>
 </head>
 <body>
 
+  <!-- BANNER ALERTA COBRO / MENSUALIDAD -->
+  <div id="banner-vencimiento">
+    ⚠️ ATENCIÓN: Quedan 2 días o menos para el vencimiento de su mensualidad. Por favor regularice su pago para evitar suspensión del servicio.
+  </div>
+
   <div class="admin-layout">
     <header>
-      <div class="brand-title" id="admin-local-name">PANEL DE CONTROL</div>
+      <div class="brand-title" id="admin-local-name">PANEL CONTROL</div>
     </header>
 
     <nav class="tabs-bar">
       <button class="tab-btn active" onclick="cambiarPestana('productos', this)">📦 Productos</button>
-      <button class="tab-btn" onclick="cambiarPestana('historial', this)">📜 Historial</button>
-      <button class="tab-btn" onclick="cambiarPestana('cocina', this)">👨‍🍳 Cocina</button>
+      <button class="tab-btn" onclick="cambiarPestana('mesas', this)">📱 Menú & QR Mesas</button>
       <button class="tab-btn" onclick="cambiarPestana('garzon', this)">🍷 Garzón</button>
+      <button class="tab-btn" onclick="cambiarPestana('cocina', this)">👨‍🍳 Cocina</button>
+      <button class="tab-btn" onclick="cambiarPestana('historial', this)">📜 Historial</button>
     </nav>
 
     <main class="content-area">
       
-      <!-- Pestaña 1: Productos -->
+      <!-- 1. CREACIÓN DE PRODUCTOS POR CATEGORÍA -->
       <div id="view-productos" class="view-panel active">
         <div class="section-card">
-          <h2>➕ Agregar Producto</h2>
+          <h2>➕ Crear / Agregar Producto</h2>
           <div class="form-group">
             <label>Categoría</label>
-            <input type="text" id="prod-categoria" placeholder="Ej: Bebidas, Comida">
+            <input type="text" id="prod-categoria" placeholder="Ej: Entradas, Bebidas, Postres">
           </div>
           <div class="form-group">
             <label>Nombre del Producto</label>
@@ -162,27 +195,59 @@
         </div>
 
         <div class="section-card">
-          <h2>📋 Lista de Productos</h2>
+          <h2>📋 Productos Registrados</h2>
           <div id="lista-productos">Cargando...</div>
         </div>
       </div>
 
-      <!-- Pestaña 2: Historial -->
-      <div id="view-historial" class="view-panel">
+      <!-- 2. CARTA Y GENERADOR DE QR EN RANGO DE MESAS -->
+      <div id="view-mesas" class="view-panel">
         <div class="section-card">
-          <h2>📜 Historial de Ventas</h2>
-          <div id="lista-historial">Cargando historial...</div>
+          <h2>🔗 Enlace Carta Pública</h2>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">URL Base para Clientes:</p>
+          <input type="text" id="link-menu-base" readonly>
+        </div>
+
+        <div class="section-card">
+          <h2>🖨️ Generador de QR por Rango de Mesas</h2>
+          <div style="display:flex; gap:10px;">
+            <div class="form-group" style="flex:1;">
+              <label>Mesa Inicial:</label>
+              <input type="number" id="mesa-inicio" value="1">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Mesa Final (X):</label>
+              <input type="number" id="mesa-fin" value="10">
+            </div>
+          </div>
+          <button class="btn-action" onclick="generarQRMesas()">Generar Códigos QR</button>
+
+          <div id="contenedor-qr-mesas" class="qr-grid"></div>
         </div>
       </div>
 
-      <!-- Pestaña 3: Cocina -->
+      <!-- 3. GARZÓN & IDENTIFICACIÓN DE TURNO POR QR -->
+      <div id="view-garzon" class="view-panel">
+        <div class="section-card">
+          <h2>🪪 QR Inicio de Turno Garzón</h2>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Escanee o descargue este QR para ingresar al turno de Garzón:</p>
+          <div id="qr-garzon-turno" style="display:flex; justify-content:center; margin:15px 0;"></div>
+          <button class="btn-action" onclick="descargarQRGarzon()">Descargar QR Garzón (PNG)</button>
+        </div>
+        <iframe id="frame-garzon"></iframe>
+      </div>
+
+      <!-- 4. COCINA -->
       <div id="view-cocina" class="view-panel">
         <iframe id="frame-cocina"></iframe>
       </div>
 
-      <!-- Pestaña 4: Garzón -->
-      <div id="view-garzon" class="view-panel">
-        <iframe id="frame-garzon"></iframe>
+      <!-- 5. HISTORIAL DE VENTAS Y MESAS -->
+      <div id="view-historial" class="view-panel">
+        <div class="section-card">
+          <h2>📜 Historial de Pedidos y Ventas</h2>
+          <div id="lista-historial">Cargando historial...</div>
+        </div>
       </div>
 
     </main>
@@ -194,11 +259,32 @@
     const localActual = urlParams.get('local') || 'default';
     const BASE_URL = window.location.origin;
 
-    document.getElementById('admin-local-name').innerText = `LOCAL: ${localActual.replace('-', ' ').toUpperCase()}`;
+    document.getElementById('admin-local-name').innerText = `LOCAL: ${localActual.replace(/-/g, ' ').toUpperCase()}`;
+    document.getElementById('link-menu-base').value = `${BASE_URL}/index.html?local=${localActual}`;
 
-    // Carga de marcos externos para cocina y garzón
-    document.getElementById('frame-cocina').src = `${BASE_URL}/cocina.html?local=${localActual}`;
+    // Inicializar sub-pantallas en Iframe
     document.getElementById('frame-garzon').src = `${BASE_URL}/garzon.html?local=${localActual}`;
+    document.getElementById('frame-cocina').src = `${BASE_URL}/cocina.html?local=${localActual}`;
+
+    // Alerta de Vencimiento
+    function verificarVencimiento() {
+      let timestampVenc = localStorage.getItem(`venc_${localActual}`);
+      if (!timestampVenc) {
+        // Asignación por defecto a 30 días si no existe
+        const f = new Date();
+        f.setDate(f.getDate() + 30);
+        timestampVenc = f.getTime();
+        localStorage.setItem(`venc_${localActual}`, timestampVenc);
+      }
+
+      const fechaVenc = new Date(parseInt(timestampVenc));
+      const hoy = new Date();
+      const diasRestantes = Math.ceil((fechaVenc - hoy) / (1000 * 60 * 60 * 24));
+
+      if (diasRestantes <= 2) {
+        document.getElementById('banner-vencimiento').style.display = 'block';
+      }
+    }
 
     function cambiarPestana(nombre, btnElement) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -209,6 +295,7 @@
 
       if (nombre === 'productos') cargarProductos();
       if (nombre === 'historial') cargarHistorial();
+      if (nombre === 'garzon') generarQRTurnoGarzon();
     }
 
     async function cargarProductos() {
@@ -224,7 +311,7 @@
 
         let html = '';
         data.forEach(cat => {
-          html += `<h4 style="color:var(--neon-orange); margin:10px 0;">${cat.categoria}</h4>`;
+          html += `<h4 style="color:var(--neon-orange); margin:12px 0 6px 0;">${cat.categoria}</h4>`;
           cat.productos.forEach(p => {
             html += `
               <div class="item-row">
@@ -248,7 +335,7 @@
       const precio = parseFloat(document.getElementById('prod-precio').value);
 
       if (!categoria || !nombre || isNaN(precio)) {
-        alert('Completa todos los campos.');
+        alert('Por favor rellena todos los campos correctamente.');
         return;
       }
 
@@ -260,16 +347,15 @@
         });
 
         if (res.ok) {
-          alert('Producto guardado');
           document.getElementById('prod-nombre').value = '';
           document.getElementById('prod-precio').value = '';
           cargarProductos();
         }
-      } catch (err) { alert('Error al guardar'); }
+      } catch (err) { alert('Error al guardar el producto.'); }
     }
 
     async function eliminarProducto(categoria, nombre) {
-      if (!confirm(`¿Eliminar ${nombre}?`)) return;
+      if (!confirm(`¿Deseas eliminar "${nombre}"?`)) return;
       try {
         const res = await fetch(`${API_URL}/menu`, {
           method: 'DELETE',
@@ -277,7 +363,63 @@
           body: JSON.stringify({ local: localActual, categoria, nombre })
         });
         if (res.ok) cargarProductos();
-      } catch (err) { alert('Error al eliminar'); }
+      } catch (err) { alert('Error al eliminar el producto.'); }
+    }
+
+    function generarQRMesas() {
+      const inicio = parseInt(document.getElementById('mesa-inicio').value);
+      const fin = parseInt(document.getElementById('mesa-fin').value);
+      const cont = document.getElementById('contenedor-qr-mesas');
+      cont.innerHTML = '';
+
+      if (isNaN(inicio) || isNaN(fin) || inicio > fin) {
+        alert('Ingresa un rango numérico válido.');
+        return;
+      }
+
+      for (let i = inicio; i <= fin; i++) {
+        const urlMesa = `${BASE_URL}/index.html?local=${localActual}&mesa=${i}`;
+        const divCard = document.createElement('div');
+        divCard.className = 'qr-card';
+        
+        const divQr = document.createElement('div');
+        divCard.appendChild(divQr);
+
+        const lbl = document.createElement('strong');
+        lbl.innerText = `Mesa ${i}`;
+        lbl.style.display = 'block';
+        lbl.style.color = '#fff';
+        divCard.appendChild(lbl);
+
+        cont.appendChild(divCard);
+
+        new QRCode(divQr, {
+          text: urlMesa,
+          width: 100,
+          height: 100
+        });
+      }
+    }
+
+    function generarQRTurnoGarzon() {
+      const cont = document.getElementById('qr-garzon-turno');
+      cont.innerHTML = '';
+      const urlGarzon = `${BASE_URL}/garzon.html?local=${localActual}&turno=activo`;
+      new QRCode(cont, {
+        text: urlGarzon,
+        width: 140,
+        height: 140
+      });
+    }
+
+    function descargarQRGarzon() {
+      const img = document.querySelector('#qr-garzon-turno img');
+      if (img) {
+        const a = document.createElement('a');
+        a.href = img.src;
+        a.download = `QR_Garzon_${localActual}.png`;
+        a.click();
+      }
     }
 
     async function cargarHistorial() {
@@ -287,7 +429,7 @@
         const cont = document.getElementById('lista-historial');
 
         if (!pedidos || !pedidos.length) {
-          cont.innerHTML = `<p style="color:var(--text-muted)">No hay ventas registradas.</p>`;
+          cont.innerHTML = `<p style="color:var(--text-muted)">No hay registros de pedidos en el historial.</p>`;
           return;
         }
 
@@ -295,17 +437,18 @@
           <div class="item-row" style="flex-direction:column; align-items:flex-start;">
             <div style="display:flex; justify-content:space-between; width:100%;">
               <strong style="color:var(--neon-yellow)">MESA ${p.mesa}</strong>
-              <span style="color:var(--text-muted); font-size:12px;">${p.fecha ? new Date(p.fecha).toLocaleTimeString() : ''}</span>
+              <span style="color:var(--text-muted); font-size:12px;">${p.fecha ? new Date(p.fecha).toLocaleTimeString('es-CL') : ''}</span>
             </div>
-            <div>Total: $${p.total ? p.total.toLocaleString('es-CL') : '0'}</div>
+            <div style="font-size:13px; margin-top:4px;">Total: $${p.total ? p.total.toLocaleString('es-CL') : '0'}</div>
           </div>
         `).join('');
       } catch (err) {
-        document.getElementById('lista-historial').innerHTML = 'Error al cargar historial.';
+        document.getElementById('lista-historial').innerHTML = 'Error al obtener el historial.';
       }
     }
 
-    // Carga inicial
+    // Ejecución Inicial
+    verificarVencimiento();
     cargarProductos();
   </script>
 </body>
