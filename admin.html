@@ -2,10 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Panel de Administración</title>
-  <!-- Librería externa para generación dinámica de QR -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración - AppMenu</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -17,439 +15,192 @@
       --text-muted: #a0a0b0;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
-    body, html {
-      height: 100%;
-      width: 100%;
+    body {
       background-color: var(--bg-dark);
       color: var(--text-main);
+      padding: 20px;
     }
 
-    /* Banner Alerta Vencimiento Mensualidad */
-    #banner-vencimiento {
-      display: none;
-      background: #ff3333;
-      color: #fff;
-      text-align: center;
-      padding: 12px;
-      font-weight: bold;
-      font-size: 13px;
-      border-bottom: 2px solid #fff;
-    }
-
-    .admin-layout {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      height: 100dvh;
-    }
+    .container { max-width: 800px; margin: 0 auto; }
 
     header {
-      background: #000;
-      border-bottom: 1px solid rgba(255, 85, 0, 0.3);
-      padding: 10px 15px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 25px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 15px;
     }
 
-    .brand-title {
-      font-size: 15px;
-      font-weight: bold;
-      background: var(--grad-neon);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-transform: uppercase;
-    }
+    h1 { color: var(--neon-yellow); font-size: 22px; }
 
-    .tabs-bar {
+    .nav-links {
       display: flex;
-      background: #101015;
-      border-bottom: 1px solid #222;
-      overflow-x: auto;
+      gap: 10px;
     }
-    .tabs-bar::-webkit-scrollbar { display: none; }
 
-    .tab-btn {
-      flex: 1;
-      min-width: 90px;
-      padding: 12px 8px;
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      font-size: 12px;
+    .nav-btn {
+      background: #14141a;
+      border: 1px solid var(--neon-orange);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 13px;
       font-weight: bold;
-      cursor: pointer;
-      text-align: center;
-      border-bottom: 3px solid transparent;
-      white-space: nowrap;
     }
 
-    .tab-btn.active {
-      color: var(--neon-yellow);
-      border-bottom-color: var(--neon-orange);
-      background: rgba(255, 85, 0, 0.05);
+    .nav-btn:hover {
+      background: var(--neon-orange);
+      color: #000;
     }
 
-    .content-area {
-      flex: 1;
-      overflow-y: auto;
-      padding: 15px;
-    }
-
-    .view-panel { display: none; }
-    .view-panel.active { display: block; }
-
-    .section-card {
+    .card {
       background: var(--card-bg);
-      border: 1px solid rgba(255, 85, 0, 0.3);
+      border: 1px solid #333;
       border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
     }
 
-    h2 { font-size: 15px; color: var(--neon-yellow); margin-bottom: 12px; text-transform: uppercase; }
-
-    .form-group { margin-bottom: 10px; }
-    label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
-    input {
+    label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
+    input, select {
       width: 100%; padding: 10px; background: #14141a; border: 1px solid #333;
-      color: #fff; border-radius: 6px; font-size: 14px;
+      color: #fff; border-radius: 6px; margin-bottom: 12px;
     }
 
-    .btn-action {
-      background: var(--grad-neon); border: none; color: #000;
-      padding: 12px; font-weight: bold; width: 100%; border-radius: 6px; cursor: pointer;
+    button.btn-submit {
+      width: 100%; background: var(--grad-neon); border: none; color: #000;
+      padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;
     }
 
     .item-row {
       display: flex; justify-content: space-between; align-items: center;
-      background: #14141a; padding: 10px; border-radius: 6px; margin-bottom: 8px;
+      background: #14141a; padding: 10px 15px; border-radius: 6px; margin-bottom: 8px;
     }
 
-    .btn-del {
-      background: #ff3333; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
-    }
-
-    /* Estilos Generador de QR */
-    .qr-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 15px;
-      margin-top: 15px;
-    }
-
-    .qr-card {
-      background: #14141a;
-      padding: 10px;
-      border-radius: 8px;
-      text-align: center;
-      border: 1px solid #333;
-    }
-
-    .qr-card div { margin: 0 auto 8px auto; }
-
-    iframe { width: 100%; height: 75vh; border: none; border-radius: 8px; }
+    .btn-delete { background: #ff3333; color: #fff; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
 
-  <!-- BANNER ALERTA COBRO / MENSUALIDAD -->
-  <div id="banner-vencimiento">
-    ⚠️ ATENCIÓN: Quedan 2 días o menos para el vencimiento de su mensualidad. Por favor regularice su pago para evitar suspensión del servicio.
-  </div>
-
-  <div class="admin-layout">
+  <div class="container">
     <header>
-      <div class="brand-title" id="admin-local-name">PANEL CONTROL</div>
+      <div>
+        <h1 id="titulo-local">Cargando Local...</h1>
+        <p style="font-size: 12px; color: var(--text-muted);">Panel General de Gestión</p>
+      </div>
+
+      <!-- NAVEGACIÓN CORREGIDA SIN ERROR 404 -->
+      <nav class="nav-links">
+        <a id="link-cocina" class="nav-btn" href="#">👨‍🍳 Cocina</a>
+        <a id="link-garzon" class="nav-btn" href="#">🤵 Garzón</a>
+        <a id="link-menu" class="nav-btn" href="#" target="_blank">📖 Ver Carta</a>
+      </nav>
     </header>
 
-    <nav class="tabs-bar">
-      <button class="tab-btn active" onclick="cambiarPestana('productos', this)">📦 Productos</button>
-      <button class="tab-btn" onclick="cambiarPestana('mesas', this)">📱 Menú & QR Mesas</button>
-      <button class="tab-btn" onclick="cambiarPestana('garzon', this)">🍷 Garzón</button>
-      <button class="tab-btn" onclick="cambiarPestana('cocina', this)">👨‍🍳 Cocina</button>
-      <button class="tab-btn" onclick="cambiarPestana('historial', this)">📜 Historial</button>
-    </nav>
-
-    <main class="content-area">
+    <!-- AGREGAR PLATOS -->
+    <div class="card">
+      <h2 style="font-size: 16px; color: var(--neon-yellow); margin-bottom: 12px;">➕ Agregar Nuevo Producto</h2>
       
-      <!-- 1. CREACIÓN DE PRODUCTOS POR CATEGORÍA -->
-      <div id="view-productos" class="view-panel active">
-        <div class="section-card">
-          <h2>➕ Crear / Agregar Producto</h2>
-          <div class="form-group">
-            <label>Categoría</label>
-            <input type="text" id="prod-categoria" placeholder="Ej: Entradas, Bebidas, Postres">
-          </div>
-          <div class="form-group">
-            <label>Nombre del Producto</label>
-            <input type="text" id="prod-nombre" placeholder="Ej: Hamburguesa Doble">
-          </div>
-          <div class="form-group">
-            <label>Precio ($)</label>
-            <input type="number" id="prod-precio" placeholder="Ej: 5900">
-          </div>
-          <button class="btn-action" onclick="guardarProducto()">Guardar Producto</button>
-        </div>
+      <label>Nombre del Producto</label>
+      <input type="text" id="nombre" placeholder="Ej: Hamburguesa Doble">
 
-        <div class="section-card">
-          <h2>📋 Productos Registrados</h2>
-          <div id="lista-productos">Cargando...</div>
-        </div>
-      </div>
+      <label>Categoría</label>
+      <input type="text" id="categoria" placeholder="Ej: Comida, Bebida, Postre">
 
-      <!-- 2. CARTA Y GENERADOR DE QR EN RANGO DE MESAS -->
-      <div id="view-mesas" class="view-panel">
-        <div class="section-card">
-          <h2>🔗 Enlace Carta Pública</h2>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">URL Base para Clientes:</p>
-          <input type="text" id="link-menu-base" readonly>
-        </div>
+      <label>Precio ($)</label>
+      <input type="number" id="precio" placeholder="Ej: 5990">
 
-        <div class="section-card">
-          <h2>🖨️ Generador de QR por Rango de Mesas</h2>
-          <div style="display:flex; gap:10px;">
-            <div class="form-group" style="flex:1;">
-              <label>Mesa Inicial:</label>
-              <input type="number" id="mesa-inicio" value="1">
-            </div>
-            <div class="form-group" style="flex:1;">
-              <label>Mesa Final (X):</label>
-              <input type="number" id="mesa-fin" value="10">
-            </div>
-          </div>
-          <button class="btn-action" onclick="generarQRMesas()">Generar Códigos QR</button>
+      <button class="btn-submit" onclick="agregarPlato()">Guardar Producto</button>
+    </div>
 
-          <div id="contenedor-qr-mesas" class="qr-grid"></div>
-        </div>
-      </div>
-
-      <!-- 3. GARZÓN & IDENTIFICACIÓN DE TURNO POR QR -->
-      <div id="view-garzon" class="view-panel">
-        <div class="section-card">
-          <h2>🪪 QR Inicio de Turno Garzón</h2>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Escanee o descargue este QR para ingresar al turno de Garzón:</p>
-          <div id="qr-garzon-turno" style="display:flex; justify-content:center; margin:15px 0;"></div>
-          <button class="btn-action" onclick="descargarQRGarzon()">Descargar QR Garzón (PNG)</button>
-        </div>
-        <iframe id="frame-garzon"></iframe>
-      </div>
-
-      <!-- 4. COCINA -->
-      <div id="view-cocina" class="view-panel">
-        <iframe id="frame-cocina"></iframe>
-      </div>
-
-      <!-- 5. HISTORIAL DE VENTAS Y MESAS -->
-      <div id="view-historial" class="view-panel">
-        <div class="section-card">
-          <h2>📜 Historial de Pedidos y Ventas</h2>
-          <div id="lista-historial">Cargando historial...</div>
-        </div>
-      </div>
-
-    </main>
+    <!-- LISTADO -->
+    <div class="card">
+      <h2 style="font-size: 16px; color: var(--neon-yellow); margin-bottom: 12px;">📋 Menú Actual</h2>
+      <div id="lista-menu">Cargando menú...</div>
+    </div>
   </div>
 
   <script>
     const API_URL = "https://appmenu-tavr.onrender.com/api";
-    const urlParams = new URLSearchParams(window.location.search);
-    const localActual = urlParams.get('local') || 'default';
-    const BASE_URL = window.location.origin;
+    const params = new URLSearchParams(window.location.search);
+    const currentLocal = params.get('local') || 'default';
 
-    document.getElementById('admin-local-name').innerText = `LOCAL: ${localActual.replace(/-/g, ' ').toUpperCase()}`;
-    document.getElementById('link-menu-base').value = `${BASE_URL}/index.html?local=${localActual}`;
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('titulo-local').innerText = `Local: ${currentLocal.replace(/-/g, ' ').toUpperCase()}`;
+      
+      // Mantiene el parámetro 'local' en todos los enlaces del menú
+      document.getElementById('link-cocina').href = `cocina.html?local=${currentLocal}`;
+      document.getElementById('link-garzon').href = `garzon.html?local=${currentLocal}`;
+      document.getElementById('link-menu').href = `index.html?local=${currentLocal}`;
 
-    // Inicializar sub-pantallas en Iframe
-    document.getElementById('frame-garzon').src = `${BASE_URL}/garzon.html?local=${localActual}`;
-    document.getElementById('frame-cocina').src = `${BASE_URL}/cocina.html?local=${localActual}`;
+      cargarMenu();
+    });
 
-    // Alerta de Vencimiento
-    function verificarVencimiento() {
-      let timestampVenc = localStorage.getItem(`venc_${localActual}`);
-      if (!timestampVenc) {
-        // Asignación por defecto a 30 días si no existe
-        const f = new Date();
-        f.setDate(f.getDate() + 30);
-        timestampVenc = f.getTime();
-        localStorage.setItem(`venc_${localActual}`, timestampVenc);
-      }
-
-      const fechaVenc = new Date(parseInt(timestampVenc));
-      const hoy = new Date();
-      const diasRestantes = Math.ceil((fechaVenc - hoy) / (1000 * 60 * 60 * 24));
-
-      if (diasRestantes <= 2) {
-        document.getElementById('banner-vencimiento').style.display = 'block';
-      }
-    }
-
-    function cambiarPestana(nombre, btnElement) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
-
-      btnElement.classList.add('active');
-      document.getElementById(`view-${nombre}`).classList.add('active');
-
-      if (nombre === 'productos') cargarProductos();
-      if (nombre === 'historial') cargarHistorial();
-      if (nombre === 'garzon') generarQRTurnoGarzon();
-    }
-
-    async function cargarProductos() {
+    async function cargarMenu() {
+      const lista = document.getElementById('lista-menu');
       try {
-        const res = await fetch(`${API_URL}/menu?local=${localActual}`);
-        const data = await res.json();
-        const cont = document.getElementById('lista-productos');
-        
-        if (!data || !data.length) {
-          cont.innerHTML = `<p style="color:var(--text-muted)">No hay productos registrados.</p>`;
+        const res = await fetch(`${API_URL}/menu?local=${currentLocal}`);
+        const platos = await res.json();
+
+        if (!platos || platos.length === 0) {
+          lista.innerHTML = `<p style="color:var(--text-muted)">No hay productos creados en este local.</p>`;
           return;
         }
 
-        let html = '';
-        data.forEach(cat => {
-          html += `<h4 style="color:var(--neon-orange); margin:12px 0 6px 0;">${cat.categoria}</h4>`;
-          cat.productos.forEach(p => {
-            html += `
-              <div class="item-row">
-                <div>
-                  <strong>${p.nombre}</strong> - $${p.precio.toLocaleString('es-CL')}
-                </div>
-                <button class="btn-del" onclick="eliminarProducto('${cat.categoria}', '${p.nombre}')">Eliminar</button>
-              </div>
-            `;
-          });
-        });
-        cont.innerHTML = html;
-      } catch (err) {
-        document.getElementById('lista-productos').innerHTML = 'Error al cargar productos.';
-      }
-    }
-
-    async function guardarProducto() {
-      const categoria = document.getElementById('prod-categoria').value.trim();
-      const nombre = document.getElementById('prod-nombre').value.trim();
-      const precio = parseFloat(document.getElementById('prod-precio').value);
-
-      if (!categoria || !nombre || isNaN(precio)) {
-        alert('Por favor rellena todos los campos correctamente.');
-        return;
-      }
-
-      try {
-        const res = await fetch(`${API_URL}/menu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localActual, categoria, nombre, precio })
-        });
-
-        if (res.ok) {
-          document.getElementById('prod-nombre').value = '';
-          document.getElementById('prod-precio').value = '';
-          cargarProductos();
-        }
-      } catch (err) { alert('Error al guardar el producto.'); }
-    }
-
-    async function eliminarProducto(categoria, nombre) {
-      if (!confirm(`¿Deseas eliminar "${nombre}"?`)) return;
-      try {
-        const res = await fetch(`${API_URL}/menu`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localActual, categoria, nombre })
-        });
-        if (res.ok) cargarProductos();
-      } catch (err) { alert('Error al eliminar el producto.'); }
-    }
-
-    function generarQRMesas() {
-      const inicio = parseInt(document.getElementById('mesa-inicio').value);
-      const fin = parseInt(document.getElementById('mesa-fin').value);
-      const cont = document.getElementById('contenedor-qr-mesas');
-      cont.innerHTML = '';
-
-      if (isNaN(inicio) || isNaN(fin) || inicio > fin) {
-        alert('Ingresa un rango numérico válido.');
-        return;
-      }
-
-      for (let i = inicio; i <= fin; i++) {
-        const urlMesa = `${BASE_URL}/index.html?local=${localActual}&mesa=${i}`;
-        const divCard = document.createElement('div');
-        divCard.className = 'qr-card';
-        
-        const divQr = document.createElement('div');
-        divCard.appendChild(divQr);
-
-        const lbl = document.createElement('strong');
-        lbl.innerText = `Mesa ${i}`;
-        lbl.style.display = 'block';
-        lbl.style.color = '#fff';
-        divCard.appendChild(lbl);
-
-        cont.appendChild(divCard);
-
-        new QRCode(divQr, {
-          text: urlMesa,
-          width: 100,
-          height: 100
-        });
-      }
-    }
-
-    function generarQRTurnoGarzon() {
-      const cont = document.getElementById('qr-garzon-turno');
-      cont.innerHTML = '';
-      const urlGarzon = `${BASE_URL}/garzon.html?local=${localActual}&turno=activo`;
-      new QRCode(cont, {
-        text: urlGarzon,
-        width: 140,
-        height: 140
-      });
-    }
-
-    function descargarQRGarzon() {
-      const img = document.querySelector('#qr-garzon-turno img');
-      if (img) {
-        const a = document.createElement('a');
-        a.href = img.src;
-        a.download = `QR_Garzon_${localActual}.png`;
-        a.click();
-      }
-    }
-
-    async function cargarHistorial() {
-      try {
-        const res = await fetch(`${API_URL}/pedidos?local=${localActual}`);
-        const pedidos = await res.json();
-        const cont = document.getElementById('lista-historial');
-
-        if (!pedidos || !pedidos.length) {
-          cont.innerHTML = `<p style="color:var(--text-muted)">No hay registros de pedidos en el historial.</p>`;
-          return;
-        }
-
-        cont.innerHTML = pedidos.map(p => `
-          <div class="item-row" style="flex-direction:column; align-items:flex-start;">
-            <div style="display:flex; justify-content:space-between; width:100%;">
-              <strong style="color:var(--neon-yellow)">MESA ${p.mesa}</strong>
-              <span style="color:var(--text-muted); font-size:12px;">${p.fecha ? new Date(p.fecha).toLocaleTimeString('es-CL') : ''}</span>
+        lista.innerHTML = platos.map(p => `
+          <div class="item-row">
+            <div>
+              <strong>${p.nombre}</strong> <span style="font-size: 12px; color: var(--text-muted);">(${p.categoria})</span>
+              <div style="color: var(--neon-yellow); font-size: 13px;">$${p.precio}</div>
             </div>
-            <div style="font-size:13px; margin-top:4px;">Total: $${p.total ? p.total.toLocaleString('es-CL') : '0'}</div>
+            <button class="btn-delete" onclick="eliminarPlato('${p._id}')">Eliminar</button>
           </div>
         `).join('');
+
       } catch (err) {
-        document.getElementById('lista-historial').innerHTML = 'Error al obtener el historial.';
+        lista.innerHTML = `<p style="color:var(--text-muted)">Error al cargar el menú.</p>`;
       }
     }
 
-    // Ejecución Inicial
-    verificarVencimiento();
-    cargarProductos();
+    async function agregarPlato() {
+      const nombre = document.getElementById('nombre').value.trim();
+      const categoria = document.getElementById('categoria').value.trim() || 'General';
+      const precio = document.getElementById('precio').value;
+
+      if (!nombre || !precio) {
+        alert('Por favor completa el nombre y el precio.');
+        return;
+      }
+
+      try {
+        await fetch(`${API_URL}/menu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: currentLocal, nombre, categoria, precio: Number(precio) })
+        });
+
+        document.getElementById('nombre').value = '';
+        document.getElementById('precio').value = '';
+        cargarMenu();
+
+      } catch (err) {
+        alert('Error al guardar el producto.');
+      }
+    }
+
+    async function eliminarPlato(id) {
+      if (!confirm('¿Deseas eliminar este producto?')) return;
+      try {
+        await fetch(`${API_URL}/menu/${id}`, { method: 'DELETE' });
+        cargarMenu();
+      } catch (err) {
+        alert('Error al eliminar.');
+      }
+    }
   </script>
 </body>
 </html>
