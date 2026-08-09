@@ -68,7 +68,7 @@
       padding: 12px 15px;
       border-radius: 8px;
       margin-bottom: 10px;
-      border-left: 3px solid var(--neon-orange);
+      border-left: 4px solid var(--neon-orange);
     }
 
     .venc-tag {
@@ -83,10 +83,18 @@
       border: 1px solid var(--neon-yellow);
       font-size: 12px;
       padding: 8px 12px;
+      border-radius: 4px;
     }
     .btn-download:hover {
       background: var(--neon-yellow);
       color: #000;
+    }
+
+    .header-refresh {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
     }
   </style>
 </head>
@@ -94,29 +102,32 @@
 
   <div class="container">
     
-    <!-- CREACIÓN DE CLIENTES -->
+    <!-- REGISTRO DE CLIENTES -->
     <div class="card">
-      <h1>⚡ Crear Nuevo Restoran / Cliente</h1>
+      <h1>⚡ Registrar Nuevo Cliente / Restoran</h1>
       
       <label>Nombre Comercial del Restoran</label>
       <input type="text" id="nombre-local" placeholder="Ej: Sushi Valpo, Bar Central">
 
-      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Registrar Cliente y Generar Acceso HTML</button>
+      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Registrar en MongoDB y Generar Acceso</button>
 
       <div id="resultado" class="result-box">
-        <h3 style="color:var(--neon-orange); margin-bottom:12px;">✅ Cliente Creado Exitosamente</h3>
+        <h3 style="color:var(--neon-orange); margin-bottom:8px;">✅ Cliente Guardado Correctamente</h3>
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" id="info-vencimiento"></p>
         
         <button class="btn-block" style="background: #00e676; color: #000;" onclick="descargarScriptActual()">
-          🌐 Descargar Lanzador Web (.html)
+          🌐 Descargar Archivo Lanzador (.html)
         </button>
       </div>
     </div>
 
-    <!-- LISTADO DE CLIENTES EN MONGO -->
+    <!-- LISTADO DE CLIENTES DE MONGO -->
     <div class="card">
-      <h2>📜 Clientes Registrados en MongoDB</h2>
-      <div id="lista-locales">Cargando restoranes...</div>
+      <div class="header-refresh">
+        <h2 style="margin:0;">📜 Clientes en MongoDB</h2>
+        <button style="padding: 6px 12px; font-size: 12px;" onclick="cargarLocales()">🔄 Actualizar Lista</button>
+      </div>
+      <div id="lista-locales">Cargando datos desde la base de datos...</div>
     </div>
 
   </div>
@@ -138,7 +149,7 @@
     async function registrarNuevoLocal() {
       const inputNombre = document.getElementById('nombre-local').value.trim();
       if (!inputNombre) {
-        alert('Por favor ingresa el nombre del restoran.');
+        alert('Ingresa el nombre del cliente o restoran.');
         return;
       }
 
@@ -149,7 +160,7 @@
       fechaVencimiento.setDate(fechaCreacion.getDate() + 30);
 
       try {
-        await fetch(`${API_URL}/menu`, {
+        const respuesta = await fetch(`${API_URL}/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -161,6 +172,8 @@
           })
         });
 
+        if (!respuesta.ok) throw new Error('Error guardando en el servidor.');
+
         localStorage.setItem(`venc_${localId}`, fechaVencimiento.getTime());
 
         ultimoLocalCreado = {
@@ -169,46 +182,54 @@
           vencimiento: fechaVencimiento.toLocaleDateString('es-CL')
         };
 
-        document.getElementById('info-vencimiento').innerText = `Vencimiento de Contrato: ${fechaVencimiento.toLocaleDateString('es-CL')}`;
+        document.getElementById('info-vencimiento').innerText = `Vencimiento programado: ${fechaVencimiento.toLocaleDateString('es-CL')}`;
         document.getElementById('resultado').style.display = 'block';
         document.getElementById('nombre-local').value = '';
 
         cargarLocales();
 
       } catch (err) {
-        alert('Error al comunicar con el servidor.');
+        alert('Error al comunicar con la base de datos en MongoDB.');
       }
     }
 
     async function cargarLocales() {
       const contenedor = document.getElementById('lista-locales');
+      contenedor.innerHTML = '<p style="color:var(--text-muted)">Consultando MongoDB...</p>';
+
       try {
-        let localesList = [];
-        
-        // Intentar consultar endpoint directo de locales
+        let clientes = [];
+
+        // 1. Probar Endpoint Principal (/api/locales)
         const resLocales = await fetch(`${API_URL}/locales`);
         if (resLocales.ok) {
-          localesList = await resLocales.json();
+          clientes = await resLocales.json();
         }
 
-        // Si no responde o está vacío, obtener los locales únicos desde el menú
-        if (!localesList || localesList.length === 0) {
+        // 2. Respaldo: Si la API de locales falló o retornó vacío, buscar todos los platos y extraer los 'local'
+        if (!Array.isArray(clientes) || clientes.length === 0) {
           const resMenu = await fetch(`${API_URL}/menu`);
           if (resMenu.ok) {
-            const todosLosPlatos = await resMenu.json();
-            localesList = [...new Set(todosLosPlatos.map(item => item.local).filter(Boolean))];
+            const platos = await resMenu.json();
+            clientes = [...new Set(platos.map(item => item.local).filter(Boolean))];
           }
         }
 
-        if (!localesList || localesList.length === 0) {
-          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay clientes registrados aún en MongoDB.</p>`;
+        // Normalizar los resultados para obtener siempre IDs válidos
+        const clientesLimpios = clientes.map(item => {
+          if (typeof item === 'string') return item;
+          return item.local || item.id || item._id || null;
+        }).filter(item => item !== null && item !== 'default');
+
+        // Eliminar duplicados si la consulta trajo varios
+        const clientesUnicos = [...new Set(clientesLimpios)];
+
+        if (clientesUnicos.length === 0) {
+          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay clientes creados en MongoDB aún.</p>`;
           return;
         }
 
-        contenedor.innerHTML = localesList.map(item => {
-          const localId = typeof item === 'string' ? item : (item.id || item.local || item._id);
-          if (!localId) return '';
-
+        contenedor.innerHTML = clientesUnicos.map(localId => {
           const nombreMostrar = localId.replace(/-/g, ' ').toUpperCase();
           
           const timestampGuardado = localStorage.getItem(`venc_${localId}`);
@@ -224,14 +245,14 @@
                 <div class="venc-tag">📅 Vencimiento: ${fechaFormateada}</div>
               </div>
               <button class="btn-download" onclick="generarYDescargarHTML('${nombreMostrar}', '${localId}', '${fechaFormateada}')">
-                🌐 Descargar HTML
+                🌐 Descargar Lanzador (.html)
               </button>
             </div>
           `;
         }).join('');
 
       } catch (err) {
-        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error al cargar la lista desde MongoDB.</p>`;
+        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error conectando con la base de datos en Render.</p>`;
       }
     }
 
@@ -285,8 +306,8 @@
 <body>
   <div class="box">
     <h1>${nombreLocal}</h1>
-    <p>Redirigiendo al Panel de Control Web...</p>
-    <a href="${urlAdminAbsoluta}">Ingresar Directamente</a>
+    <p>Redirigiendo a tu Panel de Administración...</p>
+    <a href="${urlAdminAbsoluta}">Ingresar al Panel</a>
   </div>
   <script>
     window.location.href = "${urlAdminAbsoluta}";
