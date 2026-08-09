@@ -94,28 +94,28 @@
 
   <div class="container">
     
-    <!-- REGISTRAR LOCAL Y CREAR CONTRATO -->
+    <!-- CREACIÓN DE CLIENTES / LOCALES -->
     <div class="card">
-      <h1>⚡ Crear Nuevo Restoran (Contrato 30 Días)</h1>
+      <h1>⚡ Crear Nuevo Restoran / Cliente</h1>
       
-      <label>Nombre Comercial del Restoran / Cliente</label>
+      <label>Nombre Comercial del Restoran</label>
       <input type="text" id="nombre-local" placeholder="Ej: Sushi Valpo, Bar Central">
 
-      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Registrar Local y Generar Script</button>
+      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Registrar Cliente y Generar Acceso HTML</button>
 
       <div id="resultado" class="result-box">
-        <h3 style="color:var(--neon-orange); margin-bottom:12px;">✅ Local Creado Exitosamente</h3>
+        <h3 style="color:var(--neon-orange); margin-bottom:12px;">✅ Cliente Creado Exitosamente</h3>
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" id="info-vencimiento"></p>
         
         <button class="btn-block" style="background: #00e676; color: #000;" onclick="descargarScriptActual()">
-          📥 Descargar Script Único (.txt)
+          🌐 Descargar Lanzador Web (.html)
         </button>
       </div>
     </div>
 
-    <!-- LISTA DE LOCALES CREADOS -->
+    <!-- LISTADO DE CLIENTES REGISTRADOS -->
     <div class="card">
-      <h2>📜 Locales Creados y Fechas de Vencimiento</h2>
+      <h2>📜 Clientes Registrados y Vencimientos</h2>
       <div id="lista-locales">Cargando restoranes...</div>
     </div>
 
@@ -142,28 +142,24 @@
 
       const localId = formatearIdLocal(inputNombre);
       
-      // Fecha actual y calculo a +30 días para vencimiento
+      // Cálculo de fecha de vencimiento (30 días)
       const fechaCreacion = new Date();
       const fechaVencimiento = new Date();
       fechaVencimiento.setDate(fechaCreacion.getDate() + 30);
 
-      const fechaVencISO = fechaVencimiento.toISOString();
-
       try {
-        // Inicialización en base de datos registrando el local con fecha de vencimiento
         await fetch(`${API_URL}/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             local: localId,
-            categoria: 'Inicio',
-            nombre: 'Producto de Muestra',
+            categoria: 'General',
+            nombre: 'Producto Inicial',
             precio: 1000,
-            fechaVencimiento: fechaVencISO
+            fechaVencimiento: fechaVencimiento.toISOString()
           })
         });
 
-        // Respaldar fecha de creación/vencimiento localmente
         localStorage.setItem(`venc_${localId}`, fechaVencimiento.getTime());
 
         ultimoLocalCreado = {
@@ -172,14 +168,14 @@
           vencimiento: fechaVencimiento.toLocaleDateString('es-CL')
         };
 
-        document.getElementById('info-vencimiento').innerText = `Vencimiento de Mensualidad: ${fechaVencimiento.toLocaleDateString('es-CL')}`;
+        document.getElementById('info-vencimiento').innerText = `Vencimiento de Contrato: ${fechaVencimiento.toLocaleDateString('es-CL')}`;
         document.getElementById('resultado').style.display = 'block';
         document.getElementById('nombre-local').value = '';
 
         cargarLocales();
 
       } catch (err) {
-        alert('Error al conectar con el servidor.');
+        alert('Error al comunicar con el servidor.');
       }
     }
 
@@ -194,7 +190,7 @@
         }
 
         if (!locales || locales.length === 0) {
-          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay restoranes registrados aún.</p>`;
+          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay clientes registrados aún.</p>`;
           return;
         }
 
@@ -202,15 +198,9 @@
           const localId = typeof loc === 'string' ? loc : loc.id || loc.local;
           const nombreMostrar = localId.replace(/-/g, ' ').toUpperCase();
           
-          // Cálculo de vencimiento basado en respaldo o estimación a 30 días
           const timestampGuardado = localStorage.getItem(`venc_${localId}`);
-          let fVenc;
-          if (timestampGuardado) {
-            fVenc = new Date(parseInt(timestampGuardado));
-          } else {
-            fVenc = new Date();
-            fVenc.setDate(fVenc.getDate() + 30);
-          }
+          let fVenc = timestampGuardado ? new Date(parseInt(timestampGuardado)) : new Date();
+          if (!timestampGuardado) fVenc.setDate(fVenc.getDate() + 30);
 
           const fechaFormateada = fVenc.toLocaleDateString('es-CL');
 
@@ -218,68 +208,88 @@
             <div class="local-row">
               <div>
                 <strong>${nombreMostrar}</strong>
-                <div class="venc-tag">📅 Vencimiento Mensualidad: ${fechaFormateada}</div>
+                <div class="venc-tag">📅 Vencimiento: ${fechaFormateada}</div>
               </div>
-              <button class="btn-download" onclick="generarYDescargarTXT('${nombreMostrar}', '${localId}', '${fechaFormateada}')">
-                📥 Descargar Script
+              <button class="btn-download" onclick="generarYDescargarHTML('${nombreMostrar}', '${localId}', '${fechaFormateada}')">
+                🌐 Descargar HTML
               </button>
             </div>
           `;
         }).join('');
 
       } catch (err) {
-        contenedor.innerHTML = `<p style="color:var(--text-muted)">No se pudo cargar la lista de locales.</p>`;
+        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error al cargar la lista de locales.</p>`;
       }
     }
 
     function descargarScriptActual() {
       if (ultimoLocalCreado) {
-        generarYDescargarTXT(ultimoLocalCreado.nombre, ultimoLocalCreado.id, ultimoLocalCreado.vencimiento);
+        generarYDescargarHTML(ultimoLocalCreado.nombre, ultimoLocalCreado.id, ultimoLocalCreado.vencimiento);
       }
     }
 
-    function generarYDescargarTXT(nombreLocal, localId, fechaVenc) {
+    // Genera y descarga un archivo .html listo para ejecutar e ingresar al sistema en GitHub
+    function generarYDescargarHTML(nombreLocal, localId, fechaVenc) {
       const baseUrl = window.location.origin;
+      const urlAdminGitHub = `${baseUrl}/admin.html?local=${localId}`;
 
-      const textoScript = `=====================================================
-SCRIPT ÚNICO Y CONFIGURACIÓN DE RESTORAN
-=====================================================
-CLIENTE / RESTORAN  : ${nombreLocal}
-ID SISTEMA          : ${localId}
-FECHA VENCIMIENTO   : ${fechaVenc}
+      const contenidoHTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso - ${nombreLocal}</title>
+  <style>
+    body {
+      background-color: #08080a;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+    .box {
+      background: #121216;
+      border: 1px solid #ff5500;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 400px;
+    }
+    h1 { color: #ffea00; font-size: 20px; margin-bottom: 10px; }
+    p { font-size: 14px; color: #a0a0b0; margin-bottom: 20px; }
+    a {
+      display: inline-block;
+      background: linear-gradient(135deg, #ff5500, #ffea00);
+      color: #000;
+      text-decoration: none;
+      padding: 12px 20px;
+      font-weight: bold;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>${nombreLocal}</h1>
+    <p>Haz clic en el botón para ingresar al Menú Principal y Panel de Control Web en GitHub Pages.</p>
+    <a href="${urlAdminGitHub}" target="_blank">🚀 Entrar al Sistema Web</a>
+  </div>
+  <script>
+    // Redirección automática al ejecutar el archivo
+    setTimeout(() => {
+      window.location.href = "${urlAdminGitHub}";
+    }, 1500);
+  <\/script>
+</body>
+</html>`;
 
------------------------------------------------------
-1. PANEL DE CONTROL Y ADMINISTRACIÓN GENERAL
------------------------------------------------------
-Este enlace abre el Panel Central para gestionar Productos,
-Categorías, Historial, QR Garzón y Rango de Mesas:
-${baseUrl}/admin.html?local=${localId}
-
------------------------------------------------------
-2. PANTALLA DE COCINA
------------------------------------------------------
-Enlace para la pantalla o Tablet en Cocina:
-${baseUrl}/cocina.html?local=${localId}
-
------------------------------------------------------
-3. PANTALLA DE GARZONES (TURNO)
------------------------------------------------------
-Enlace directo para Garzones:
-${baseUrl}/garzon.html?local=${localId}
-
------------------------------------------------------
-4. CARTA PÚBLICA DE CLIENTES (MESA 1)
------------------------------------------------------
-${baseUrl}/index.html?local=${localId}&mesa=1
-
-=====================================================
-Guarde este archivo como respaldo para la entrega al cliente.
-=====================================================`;
-
-      const blob = new Blob([textoScript], { type: 'text/plain;charset=utf-8' });
+      const blob = new Blob([contenidoHTML], { type: 'text/html;charset=utf-8' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `Script_${localId}.txt`;
+      link.download = `Acceso_${localId}.html`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
