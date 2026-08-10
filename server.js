@@ -65,16 +65,61 @@ const HistorialSchema = new mongoose.Schema({
 
 const Historial = mongoose.models.Historial || mongoose.model('Historial', HistorialSchema, 'historials');
 
-// --- 4. RUTAS DE LA API DE LOCALES Y LICENCIAS ---
 
-// 4.1 Obtener lista completa de locales con sus estados de licencia (SuperAdmin)
+// --- 4. MIDDLEWARE DE VERIFICACIÓN DE LICENCIA Y BLOQUEO ---
+const verificarLicencia = async (req, res, next) => {
+  try {
+    // Extraer identificador del local desde Query, Body o Params
+    const localQuery = (req.query.local || req.body.local || req.params.local || '').toLowerCase().trim();
+
+    // Si la petición no incluye un parámetro de local, continuar
+    if (!localQuery) return next();
+
+    // Buscar el local registrado en MongoDB
+    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] }).lean();
+
+    // Si el local no existe en MongoDB, denegar acceso
+    if (!doc) {
+      return res.status(404).json({ error: 'Local no registrado.' });
+    }
+
+    // 1. Validar si está bloqueado manualmente desde SuperAdmin
+    if (doc.activo === false) {
+      return res.status(403).json({ 
+        error: 'LICENCIA_BLOQUEADA', 
+        mensaje: 'El servicio para este local se encuentra bloqueado por el administrador.' 
+      });
+    }
+
+    // 2. Validar si la licencia ha expirado
+    const hoy = new Date();
+    const fechaVencimiento = doc.fechaVencimiento ? new Date(doc.fechaVencimiento) : new Date(0);
+
+    if (fechaVencimiento < hoy) {
+      return res.status(403).json({ 
+        error: 'LICENCIA_VENCIDA', 
+        mensaje: 'La licencia de uso para este local ha expirado.' 
+      });
+    }
+
+    // Licencia activa y válida: permitir ejecución
+    next();
+  } catch (err) {
+    console.error("❌ Error en middleware verificarLicencia:", err.message);
+    return res.status(500).json({ error: 'Error interno al validar la licencia.' });
+  }
+};
+
+
+// --- 5. RUTAS DE LA API DE LOCALES Y LICENCIAS (SUPERADMIN) ---
+
+// 5.1 Obtener lista completa de locales con sus estados de licencia (SuperAdmin)
 app.get('/api/locales', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) return res.status(200).json([]);
 
     const docs = await Local.find({}).lean();
     
-    // Si no existen documentos todavía, retornar arreglo vacío
     if (!docs || docs.length === 0) return res.status(200).json([]);
 
     const localesNormalizados = docs.map(d => {
@@ -82,12 +127,11 @@ app.get('/api/locales', async (req, res) => {
       return {
         localId: idFinal ? idFinal.toLowerCase().trim() : 'desconocido',
         nombre: d.nombre || idFinal,
-        activo: d.activo !== false, // Por defecto true si no está definido
+        activo: d.activo !== false,
         fechaVencimiento: d.fechaVencimiento || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       };
     }).filter(d => d.localId !== 'desconocido');
 
-    // Filtrar duplicados dejando la última versión registrada
     const unicosMap = new Map();
     localesNormalizados.forEach(item => unicosMap.set(item.localId, item));
 
@@ -98,7 +142,7 @@ app.get('/api/locales', async (req, res) => {
   }
 });
 
-// 4.2 Obtener la licencia y estado de un local específico
+// 5.2 Obtener la licencia y estado de un local específico
 app.get('/api/locales/:id', async (req, res) => {
   try {
     const localQuery = req.params.id.toLowerCase().trim();
@@ -120,7 +164,7 @@ app.get('/api/locales/:id', async (req, res) => {
   }
 });
 
-// 4.3 Actualizar estado de licencia o renovar (SuperAdmin)
+// 5.3 Actualizar estado de licencia o renovar (SuperAdmin)
 app.patch('/api/locales/:id/licencia', async (req, res) => {
   try {
     const localQuery = req.params.id.toLowerCase().trim();
@@ -148,10 +192,11 @@ app.patch('/api/locales/:id/licencia', async (req, res) => {
   }
 });
 
-// --- 5. RUTAS DEL MENÚ ---
+
+// --- 6. RUTAS DEL MENÚ (PROTEGIDAS CON MIDDDLEWARE) ---
 
 // Obtener el menú aplanado de un local
-app.get('/api/menu', async (req, res) => {
+app.get('/api/menu', verificarLicencia, async (req, res) => {
   try {
     const { local } = req.query;
     if (!local) return res.status(200).json([]);
@@ -184,7 +229,7 @@ app.get('/api/menu', async (req, res) => {
 });
 
 // Agregar producto al menú
-app.post('/api/menu', async (req, res) => {
+app.post('/api/menu', verificarLicencia, async (req, res) => {
   try {
     const { local, categoria, nombre, precio, fechaVencimiento } = req.body;
     if (!local || !categoria || !nombre) {
@@ -233,7 +278,7 @@ app.post('/api/menu', async (req, res) => {
 });
 
 // Editar un producto
-app.put('/api/menu/edit', async (req, res) => {
+app.put('/api/menu/edit', verificarLicencia, async (req, res) => {
   try {
     const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaCategoria } = req.body;
     
@@ -276,7 +321,7 @@ app.put('/api/menu/edit', async (req, res) => {
 });
 
 // Eliminar producto
-app.delete('/api/menu/del', async (req, res) => {
+app.delete('/api/menu/del', verificarLicencia, async (req, res) => {
   try {
     const { local, categoria, index } = req.query;
 
@@ -303,9 +348,10 @@ app.delete('/api/menu/del', async (req, res) => {
   }
 });
 
-// --- 6. RUTAS DE PEDIDOS Y COMANDAS ---
 
-app.get('/api/pedidos', async (req, res) => {
+// --- 7. RUTAS DE PEDIDOS Y COMANDAS (PROTEGIDAS CON MIDDLEWARE) ---
+
+app.get('/api/pedidos', verificarLicencia, async (req, res) => {
   try {
     const { local } = req.query;
     let query = {};
@@ -335,7 +381,7 @@ app.get('/api/pedidos', async (req, res) => {
   }
 });
 
-app.post('/api/pedidos', async (req, res) => {
+app.post('/api/pedidos', verificarLicencia, async (req, res) => {
   try {
     const { local, mesa, items, total, estado, fecha } = req.body;
 
@@ -379,9 +425,10 @@ app.delete('/api/pedidos/:id', async (req, res) => {
   }
 });
 
-// --- 7. RUTAS DE HISTORIAL DE ENTREGAS ---
 
-app.post('/api/historials', async (req, res) => {
+// --- 8. RUTAS DE HISTORIAL DE ENTREGAS (PROTEGIDAS CON MIDDLEWARE) ---
+
+app.post('/api/historials', verificarLicencia, async (req, res) => {
   try {
     const data = req.body;
     const ahora = new Date();
@@ -413,7 +460,7 @@ app.post('/api/historials', async (req, res) => {
   }
 });
 
-app.get('/api/historials', async (req, res) => {
+app.get('/api/historials', verificarLicencia, async (req, res) => {
   try {
     const { local } = req.query;
     let query = {};
