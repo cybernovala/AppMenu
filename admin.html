@@ -505,7 +505,7 @@
     <!-- PESTAÑA 4: COCINA / PEDIDOS -->
     <div id="tab-cocina" class="tab-content">
       <div class="section-card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <h3>🚀 Comandas y Pedidos en Tiempo Real</h3>
           <button class="btn btn-secondary btn-sm" onclick="cargarPedidosCocina()">🔄 Actualizar Pedidos</button>
         </div>
@@ -908,51 +908,79 @@
       const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
       try {
-        await fetch(`${API_URL}/pedidos`, {
+        const res = await fetch(`${API_URL}/pedidos`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ local: localId, mesa: numeroMesa, items: carrito, total })
         });
 
-        alert("✅ ¡Pedido enviado a la cocina con éxito!");
-        carrito = [];
-        actualizarBarraCarrito();
-        cerrarModalCarrito();
+        if (res.ok) {
+          alert("✅ ¡Pedido enviado a la cocina con éxito!");
+          carrito = [];
+          actualizarBarraCarrito();
+          cerrarModalCarrito();
+        } else {
+          alert("Ocurrió un inconveniente al enviar el pedido.");
+        }
       } catch (e) {
-        alert("Error al enviar el pedido.");
+        alert("Error de red al enviar el pedido.");
       }
     }
 
     /* ==========================================
-       GESTIÓN DE COCINA Y PEDIDOS
+       GESTIÓN DE COCINA Y PEDIDOS (CORREGIDO Y ROBUSTO)
     ========================================== */
     async function cargarPedidosCocina() {
       const contenedor = document.getElementById('contenedor-pedidos-cocina');
-      try {
-        const respuesta = await fetch(`${API_URL}/pedidos?local=${encodeURIComponent(localId)}`);
-        const pedidos = await respuesta.json();
+      contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando comandas...</p>';
 
-        if (!Array.isArray(pedidos) || pedidos.length === 0) {
+      try {
+        // Intenta obtener los pedidos con filtro de local
+        let respuesta = await fetch(`${API_URL}/pedidos?local=${encodeURIComponent(localId)}`);
+        
+        if (!respuesta.ok) {
+          // Fallback en caso de formato alternativo del endpoint
+          respuesta = await fetch(`${API_URL}/pedidos`);
+        }
+
+        let datos = await respuesta.json();
+        let pedidos = [];
+
+        // Extrae el array independientemente del nombre de la propiedad entregada por el backend
+        if (Array.isArray(datos)) {
+          pedidos = datos;
+        } else if (datos && Array.isArray(datos.pedidos)) {
+          pedidos = datos.pedidos;
+        } else if (datos && Array.isArray(datos.data)) {
+          pedidos = datos.data;
+        }
+
+        // Si el backend no filtra por local cliente, se filtra en el frontend
+        pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
+
+        if (pedidos.length === 0) {
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en cocina.</p>';
           return;
         }
 
         contenedor.innerHTML = pedidos.map((p, idx) => {
           const idPedido = p._id || p.id || idx;
-          const fecha = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Reciente';
+          const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Reciente';
+          const itemsList = Array.isArray(p.items) ? p.items : [];
 
           return `
             <div class="card-pedido">
               <div>
                 <div class="card-pedido-header">
-                  <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
-                  <span class="card-pedido-time">⏰ ${fecha}</span>
+                  <span class="card-pedido-mesa">MESA N° ${p.mesa || '--'}</span>
+                  <span class="card-pedido-time">⏰ ${fechaFormateada}</span>
                 </div>
                 <div class="pedido-items-list">
-                  ${(p.items || []).map(i => `
+                  ${itemsList.length === 0 ? '<span style="color:var(--text-muted);">Sin detalles</span>' : ''}
+                  ${itemsList.map(i => `
                     <div class="pedido-item-row">
-                      <span><b>${i.cantidad}x</b> ${i.nombre}</span>
-                      <span style="color:var(--text-muted);">$${(i.precio * i.cantidad).toLocaleString('es-CL')}</span>
+                      <span><b>${i.cantidad || 1}x</b> ${i.nombre || 'Producto'}</span>
+                      <span style="color:var(--text-muted);">$${((i.precio || 0) * (i.cantidad || 1)).toLocaleString('es-CL')}</span>
                     </div>
                   `).join('')}
                 </div>
@@ -966,26 +994,39 @@
         }).join('');
 
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al cargar pedidos de cocina.</p>';
+        console.error("Error al obtener pedidos:", e);
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error de conexión al cargar las comandas de cocina.</p>';
       }
     }
 
     async function despacharPedido(idPedido) {
-      if (!confirm("¿Marcar este pedido como entregado?")) return;
+      if (!confirm("¿Marcar este pedido como entregado / finalizado?")) return;
 
       try {
-        const res = await fetch(`${API_URL}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
+        // Intenta eliminar/completar por endpoint REST estándar
+        let res = await fetch(`${API_URL}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
           method: 'DELETE'
         });
 
-        if (res.ok) {
-          cargarPedidosCocina();
-        } else {
-          // Si la API usa query param o endpoint distinto
-          await fetch(`${API_URL}/pedidos/del?local=${encodeURIComponent(localId)}&id=${idPedido}`, { method: 'DELETE' });
-          cargarPedidosCocina();
+        if (!res.ok) {
+          // Intenta con query parameter por compatibilidad de rutas
+          res = await fetch(`${API_URL}/pedidos/del?local=${encodeURIComponent(localId)}&id=${idPedido}`, { 
+            method: 'DELETE' 
+          });
         }
+
+        if (!res.ok) {
+          // Intenta con método POST
+          res = await fetch(`${API_URL}/pedidos/completar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: idPedido, local: localId })
+          });
+        }
+
+        cargarPedidosCocina();
       } catch (e) {
+        console.error("Error al despachar el pedido:", e);
         cargarPedidosCocina();
       }
     }
