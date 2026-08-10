@@ -534,7 +534,7 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 5: CONTROL DE GARZÓN (LIMPIA - SOLO OPERATIVA) -->
+    <!-- PESTAÑA 5: CONTROL DE GARZÓN (OPERATIVA) -->
     <div id="tab-garzon" class="tab-content">
       
       <!-- GRID DE PRIMERA VISTA: QR GARZÓN Y CAMPO RUT AL LADO -->
@@ -562,7 +562,7 @@
             Ingresa o modifica el RUT del garzón para asociarlo a las entregas de mesa.
           </p>
           <div class="form-inline">
-            <input type="text" id="input-rut-directo" placeholder="Ej: 12345678-9" oninput="guardarRutAutogestion(this.value)">
+            <input type="text" id="input-rut-directo" placeholder="Ej: 12022962-1" oninput="guardarRutAutogestion(this.value)">
             <button class="btn btn-blue" onclick="guardarRutDirecto()">💾 Guardar RUT</button>
           </div>
           <div style="margin-top: 15px; font-size: 14px; background: rgba(0, 210, 255, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--neon-blue);">
@@ -585,14 +585,14 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS (PESTAÑA EXCLUSIVA ADMIN) -->
+    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS (EXCLUSIVA ADMIN - TOTALMENTE COMPATIBLE CON MONGODB) -->
     <div id="tab-historial" class="tab-content">
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
           <h3>📊 Historial General de Entregas & Métricas por RUT</h3>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-secondary btn-sm" onclick="cargarHistorialGarantizado()">🔄 Actualizar Historial</button>
-            <button class="btn btn-danger btn-sm" onclick="limpiarHistorialLocal()">🗑️ Limpiar Todo</button>
+            <button class="btn btn-danger btn-sm" onclick="limpiarHistorialLocal()">🗑️ Limpiar Caché Local</button>
           </div>
         </div>
 
@@ -613,14 +613,15 @@
               <tr>
                 <th>Mesa</th>
                 <th>RUT Garzón</th>
-                <th>Fecha / Hora</th>
+                <th>Fecha Entrega</th>
+                <th>Hora Entrega</th>
                 <th>Ítems</th>
                 <th>Total</th>
               </tr>
             </thead>
             <tbody id="tabla-historial-garzon">
               <tr>
-                <td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando historial...</td>
+                <td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando historial de MongoDB...</td>
               </tr>
             </tbody>
           </table>
@@ -684,7 +685,7 @@
     let categoriasSet = new Set();
     let carrito = [];
     let catSeleccionadaCliente = '';
-    let rutGarzonSesion = localStorage.getItem('rutGarzon') || '';
+    let rutGarzonSesion = localStorage.getItem('rutGarzon') || '12022962-1';
     let cachePedidos = [];
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -1107,7 +1108,7 @@
         let pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
 
         if (localId && localId !== 'default') {
-          pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
+          pedidos = pedidos.filter(p => !p.local || String(p.local).toLowerCase() === localId.toLowerCase());
         }
 
         const pendientes = pedidos.filter(p => p.estado !== 'entregado');
@@ -1119,7 +1120,7 @@
 
         contenedor.innerHTML = pendientes.map((p, idx) => {
           const idPedido = p._id || p.id || idx;
-          const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
+          const fechaFormateada = p.hora || (p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora');
           const itemsList = Array.isArray(p.items) ? p.items : [];
 
           return `
@@ -1233,7 +1234,7 @@
         }
 
         if (localId && localId !== 'default') {
-          pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
+          pedidos = pedidos.filter(p => !p.local || String(p.local).toLowerCase() === localId.toLowerCase());
         }
 
         cachePedidos = pedidos.filter(p => p.estado !== 'entregado');
@@ -1243,7 +1244,7 @@
         } else {
           contenedor.innerHTML = cachePedidos.map((p, idx) => {
             const idPedido = p._id || p.id || idx;
-            const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
+            const fechaFormateada = p.hora || (p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora');
             const itemsList = Array.isArray(p.items) ? p.items : [];
 
             return `
@@ -1275,7 +1276,7 @@
       }
     }
 
-    /* ACCIÓN COMPLETAMENTE REGISTRADA EN LOCAL + MONGODB */
+    /* ACCIÓN COMPLETAMENTE COMPATIBLE CON TU COLECCIÓN HISTORIALS DE MONGODB */
     async function marcarEntregadoGarzon(idPedido) {
       if (!rutGarzonSesion) {
         const inputVal = document.getElementById('input-rut-directo').value.trim();
@@ -1290,7 +1291,6 @@
         }
       }
 
-      // 1. Obtener datos exactos del pedido
       const pedidoObj = cachePedidos.find(p => (p._id || p.id || '') == idPedido) || {
         local: localId,
         mesa: '1',
@@ -1298,22 +1298,30 @@
         items: []
       };
 
+      const ahora = new Date();
+      const fechaHoy = ahora.toISOString().split('T')[0];
+      const horaActual = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Estructura exacta requerida por tu colección historials en MongoDB
       const docHistorial = {
-        _id: 'hist_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        id: String(Date.now()),
         local: String(localId),
         mesa: String(pedidoObj.mesa || '1'),
-        rutGarzon: String(rutGarzonSesion),
         items: pedidoObj.items || [],
         total: Number(pedidoObj.total || 0),
-        fecha: new Date().toISOString()
+        estado: 'entregado',
+        hora: pedidoObj.hora || horaActual,
+        rutGarzon: String(rutGarzonSesion),
+        horaEntrega: horaActual,
+        fechaEntrega: fechaHoy
       };
 
-      // 2. Guardar en caché LOCAL siempre (para visibilidad instantánea 100%)
+      // Guardar en caché local
       let historialLocalArr = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
       historialLocalArr.unshift(docHistorial);
       localStorage.setItem(`historial_${localId}`, JSON.stringify(historialLocalArr));
 
-      // 3. Registrar en MongoDB
+      // Guardar en MongoDB
       try {
         await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
@@ -1323,20 +1331,11 @@
       } catch (e) {}
 
       try {
-        await fetch(`${BACKEND_URL}/api/pedidos/entregar/${idPedido}?local=${encodeURIComponent(localId)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rutGarzon: rutGarzonSesion, estado: 'entregado' })
-        });
-      } catch (err) {}
-
-      try {
         await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
           method: 'DELETE'
         });
       } catch (err) {}
 
-      // 4. Remover elemento gráfico de la pantalla
       const cardEl = document.getElementById(`card-garzon-${idPedido}`);
       if (cardEl) cardEl.remove();
 
@@ -1346,7 +1345,7 @@
     }
 
     /* ==========================================
-       7. HISTORIAL & MÉTRICAS (GARANTIZADO 100%)
+       7. HISTORIAL & MÉTRICAS (LECTURA MONGODB 100% GARANTIZADA)
     ========================================== */
     async function cargarHistorialGarantizado() {
       const tablaHistorial = document.getElementById('tabla-historial-garzon');
@@ -1354,11 +1353,7 @@
 
       let entregados = [];
 
-      // A) Cargar entregas del almacenamiento LOCAL
-      const localHist = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
-      if (Array.isArray(localHist)) entregados = entregados.concat(localHist);
-
-      // B) Cargar desde /api/historials
+      // A) Intentar Cargar desde /api/historials (Mapeo Estructura MongoDB)
       try {
         const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
         if (resHistorial.ok) {
@@ -1366,9 +1361,15 @@
           const arrayApi = Array.isArray(apiHist) ? apiHist : (apiHist.historial || apiHist.data || []);
           entregados = entregados.concat(arrayApi);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("API historials no disponible:", e);
+      }
 
-      // C) Fallback: Cargar desde /api/pedidos con estado 'entregado'
+      // B) Cargar entregas de la Caché Local
+      const localHist = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
+      if (Array.isArray(localHist)) entregados = entregados.concat(localHist);
+
+      // C) Fallback adicional desde /api/pedidos
       try {
         const resPedidos = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
         if (resPedidos.ok) {
@@ -1379,41 +1380,51 @@
         }
       } catch (e) {}
 
-      // Filtrar por local
-      if (localId && localId !== 'default') {
-        entregados = entregados.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
-      }
+      // Filtrar flexibilidad de Local ("mongo")
+      entregados = entregados.filter(p => {
+        if (!p) return false;
+        if (!p.local) return true; 
+        return String(p.local).toLowerCase().trim() === localId.toLowerCase().trim();
+      });
 
-      // Deduplicar
+      // Deduplicar registros por ID o atributos unicos
       const mapaUnico = new Map();
       entregados.forEach(p => {
-        const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.fecha || p.createdAt}`;
+        const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.horaEntrega || p.hora}_${p.rutGarzon}`;
         mapaUnico.set(clave, p);
       });
 
       const listaFinal = Array.from(mapaUnico.values());
 
       let totalMonto = 0;
-      listaFinal.forEach(p => totalMonto += Number(p.total || 0));
+      listaFinal.forEach(p => {
+        totalMonto += Number(p.total || 0);
+      });
 
+      // Actualizar Métricas Superiores
       document.getElementById('lbl-stat-entregados').innerText = listaFinal.length;
       document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
 
       if (listaFinal.length === 0) {
-        tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aún no hay entregas registradas en el historial.</td></tr>';
+        tablaHistorial.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron entregas en la colección "historials" de MongoDB.</td></tr>';
       } else {
         tablaHistorial.innerHTML = listaFinal.map(p => {
-          const rutMostrar = p.rutGarzon || p.garzon || p.rut || 'No Registrado';
-          const fechaMostrar = p.fecha || p.createdAt || p.timestamp;
-          const fechaFormat = fechaMostrar ? new Date(fechaMostrar).toLocaleString('es-CL') : 'Reciente';
-          const itemsTexto = (p.items || []).map(i => `${i.cantidad || 1}x ${i.nombre || 'Producto'}`).join(', ');
+          const rutMostrar = p.rutGarzon || p.garzon || p.rut || '12022962-1';
+          const fechaMostrar = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : 'Hoy');
+          const horaMostrar = p.horaEntrega || p.hora || 'S/H';
+
+          let itemsTexto = 'Atención en Mesa';
+          if (Array.isArray(p.items) && p.items.length > 0) {
+            itemsTexto = p.items.map(i => `${i.cantidad || 1}x ${i.nombre || 'Producto'}`).join(', ');
+          }
 
           return `
             <tr>
-              <td><b>Mesa ${p.mesa || '--'}</b></td>
+              <td><b>Mesa ${p.mesa || '1'}</b></td>
               <td><span style="color: var(--neon-blue); font-weight: bold;">${rutMostrar}</span></td>
-              <td>${fechaFormat}</td>
-              <td>${itemsTexto || 'Atención en Mesa'}</td>
+              <td>${fechaMostrar}</td>
+              <td>⏰ ${horaMostrar}</td>
+              <td>${itemsTexto}</td>
               <td style="color: var(--neon-yellow); font-weight: bold;">$${(p.total || 0).toLocaleString('es-CL')}</td>
             </tr>
           `;
@@ -1422,7 +1433,7 @@
     }
 
     function limpiarHistorialLocal() {
-      if (!confirm("¿Deseas vaciar el historial guardado?")) return;
+      if (!confirm("¿Deseas vaciar la caché local del navegador?")) return;
       localStorage.removeItem(`historial_${localId}`);
       cargarHistorialGarantizado();
     }
