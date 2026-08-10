@@ -353,8 +353,8 @@
 
   <div class="container">
     
-    <!-- HEADER GENERAL -->
-    <div class="header-bar">
+    <!-- HEADER GENERAL (Solo visible para Administrador) -->
+    <div class="header-bar" id="admin-header">
       <div>
         <span style="font-size: 12px; color: var(--text-muted);">Local Administrado:</span>
         <div class="local-title" id="lbl-local-nombre">CARGANDO...</div>
@@ -362,12 +362,12 @@
       <button class="btn btn-secondary btn-sm" onclick="recargarTodo()">🔄 Recargar Datos</button>
     </div>
 
-    <!-- BARRA DE PESTAÑAS (TABS) -->
-    <div class="nav-tabs">
-      <button class="tab-btn active" onclick="cambiarPestana('tab-admin', this)">⚙️ Gestión de Menú</button>
-      <button class="tab-btn" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Menú Cliente</button>
-      <button class="tab-btn" onclick="cambiarPestana('tab-qr', this)">🔲 Generador de QR</button>
-      <button class="tab-btn" onclick="cambiarPestana('tab-proxima', this)">📋 Cocina / Pedidos</button>
+    <!-- BARRA DE PESTAÑAS (Solo visible para Administrador) -->
+    <div class="nav-tabs" id="admin-nav-tabs">
+      <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Gestión de Menú</button>
+      <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Menú Cliente</button>
+      <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Generador de QR</button>
+      <button class="tab-btn" id="btn-tab-proxima" onclick="cambiarPestana('tab-proxima', this)">📋 Cocina / Pedidos</button>
     </div>
 
     <!-- PESTAÑA 1: GESTIÓN DE MENÚ (ADMINISTRADOR) -->
@@ -385,7 +385,7 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 2: VISTA PREVIA MENÚ DIGITAL (CLIENTE) -->
+    <!-- PESTAÑA 2: MENÚ DIGITAL (VISTA DEL CLIENTE) -->
     <div id="tab-cliente" class="tab-content">
       <div class="preview-header">
         <div class="brand-title" id="txt-local-cliente">MENÚ DIGITAL</div>
@@ -431,7 +431,7 @@
       <!-- GENERAR PDF DE RANGO DE MESAS -->
       <div class="section-card">
         <h3>📄 Exportar Planilla PDF por Rango de Mesas</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Genera un documento PDF listo para imprimir con etiquetas de $5 \times 5\text{ cm}$ ordenadas en cuadrícula.</p>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Genera un documento PDF listo para imprimir con etiquetas de 5x5 cm ordenadas en cuadrícula.</p>
         <div class="form-inline">
           <input type="number" id="qr-rango-desde" placeholder="Mesa Desde" value="1" min="1">
           <input type="number" id="qr-rango-hasta" placeholder="Mesa Hasta" value="12" min="1">
@@ -496,10 +496,11 @@
   <script>
     const API_URL = "https://appmenu-tavr.onrender.com/api";
     
-    // Configuración desde URL
+    // Configuración desde la URL
     const params = new URLSearchParams(window.location.search);
     const localId = (params.get('local') || 'mongo').toLowerCase().trim();
     const numeroMesa = params.get('mesa') || '1';
+    const vistaModo = params.get('view'); // Detecta si viene desde el QR escaneado (?view=cliente)
 
     // Estado global
     let productosPlanos = [];
@@ -513,6 +514,16 @@
       document.getElementById('txt-local-cliente').innerText = localId.toUpperCase();
       document.getElementById('txt-mesa-cliente').innerText = `MESA N° ${numeroMesa}`;
       
+      // SI VIENE DESDE UN CÓDIGO QR ESCANEADO O ES MÓVIL CON PARÁMETRO CLIENTE:
+      if (vistaModo === 'cliente') {
+        // Oculta header y pestañas de administración
+        document.getElementById('admin-header').style.display = 'none';
+        document.getElementById('admin-nav-tabs').style.display = 'none';
+        
+        // Muestra únicamente la vista cliente
+        cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
+      }
+
       cargarDatosMenu();
       generarQRUnico();
     });
@@ -522,16 +533,17 @@
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       
       document.getElementById(tabId).classList.add('active');
-      element.classList.add('active');
+      if (element) element.classList.add('active');
     }
 
     function recargarTodo() {
       cargarDatosMenu();
     }
 
+    // Construye la URL agregando '?view=cliente' para forzar la pestaña del menú digital
     function construirUrlMesa(mesa) {
       const baseUrl = window.location.origin + window.location.pathname;
-      return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}`;
+      return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
     }
 
     // 1. CARGA DE DATOS DE MENÚ
@@ -839,7 +851,6 @@
 
       const urlTarget = construirUrlMesa(numMesa);
 
-      // Renderiza QR a alta definición (591px ~ 5x5cm a 300 DPI)
       qrSingleObj = new QRCode(container, {
         text: urlTarget,
         width: 250,
@@ -858,7 +869,6 @@
       
       if (!qrCanvas) return alert("Genera primero el código QR.");
 
-      // Crear Canvas final con dimensiones físicas exactas (5x5 cm a 300DPI => 591x591px)
       const canvasFinal = document.createElement('canvas');
       const size = 591;
       canvasFinal.width = size;
@@ -866,17 +876,14 @@
 
       const ctx = canvasFinal.getContext('2d');
 
-      // Fondo blanco
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
 
-      // Dibujar QR centrado
       const qrSize = 420;
       const qrX = (size - qrSize) / 2;
       const qrY = 40;
       ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
-      // Textos informativos
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 32px sans-serif';
       ctx.textAlign = 'center';
@@ -885,7 +892,6 @@
       ctx.font = 'bold 38px sans-serif';
       ctx.fillText(`MESA N° ${numMesa}`, size / 2, 550);
 
-      // Enlace de descarga
       const link = document.createElement('a');
       link.download = `QR_Mesa_${numMesa}_${localId}_5x5cm.png`;
       link.href = canvasFinal.toDataURL('image/png');
@@ -903,9 +909,8 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'cm', format: 'a4' });
 
-      // Configuración de cuadrícula A4 (21 x 29.7 cm)
-      const itemW = 5; // 5 cm de ancho
-      const itemH = 5; // 5 cm de alto
+      const itemW = 5;
+      const itemH = 5;
       const gapX = 1.2;
       const gapY = 1.2;
       const marginX = 1.8;
@@ -928,7 +933,6 @@
         const x = marginX + col * (itemW + gapX);
         const y = marginY + row * (itemH + gapY);
 
-        // Generar QR en elemento invisible auxiliar
         const tempDiv = document.getElementById('qr-hidden-temp');
         tempDiv.innerHTML = '';
         
@@ -941,18 +945,15 @@
           correctLevel: QRCode.CorrectLevel.H
         });
 
-        // Esperar renderizado del Canvas
         await new Promise(r => setTimeout(r, 50));
 
         const canvasElem = tempDiv.querySelector('canvas');
         const imgData = canvasElem.toDataURL('image/png');
 
-        // Borde exterior guía de corte (5x5 cm)
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.02);
         doc.rect(x, y, itemW, itemH);
 
-        // Renderizar QR e información de mesa
         doc.addImage(imgData, 'PNG', x + 0.6, y + 0.3, 3.8, 3.8);
 
         doc.setFont("helvetica", "bold");
