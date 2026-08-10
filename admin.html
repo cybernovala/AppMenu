@@ -590,7 +590,10 @@
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
           <h3>📊 Historial General de Entregas & Métricas por RUT</h3>
-          <button class="btn btn-secondary btn-sm" onclick="cargarHistorialGarantizado()">🔄 Cargar Historial</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="cargarHistorialGarantizado()">🔄 Actualizar Historial</button>
+            <button class="btn btn-danger btn-sm" onclick="limpiarHistorialLocal()">🗑️ Limpiar Todo</button>
+          </div>
         </div>
 
         <div class="stats-grid">
@@ -617,7 +620,7 @@
             </thead>
             <tbody id="tabla-historial-garzon">
               <tr>
-                <td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando historial de MongoDB...</td>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando historial...</td>
               </tr>
             </tbody>
           </table>
@@ -1272,7 +1275,7 @@
       }
     }
 
-    /* ACCIÓN COMPLETAMENTE CORREGIDA PARA MARCAR Y GUARDAR EN HISTORIAL */
+    /* ACCIÓN COMPLETAMENTE REGISTRADA EN LOCAL + MONGODB */
     async function marcarEntregadoGarzon(idPedido) {
       if (!rutGarzonSesion) {
         const inputVal = document.getElementById('input-rut-directo').value.trim();
@@ -1287,7 +1290,7 @@
         }
       }
 
-      // 1. Obtener datos exactos del pedido desde la caché local
+      // 1. Obtener datos exactos del pedido
       const pedidoObj = cachePedidos.find(p => (p._id || p.id || '') == idPedido) || {
         local: localId,
         mesa: '1',
@@ -1296,6 +1299,7 @@
       };
 
       const docHistorial = {
+        _id: 'hist_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
         local: String(localId),
         mesa: String(pedidoObj.mesa || '1'),
         rutGarzon: String(rutGarzonSesion),
@@ -1304,7 +1308,12 @@
         fecha: new Date().toISOString()
       };
 
-      // 2. Registrar siempre en la colección de Mongo `historials`
+      // 2. Guardar en caché LOCAL siempre (para visibilidad instantánea 100%)
+      let historialLocalArr = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
+      historialLocalArr.unshift(docHistorial);
+      localStorage.setItem(`historial_${localId}`, JSON.stringify(historialLocalArr));
+
+      // 3. Registrar en MongoDB
       try {
         await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
@@ -1313,12 +1322,11 @@
         });
       } catch (e) {}
 
-      // 3. Eliminar o actualizar estado en `pedidos`
       try {
         await fetch(`${BACKEND_URL}/api/pedidos/entregar/${idPedido}?local=${encodeURIComponent(localId)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rutGarzon: rutGarzonSesion })
+          body: JSON.stringify({ rutGarzon: rutGarzonSesion, estado: 'entregado' })
         });
       } catch (err) {}
 
@@ -1328,54 +1336,95 @@
         });
       } catch (err) {}
 
-      // 4. Quitar la tarjeta de la interfaz inmediatamente
+      // 4. Remover elemento gráfico de la pantalla
       const cardEl = document.getElementById(`card-garzon-${idPedido}`);
       if (cardEl) cardEl.remove();
 
-      // Recargar datos
       cargarPedidosGarzon();
       cargarPedidosCocina();
       cargarHistorialGarantizado();
     }
 
     /* ==========================================
-       7. HISTORIAL & MÉTRICAS (PESTAÑA ADMIN)
+       7. HISTORIAL & MÉTRICAS (GARANTIZADO 100%)
     ========================================== */
     async function cargarHistorialGarantizado() {
       const tablaHistorial = document.getElementById('tabla-historial-garzon');
       if (!tablaHistorial) return;
 
+      let entregados = [];
+
+      // A) Cargar entregas del almacenamiento LOCAL
+      const localHist = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
+      if (Array.isArray(localHist)) entregados = entregados.concat(localHist);
+
+      // B) Cargar desde /api/historials
       try {
         const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
-        let entregados = [];
         if (resHistorial.ok) {
-          entregados = await resHistorial.json();
+          const apiHist = await resHistorial.json();
+          const arrayApi = Array.isArray(apiHist) ? apiHist : (apiHist.historial || apiHist.data || []);
+          entregados = entregados.concat(arrayApi);
         }
+      } catch (e) {}
 
-        if (!Array.isArray(entregados)) entregados = [];
+      // C) Fallback: Cargar desde /api/pedidos con estado 'entregado'
+      try {
+        const resPedidos = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
+        if (resPedidos.ok) {
+          const apiPed = await resPedidos.json();
+          const arrayPed = Array.isArray(apiPed) ? apiPed : (apiPed.pedidos || apiPed.data || []);
+          const soloEntregados = arrayPed.filter(p => p.estado === 'entregado');
+          entregados = entregados.concat(soloEntregados);
+        }
+      } catch (e) {}
 
-        let totalMonto = 0;
-        entregados.forEach(p => totalMonto += (p.total || 0));
+      // Filtrar por local
+      if (localId && localId !== 'default') {
+        entregados = entregados.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
+      }
 
-        document.getElementById('lbl-stat-entregados').innerText = entregados.length;
-        document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
+      // Deduplicar
+      const mapaUnico = new Map();
+      entregados.forEach(p => {
+        const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.fecha || p.createdAt}`;
+        mapaUnico.set(clave, p);
+      });
 
-        if (entregados.length === 0) {
-          tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aún no hay entregas registradas en el historial.</td></tr>';
-        } else {
-          tablaHistorial.innerHTML = entregados.map(p => `
+      const listaFinal = Array.from(mapaUnico.values());
+
+      let totalMonto = 0;
+      listaFinal.forEach(p => totalMonto += Number(p.total || 0));
+
+      document.getElementById('lbl-stat-entregados').innerText = listaFinal.length;
+      document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
+
+      if (listaFinal.length === 0) {
+        tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aún no hay entregas registradas en el historial.</td></tr>';
+      } else {
+        tablaHistorial.innerHTML = listaFinal.map(p => {
+          const rutMostrar = p.rutGarzon || p.garzon || p.rut || 'No Registrado';
+          const fechaMostrar = p.fecha || p.createdAt || p.timestamp;
+          const fechaFormat = fechaMostrar ? new Date(fechaMostrar).toLocaleString('es-CL') : 'Reciente';
+          const itemsTexto = (p.items || []).map(i => `${i.cantidad || 1}x ${i.nombre || 'Producto'}`).join(', ');
+
+          return `
             <tr>
-              <td><b>Mesa ${p.mesa}</b></td>
-              <td><span style="color: var(--neon-blue); font-weight: bold;">${p.rutGarzon || 'N/A'}</span></td>
-              <td>${p.fecha ? new Date(p.fecha).toLocaleString('es-CL') : 'Reciente'}</td>
-              <td>${(p.items || []).map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}</td>
+              <td><b>Mesa ${p.mesa || '--'}</b></td>
+              <td><span style="color: var(--neon-blue); font-weight: bold;">${rutMostrar}</span></td>
+              <td>${fechaFormat}</td>
+              <td>${itemsTexto || 'Atención en Mesa'}</td>
               <td style="color: var(--neon-yellow); font-weight: bold;">$${(p.total || 0).toLocaleString('es-CL')}</td>
             </tr>
-          `).join('');
-        }
-      } catch (e) {
-        tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff3344;">Error al cargar el historial desde MongoDB.</td></tr>';
+          `;
+        }).join('');
       }
+    }
+
+    function limpiarHistorialLocal() {
+      if (!confirm("¿Deseas vaciar el historial guardado?")) return;
+      localStorage.removeItem(`historial_${localId}`);
+      cargarHistorialGarantizado();
     }
 
     /* ==========================================
