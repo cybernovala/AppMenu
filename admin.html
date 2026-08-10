@@ -585,28 +585,56 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS (EXCLUSIVA ADMIN - MONGODB GARANTIZADO) -->
+    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS (EXCLUSIVA ADMIN - INFORMES POR DESPLEGABLE) -->
     <div id="tab-historial" class="tab-content">
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-          <h3>📊 Historial General de Entregas & Métricas por RUT</h3>
+          <h3>📊 Historial General & Generador de Informes</h3>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-secondary btn-sm" onclick="cargarHistorialGarantizado()">🔄 Actualizar Historial</button>
             <button class="btn btn-danger btn-sm" onclick="limpiarHistorialLocal()">🗑️ Limpiar Caché Local</button>
           </div>
         </div>
 
+        <!-- SELECTOR DESPLEGABLE DE INFORMES -->
+        <div style="background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px;">
+          <h4 style="color: var(--neon-yellow); font-size: 14px; margin-bottom: 10px;">📄 Generar Informe Personalizado</h4>
+          <div class="form-inline">
+            <select id="select-tipo-informe" onchange="cambiarFiltrosInforme()">
+              <option value="todos">📋 Informe General (Todos los Registros)</option>
+              <option value="rut">🪪 Informe por RUT de Garzón</option>
+              <option value="fechas">📅 Informe por Rango de Fechas</option>
+            </select>
+
+            <!-- Campo Dinámico: RUT -->
+            <input type="text" id="filtro-informe-rut" placeholder="Ej: 12022962-1" style="display: none;">
+
+            <!-- Campos Dinámicos: Fechas -->
+            <input type="date" id="filtro-informe-desde" style="display: none;">
+            <input type="date" id="filtro-informe-hasta" style="display: none;">
+
+            <button class="btn btn-blue" onclick="aplicarFiltroInforme()">🔍 Generar Informe</button>
+            <button class="btn btn-success" onclick="descargarInformePDF()">📥 Descargar Resumen PDF</button>
+          </div>
+        </div>
+
+        <!-- RESUMEN / MÉTRICAS -->
         <div class="stats-grid">
           <div class="stat-card">
-            <span style="font-size: 12px; color: var(--text-muted);">Total Pedidos Entregados</span>
+            <span style="font-size: 12px; color: var(--text-muted);">Total Pedidos Atendidos</span>
             <div class="stat-number" id="lbl-stat-entregados">0</div>
           </div>
           <div class="stat-card">
             <span style="font-size: 12px; color: var(--text-muted);">Monto Total Atendido</span>
             <div class="stat-number" id="lbl-stat-monto">$0</div>
           </div>
+          <div class="stat-card">
+            <span style="font-size: 12px; color: var(--text-muted);">Promedio por Pedido</span>
+            <div class="stat-number" id="lbl-stat-promedio" style="color: var(--neon-blue);">$0</div>
+          </div>
         </div>
 
+        <!-- TABLA DE RESULTADOS -->
         <div class="table-wrapper">
           <table>
             <thead>
@@ -687,6 +715,7 @@
     let catSeleccionadaCliente = '';
     let rutGarzonSesion = localStorage.getItem('rutGarzon') || '12022962-1';
     let cachePedidos = [];
+    let historialGlobal = []; // Copia global de entregas para filtrado rápido
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
@@ -1361,12 +1390,27 @@
     }
 
     /* ==========================================
-       7. HISTORIAL & MÉTRICAS (LECTURA MONGODB 100% GARANTIZADA)
+       7. HISTORIAL & MÉTRICAS (DESPLEGABLE DE INFORMES)
     ========================================== */
-    async function cargarHistorialGarantizado() {
-      const tablaHistorial = document.getElementById('tabla-historial-garzon');
-      if (!tablaHistorial) return;
+    function cambiarFiltrosInforme() {
+      const tipo = document.getElementById('select-tipo-informe').value;
+      const inputRut = document.getElementById('filtro-informe-rut');
+      const inputDesde = document.getElementById('filtro-informe-desde');
+      const inputHasta = document.getElementById('filtro-informe-hasta');
 
+      inputRut.style.display = 'none';
+      inputDesde.style.display = 'none';
+      inputHasta.style.display = 'none';
+
+      if (tipo === 'rut') {
+        inputRut.style.display = 'inline-block';
+      } else if (tipo === 'fechas') {
+        inputDesde.style.display = 'inline-block';
+        inputHasta.style.display = 'inline-block';
+      }
+    }
+
+    async function cargarHistorialGarantizado() {
       let entregados = [];
 
       // A) Consulta principal a la colección historials de Mongo
@@ -1410,21 +1454,60 @@
         mapaUnico.set(clave, p);
       });
 
-      const listaFinal = Array.from(mapaUnico.values());
+      historialGlobal = Array.from(mapaUnico.values());
+      aplicarFiltroInforme();
+    }
 
+    function aplicarFiltroInforme() {
+      const tipo = document.getElementById('select-tipo-informe').value;
+      const rutBuscado = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
+      const fechaDesde = document.getElementById('filtro-informe-desde').value;
+      const fechaHasta = document.getElementById('filtro-informe-hasta').value;
+
+      let filtrados = [...historialGlobal];
+
+      if (tipo === 'rut' && rutBuscado) {
+        filtrados = filtrados.filter(p => {
+          const r = (p.rutGarzon || p.garzon || p.rut || '').toUpperCase();
+          return r.includes(rutBuscado);
+        });
+      } else if (tipo === 'fechas') {
+        if (fechaDesde) {
+          filtrados = filtrados.filter(p => {
+            const f = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : '');
+            return f >= fechaDesde;
+          });
+        }
+        if (fechaHasta) {
+          filtrados = filtrados.filter(p => {
+            const f = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : '');
+            return f <= fechaHasta;
+          });
+        }
+      }
+
+      renderizarTablaYMetricas(filtrados);
+    }
+
+    function renderizarTablaYMetricas(lista) {
+      const tablaHistorial = document.getElementById('tabla-historial-garzon');
       let totalMonto = 0;
-      listaFinal.forEach(p => {
+
+      lista.forEach(p => {
         totalMonto += Number(p.total || 0);
       });
 
-      // Actualizar Métricas Superiores
-      document.getElementById('lbl-stat-entregados').innerText = listaFinal.length;
-      document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
+      const promedio = lista.length > 0 ? Math.round(totalMonto / lista.length) : 0;
 
-      if (listaFinal.length === 0) {
-        tablaHistorial.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron entregas registradas en MongoDB.</td></tr>';
+      // Actualizar Métricas Superiores
+      document.getElementById('lbl-stat-entregados').innerText = lista.length;
+      document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
+      document.getElementById('lbl-stat-promedio').innerText = `$${promedio.toLocaleString('es-CL')}`;
+
+      if (lista.length === 0) {
+        tablaHistorial.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron entregas para el filtro seleccionado.</td></tr>';
       } else {
-        tablaHistorial.innerHTML = listaFinal.map(p => {
+        tablaHistorial.innerHTML = lista.map(p => {
           const rutMostrar = p.rutGarzon || p.garzon || p.rut || '12022962-1';
           const fechaMostrar = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : 'Hoy');
           const horaMostrar = p.horaEntrega || p.hora || 'S/H';
@@ -1446,6 +1529,69 @@
           `;
         }).join('');
       }
+    }
+
+    /* DESCARGAR INFORME RESUMEN EN PDF */
+    function descargarInformePDF() {
+      const tipo = document.getElementById('select-tipo-informe').value;
+      const totalPedidos = document.getElementById('lbl-stat-entregados').innerText;
+      const totalMonto = document.getElementById('lbl-stat-monto').innerText;
+      const promedio = document.getElementById('lbl-stat-promedio').innerText;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(`INFORME DE ENTREGAS & MÉTRICAS - ${localId.toUpperCase()}`, 14, 20);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-CL')} ${new Date().toLocaleTimeString('es-CL')}`, 14, 28);
+      doc.text(`Tipo de Informe: ${tipo.toUpperCase()}`, 14, 34);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("RESUMEN DE MÉTRICAS", 14, 46);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(`• Total Pedidos Atendidos: ${totalPedidos}`, 14, 54);
+      doc.text(`• Monto Total Recaudado: ${totalMonto}`, 14, 60);
+      doc.text(`• Venta Promedio por Comanda: ${promedio}`, 14, 66);
+
+      doc.setLineWidth(0.5);
+      doc.line(14, 72, 196, 72);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Mesa   RUT Garzón      Fecha        Hora      Total", 14, 80);
+      doc.setLineWidth(0.2);
+      doc.line(14, 82, 196, 82);
+
+      const filas = document.querySelectorAll('#tabla-historial-garzon tr');
+      let y = 90;
+
+      doc.setFont("helvetica", "normal");
+      filas.forEach(f => {
+        const cols = f.querySelectorAll('td');
+        if (cols.length >= 6) {
+          const mesa = cols[0].innerText.replace('Mesa ', '');
+          const rut = cols[1].innerText;
+          const fecha = cols[2].innerText;
+          const hora = cols[3].innerText.replace('⏰ ', '');
+          const total = cols[5].innerText;
+
+          if (y > 270) {
+            doc.addPage();
+            y = 20;
+          }
+
+          doc.text(`${mesa.padEnd(6)} ${rut.padEnd(15)} ${fecha.padEnd(12)} ${hora.padEnd(9)} ${total}`, 14, y);
+          y += 7;
+        }
+      });
+
+      doc.save(`Informe_${tipo}_${localId}.pdf`);
     }
 
     function limpiarHistorialLocal() {
