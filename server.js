@@ -36,7 +36,7 @@ const LocalSchema = new mongoose.Schema({
 
 const Local = mongoose.models.Local || mongoose.model('Local', LocalSchema, 'locals');
 
-// Esquema de Pedidos / Comandas (NUEVO)
+// Esquema de Pedidos / Comandas
 const PedidoSchema = new mongoose.Schema({
   local: String,
   mesa: String,
@@ -219,7 +219,7 @@ app.delete('/api/menu/del', async (req, res) => {
    5. RUTAS DE PEDIDOS Y COMANDAS (/api/pedidos)
 ========================================== */
 
-// 5.1 Obtener todos los pedidos activos de un local (Para la vista de cocina)
+// 5.1 Obtener todos los pedidos activos de un local (Formateado para Cocina)
 app.get('/api/pedidos', async (req, res) => {
   try {
     const { local } = req.query;
@@ -229,7 +229,28 @@ app.get('/api/pedidos', async (req, res) => {
     }
 
     const pedidos = await Pedido.find(query).sort({ fecha: -1 }).lean();
-    return res.status(200).json(pedidos);
+
+    // Formatear los ítems para asegurar que incluyan la Categoría en el Nombre
+    const pedidosFormateados = pedidos.map(pedido => {
+      if (Array.isArray(pedido.items)) {
+        pedido.items = pedido.items.map(item => {
+          let nombreFinal = item.nombre || '';
+          
+          // Si tiene categoría y el nombre no empieza ya con esa categoría, la anteponemos
+          if (item.categoria && !nombreFinal.toLowerCase().startsWith(item.categoria.toLowerCase())) {
+            nombreFinal = `${item.categoria} ${nombreFinal}`;
+          }
+
+          return {
+            ...item,
+            nombre: nombreFinal
+          };
+        });
+      }
+      return pedido;
+    });
+
+    return res.status(200).json(pedidosFormateados);
   } catch (err) {
     console.error("❌ Error en GET /api/pedidos:", err.message);
     return res.status(500).json([]);
@@ -245,10 +266,22 @@ app.post('/api/pedidos', async (req, res) => {
       return res.status(400).json({ error: 'El pedido no contiene productos válidos' });
     }
 
+    // Asegurar formato Categoria + Nombre al guardar
+    const itemsFormateados = items.map(item => {
+      let nombreFinal = item.nombre || '';
+      if (item.categoria && !nombreFinal.toLowerCase().startsWith(item.categoria.toLowerCase())) {
+        nombreFinal = `${item.categoria} ${nombreFinal}`;
+      }
+      return {
+        ...item,
+        nombre: nombreFinal
+      };
+    });
+
     const nuevoPedido = new Pedido({
       local: (local || 'mongo').toLowerCase().trim(),
       mesa: String(mesa || '1'),
-      items,
+      items: itemsFormateados,
       total: Number(total) || 0,
       estado: estado || 'pendiente',
       fecha: fecha ? new Date(fecha) : new Date()
