@@ -565,7 +565,7 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    // SERVIDOR OFICIAL EN RENDER
+    // URL ABSOLUTA OBLIGATORIA A RENDER
     const BACKEND_URL = 'https://appmenu-tavr.onrender.com';
 
     const params = new URLSearchParams(window.location.search);
@@ -628,19 +628,13 @@
       const contenedorAdmin = document.getElementById('contenedor-categorias');
       contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
 
-      const endpoints = [
-        `${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`,
-        `${BACKEND_URL}/menu?local=${encodeURIComponent(localId)}`
-      ];
-
-      for (const url of endpoints) {
-        try {
-          const respuesta = await fetch(url);
-          if (respuesta.ok) {
-            productosPlanos = await respuesta.json();
-            break;
-          }
-        } catch (err) {}
+      try {
+        const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
+        if (respuesta.ok) {
+          productosPlanos = await respuesta.json();
+        }
+      } catch (err) {
+        console.error("Error al cargar menú desde Render:", err);
       }
 
       if (!Array.isArray(productosPlanos)) productosPlanos = [];
@@ -880,7 +874,7 @@
     }
 
     /* ==========================================
-       4. ENVIAR PEDIDO A MONGODB (RENDER)
+       4. ENVIAR PEDIDO A MONGODB (RENDER EXCLUSIVO)
     ========================================== */
     async function enviarPedidoCocina() {
       if (carrito.length === 0) return alert("El carrito está vacío.");
@@ -904,45 +898,30 @@
         fecha: new Date().toISOString()
       };
 
-      const rutasEnvio = [
-        `${BACKEND_URL}/api/pedidos`,
-        `${BACKEND_URL}/pedidos`
-      ];
+      const urlDestino = `${BACKEND_URL}/api/pedidos`;
 
-      let guardadoOk = false;
-      let errorMsg = '';
+      try {
+        const res = await fetch(urlDestino, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(documentoMongoPedido)
+        });
 
-      for (const targetUrl of rutasEnvio) {
-        try {
-          const res = await fetch(targetUrl, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify(documentoMongoPedido)
-          });
-
-          if (res.ok || res.status === 201) {
-            guardadoOk = true;
-            break;
-          } else {
-            const resTexto = await res.text();
-            errorMsg = `[Status ${res.status}] ${resTexto}`;
-          }
-        } catch (e) {
-          errorMsg = e.message;
+        if (res.ok || res.status === 201) {
+          alert("✅ ¡Pedido recibido! Registrado con éxito en MongoDB.");
+          carrito = [];
+          actualizarBarraCarrito();
+          cerrarModalCarrito();
+          cargarPedidosCocina();
+        } else {
+          const textErr = await res.text();
+          alert(`⚠️ El servidor backend respondió con error (${res.status}):\n${textErr}`);
         }
-      }
-
-      if (guardadoOk) {
-        alert("✅ ¡Pedido recibido! Se ha insertado correctamente en MongoDB.");
-        carrito = [];
-        actualizarBarraCarrito();
-        cerrarModalCarrito();
-        cargarPedidosCocina();
-      } else {
-        alert(`⚠️ No se pudo registrar en la base de datos MongoDB:\n${errorMsg}`);
+      } catch (e) {
+        alert(`⚠️ Error de conexión al backend en Render:\n${e.message}`);
       }
 
       btnEnviar.disabled = false;
@@ -956,33 +935,12 @@
       const contenedor = document.getElementById('contenedor-pedidos-cocina');
       if (!contenedor) return;
 
-      const rutasConsulta = [
-        `${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`,
-        `${BACKEND_URL}/pedidos?local=${encodeURIComponent(localId)}`
-      ];
-
-      let datos = null;
-
-      for (const url of rutasConsulta) {
-        try {
-          const res = await fetch(url);
-          if (res.ok) {
-            datos = await res.json();
-            break;
-          }
-        } catch (e) {}
-      }
-
       try {
-        let pedidos = [];
-
-        if (Array.isArray(datos)) {
-          pedidos = datos;
-        } else if (datos && Array.isArray(datos.pedidos)) {
-          pedidos = datos.pedidos;
-        } else if (datos && Array.isArray(datos.data)) {
-          pedidos = datos.data;
-        }
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        
+        const datos = await res.json();
+        let pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
 
         if (localId && localId !== 'default') {
           pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
@@ -1031,17 +989,9 @@
     async function despacharPedido(idPedido) {
       if (!confirm("¿Completar y retirar este pedido?")) return;
 
-      const rutasBorrado = [
-        `${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`,
-        `${BACKEND_URL}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`
-      ];
-
-      for (const url of rutasBorrado) {
-        try {
-          const res = await fetch(url, { method: 'DELETE' });
-          if (res.ok) break;
-        } catch (e) {}
-      }
+      try {
+        await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' });
+      } catch (e) {}
 
       cargarPedidosCocina();
     }
