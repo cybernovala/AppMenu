@@ -364,6 +364,18 @@
       border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
 
+    /* BARRA RUT IDENTIFICACION */
+    .rut-bar {
+      background: rgba(0, 210, 255, 0.1);
+      border: 1px solid var(--neon-blue);
+      border-radius: 8px;
+      padding: 10px 15px;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
     /* METRICAS GARZON Y TABLAS */
     .stats-grid {
       display: grid;
@@ -588,20 +600,28 @@
           <button class="btn btn-secondary btn-sm" onclick="cargarPedidosGarzon()">🔄 Actualizar</button>
         </div>
 
+        <div class="rut-bar" id="rut-garzon-info" style="margin-top: 10px;">
+          <div>
+            <span style="font-size: 12px; color: var(--text-muted);">Garzón Identificado:</span>
+            <div style="font-size: 15px; font-weight: bold; color: var(--neon-blue);" id="lbl-rut-activo">Sin RUT registrado</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="cambiarRutGarzon()">✏️ Cambiar RUT</button>
+        </div>
+
         <div id="contenedor-pedidos-garzon" class="grid-pedidos">
           <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando comandas para garzón...</p>
         </div>
       </div>
 
       <div class="section-card">
-        <h3>📊 Historial de Entregas & Métricas de Desempeño</h3>
+        <h3>📊 Historial de Entregas (`historials`) & Métricas por RUT</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Registro histórico de comandas entregadas para cálculo de bonificaciones por desempeño del personal.
+          Registro guardado en la colección `historials` con el RUT del garzón para bonificaciones de desempeño.
         </p>
 
         <div class="stats-grid">
           <div class="stat-card">
-            <span style="font-size: 12px; color: var(--text-muted);">Total Entregados</span>
+            <span style="font-size: 12px; color: var(--text-muted);">Total Pedidos Entregados</span>
             <div class="stat-number" id="lbl-stat-entregados">0</div>
           </div>
           <div class="stat-card">
@@ -615,10 +635,10 @@
             <thead>
               <tr>
                 <th>Mesa</th>
+                <th>RUT Garzón</th>
                 <th>Fecha / Hora</th>
                 <th>Ítems</th>
                 <th>Total</th>
-                <th>Estado</th>
               </tr>
             </thead>
             <tbody id="tabla-historial-garzon">
@@ -673,6 +693,18 @@
     </div>
   </div>
 
+  <!-- MODAL PEDIR RUT GARZON -->
+  <div class="modal" id="modal-rut-garzon">
+    <div class="modal-content">
+      <h3>🤵 Registro de Garzón</h3>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">Ingresa tu RUT para registrar tus entregas en el historial:</p>
+      <input type="text" id="input-rut-garzon" placeholder="Ej: 12345678-9">
+      <div style="margin-top: 15px;">
+        <button class="btn btn-blue" style="width: 100%;" onclick="guardarRutGarzon()">Continuar y Registrar RUT</button>
+      </div>
+    </div>
+  </div>
+
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
@@ -688,6 +720,7 @@
     let categoriasSet = new Set();
     let carrito = [];
     let catSeleccionadaCliente = '';
+    let rutGarzonSesion = localStorage.getItem('rutGarzon') || '';
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
@@ -702,6 +735,7 @@
         document.getElementById('admin-header').style.display = 'none';
         document.getElementById('admin-nav-tabs').style.display = 'none';
         cambiarPestana('tab-garzon', document.getElementById('btn-tab-garzon'));
+        verificarRutGarzon();
       }
 
       cargarDatosMenu();
@@ -728,6 +762,7 @@
       if (tabId === 'tab-cocina') {
         cargarPedidosCocina();
       } else if (tabId === 'tab-garzon') {
+        verificarRutGarzon();
         cargarPedidosGarzon();
       }
     }
@@ -736,6 +771,33 @@
       cargarDatosMenu();
       cargarPedidosCocina();
       cargarPedidosGarzon();
+    }
+
+    /* ==========================================
+       GESTIÓN Y VERIFICACIÓN DE RUT DEL GARZÓN
+    ========================================== */
+    function verificarRutGarzon() {
+      if (!rutGarzonSesion) {
+        document.getElementById('modal-rut-garzon').style.display = 'flex';
+      } else {
+        document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+      }
+    }
+
+    function guardarRutGarzon() {
+      const val = document.getElementById('input-rut-garzon').value.trim();
+      if (!val || val.length < 7) {
+        return alert("Ingresa un RUT válido.");
+      }
+      rutGarzonSesion = val.toUpperCase();
+      localStorage.setItem('rutGarzon', rutGarzonSesion);
+      document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+      document.getElementById('modal-rut-garzon').style.display = 'none';
+    }
+
+    function cambiarRutGarzon() {
+      document.getElementById('input-rut-garzon').value = rutGarzonSesion;
+      document.getElementById('modal-rut-garzon').style.display = 'flex';
     }
 
     function construirUrlMesa(mesa) {
@@ -1131,7 +1193,7 @@
     }
 
     /* ==========================================
-       6. CONTROL DE GARZÓN & HISTORIAL
+       6. CONTROL DE GARZÓN & COLECCIÓN `historials`
     ========================================== */
     function generarQRGarzon() {
       const container = document.getElementById('qr-garzon-render');
@@ -1183,20 +1245,20 @@
       if (!contenedor) return;
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-
-        const datos = await res.json();
-        let pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
+        // 1. Cargar Pendientes desde `pedidos`
+        const resPedidos = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
+        let pedidos = [];
+        if (resPedidos.ok) {
+          const datos = await resPedidos.json();
+          pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
+        }
 
         if (localId && localId !== 'default') {
           pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
         }
 
         const pendientes = pedidos.filter(p => p.estado !== 'entregado');
-        const entregados = pedidos.filter(p => p.estado === 'entregado');
 
-        // 1. Mostrar Pendientes para Garzón
         if (pendientes.length === 0) {
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">🎉 No hay pedidos pendientes por llevar a mesa.</p>';
         } else {
@@ -1230,7 +1292,15 @@
           }).join('');
         }
 
-        // 2. Métricas e Historial
+        // 2. Cargar Historial desde la colección `historials`
+        const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
+        let entregados = [];
+        if (resHistorial.ok) {
+          entregados = await resHistorial.json();
+        }
+
+        if (!Array.isArray(entregados)) entregados = [];
+
         let totalMonto = 0;
         entregados.forEach(p => totalMonto += (p.total || 0));
 
@@ -1238,28 +1308,37 @@
         document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
 
         if (entregados.length === 0) {
-          tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aún no hay entregas registradas en el historial.</td></tr>';
+          tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aún no hay entregas registradas en `historials`.</td></tr>';
         } else {
           tablaHistorial.innerHTML = entregados.map(p => `
             <tr>
               <td><b>Mesa ${p.mesa}</b></td>
+              <td><span style="color: var(--neon-blue); font-weight: bold;">${p.rutGarzon || 'N/A'}</span></td>
               <td>${p.fecha ? new Date(p.fecha).toLocaleString('es-CL') : 'Reciente'}</td>
               <td>${(p.items || []).map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}</td>
               <td style="color: var(--neon-yellow); font-weight: bold;">$${(p.total || 0).toLocaleString('es-CL')}</td>
-              <td><span style="color: var(--neon-green); font-weight: bold;">✔ Entregado</span></td>
             </tr>
           `).join('');
         }
 
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al cargar datos para Garzón.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al consultar comandas de garzón.</p>';
       }
     }
 
     async function marcarEntregadoGarzon(idPedido) {
+      if (!rutGarzonSesion) {
+        verificarRutGarzon();
+        return;
+      }
+
       try {
         await fetch(`${BACKEND_URL}/api/pedidos/entregar/${idPedido}?local=${encodeURIComponent(localId)}`, {
-          method: 'PUT'
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rutGarzon: rutGarzonSesion
+          })
         });
       } catch (e) {}
 
