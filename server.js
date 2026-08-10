@@ -3,135 +3,210 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
 
-// Middlewares
-app.use(cors());
+// --- 1. CONFIGURACIÓN CORS ---
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.options('*', cors());
 app.use(express.json());
 
-// --- CONEXIÓN A MONGODB ATLAS ---
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:password@cluster.mongodb.net/appmenu?retryWrites=true&w=majority";
+// --- 2. CONEXIÓN A MONGO DB ATLAS ---
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:juan2073@cluster0.w3kjxzs.mongodb.net/appmenu?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ Conectado exitosamente a MongoDB Atlas"))
-  .catch(err => console.error("❌ Error de conexión a MongoDB:", err));
+  .then(() => console.log('✅ MongoDB Conectado Exitosamente'))
+  .catch(err => console.error('❌ Error crítico al conectar a MongoDB:', err));
 
-// --- MODELO DE MONGOOSE PARA PRODUCTOS ---
-const ProductoSchema = new mongoose.Schema({
-  local: { type: String, required: true, default: 'mongo', lowercase: true, trim: true },
-  categoria: { type: String, required: true, default: 'General', trim: true },
-  nombre: { type: String, required: true, trim: true },
-  precio: { type: Number, required: true }
-}, { timestamps: true });
+// --- 3. ESQUEMA Y MODELO ---
+const LocalSchema = new mongoose.Schema({
+  id: String,
+  local: String,
+  nombre: String,
+  password: String,
+  fechaCreacion: String,
+  fechaVencimiento: String,
+  menu: Array
+}, { strict: false, timestamps: true });
 
-const Producto = mongoose.model('Producto', ProductoSchema);
+const Local = mongoose.models.Local || mongoose.model('Local', LocalSchema, 'locals');
 
-// --- BASE DE DATOS EN MEMORIA PARA PEDIDOS DE COCINA ---
-let pedidosMemoria = [];
+// --- 4. RUTAS DE LA API ---
 
-// ==========================================
-// 1. RUTAS DE MENÚ Y CARTA (MONGODB)
-// ==========================================
-
-// Obtener productos de un local
-app.get('/api/menu', async (req, res) => {
+// 4.1 Obtener lista de todos los locales (Para SuperAdmin)
+app.get('/api/locales', async (req, res) => {
   try {
-    const local = (req.query.local || 'mongo').toLowerCase().trim();
-    const productos = await Producto.find({ local }).sort({ createdAt: 1 });
-    res.json(productos);
-  } catch (error) {
-    console.error("❌ Error al obtener menú:", error);
-    res.status(500).json({ error: "Error al obtener el menú desde la base de datos" });
+    if (mongoose.connection.readyState !== 1) return res.status(200).json([]);
+
+    const docs = await Local.find({}).lean();
+    const locales = docs.map(d => d.id || d.local || d.slug || d.nombre).filter(Boolean);
+    const unicos = [...new Set(locales)];
+
+    return res.status(200).json(unicos);
+  } catch (err) {
+    console.error("❌ Error en GET /api/locales:", err.message);
+    return res.status(200).json([]);
   }
 });
 
-// Guardar un nuevo producto
+// 4.2 Obtener el menú aplanado de un local específico
+app.get('/api/menu', async (req, res) => {
+  try {
+    const { local } = req.query;
+    if (!local) return res.status(200).json([]);
+
+    const localQuery = local.toLowerCase().trim();
+    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] }).lean();
+
+    if (!doc || !doc.menu) return res.status(200).json([]);
+
+    let listaProductos = [];
+    doc.menu.forEach((catObj) => {
+      const categoriaNombre = catObj.categoria || 'General';
+      if (Array.isArray(catObj.productos)) {
+        catObj.productos.forEach((prod, index) => {
+          listaProductos.push({
+            _id: `${categoriaNombre}||${index}`,
+            nombre: prod.nombre,
+            precio: prod.precio,
+            categoria: categoriaNombre
+          });
+        });
+      }
+    });
+
+    return res.status(200).json(listaProductos);
+  } catch (err) {
+    console.error("❌ Error en GET /api/menu:", err.message);
+    return res.status(500).json([]);
+  }
+});
+
+// 4.3 Agregar un producto al arreglo `menu` en MongoDB
 app.post('/api/menu', async (req, res) => {
   try {
     const { local, categoria, nombre, precio } = req.body;
-    
-    if (!nombre || precio === undefined || precio === null) {
-      return res.status(400).json({ error: "Faltan campos obligatorios: nombre o precio" });
+    if (!local || !categoria || !nombre) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios' });
     }
 
-    const nuevoProducto = new Producto({
-      local: (local || 'mongo').toLowerCase().trim(),
-      categoria: categoria ? categoria.trim() : 'General',
-      nombre: nombre.trim(),
-      precio: Number(precio)
+    const localQuery = local.toLowerCase().trim();
+    let doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
+
+    if (!doc) {
+      doc = new Local({
+        id: localQuery,
+        local: localQuery,
+        fechaCreacion: new Date().toISOString().split('T')[0],
+        menu: []
+      });
+    }
+
+    if (!Array.isArray(doc.menu)) doc.menu = [];
+
+    let catExistente = doc.menu.find(c => c.categoria === categoria);
+    if (!catExistente) {
+      catExistente = { categoria: categoria, productos: [] };
+      doc.menu.push(catExistente);
+    }
+
+    if (!Array.isArray(catExistente.productos)) catExistente.productos = [];
+
+    catExistente.productos.push({
+      nombre: nombre,
+      precio: Number(precio) || 0
     });
 
-    await nuevoProducto.save();
-    res.status(201).json({ mensaje: "Producto guardado con éxito", producto: nuevoProducto });
-  } catch (error) {
-    console.error("❌ Error al guardar producto:", error);
-    res.status(500).json({ error: "Error interno al guardar el producto" });
+    doc.markModified('menu');
+    await doc.save();
+
+    return res.status(200).json({ mensaje: 'Producto guardado con éxito' });
+  } catch (err) {
+    console.error("❌ Error en POST /api/menu:", err.message);
+    return res.status(500).json({ error: 'Error al agregar producto' });
   }
 });
 
-// Eliminar producto por ID de MongoDB
-app.delete('/api/menu/:id', async (req, res) => {
+// 4.4 Editar un producto dentro de la estructura anidada
+app.put('/api/menu/edit', async (req, res) => {
   try {
-    const { id } = req.params;
-    await Producto.findByIdAndDelete(id);
-    res.json({ mensaje: "Producto eliminado correctamente" });
-  } catch (error) {
-    console.error("❌ Error al eliminar producto:", error);
-    res.status(500).json({ error: "Error al eliminar el producto" });
-  }
-});
+    const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaCategoria } = req.body;
+    
+    const localQuery = local.toLowerCase().trim();
+    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
+    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
 
-// ==========================================
-// 2. RUTAS DE PEDIDOS EN TIEMPO REAL (COCINA)
-// ==========================================
-
-// Crear pedido desde el cliente
-app.post('/api/pedidos', (req, res) => {
-  try {
-    const { local, mesa, items, total } = req.body;
-
-    if (!items || items.length === 0) {
-      return res.status(400).json({ error: "El pedido está vacío" });
+    let catObj = doc.menu.find(c => c.categoria === categoriaOriginal);
+    if (!catObj || !catObj.productos[indexOriginal]) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    const nuevoPedido = {
-      _id: Date.now().toString(),
-      local: (local || 'mongo').toLowerCase().trim(),
-      mesa: mesa || '1',
-      items: items || [],
-      total: total || 0,
-      hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-    };
+    if (nuevaCategoria && nuevaCategoria !== categoriaOriginal) {
+      catObj.productos.splice(indexOriginal, 1);
+      if (catObj.productos.length === 0) {
+        doc.menu = doc.menu.filter(c => c.categoria !== categoriaOriginal);
+      }
 
-    pedidosMemoria.push(nuevoPedido);
-    console.log(`📩 Pedido recibido - Mesa ${nuevoPedido.mesa} ($${nuevoPedido.total})`);
+      let nuevaCatObj = doc.menu.find(c => c.categoria === nuevaCategoria);
+      if (!nuevaCatObj) {
+        nuevaCatObj = { categoria: nuevaCategoria, productos: [] };
+        doc.menu.push(nuevaCatObj);
+      }
+      nuevaCatObj.productos.push({ nombre: nuevoNombre, precio: Number(nuevoPrecio) || 0 });
+    } else {
+      catObj.productos[indexOriginal] = {
+        nombre: nuevoNombre,
+        precio: Number(nuevoPrecio) || 0
+      };
+    }
 
-    return res.status(200).json({ mensaje: 'Pedido recibido en cocina exitosamente', pedido: nuevoPedido });
-  } catch (error) {
-    return res.status(500).json({ error: "Error al procesar el pedido" });
+    doc.markModified('menu');
+    await doc.save();
+
+    return res.status(200).json({ mensaje: 'Producto actualizado con éxito' });
+  } catch (err) {
+    console.error("❌ Error en PUT /api/menu/edit:", err.message);
+    return res.status(500).json({ error: 'Error al actualizar producto' });
   }
 });
 
-// Obtener lista de pedidos activos para Cocina
-app.get('/api/pedidos', (req, res) => {
-  const local = (req.query.local || 'mongo').toLowerCase().trim();
-  const pedidosLocal = pedidosMemoria.filter(p => p.local === local);
-  return res.status(200).json(pedidosLocal);
+// 4.5 Eliminar un producto del arreglo en MongoDB
+app.delete('/api/menu/del', async (req, res) => {
+  try {
+    const { local, categoria, index } = req.query;
+
+    const localQuery = (local || '').toLowerCase().trim();
+    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
+    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
+
+    let catObj = doc.menu.find(c => c.categoria === categoria);
+    if (catObj && catObj.productos) {
+      catObj.productos.splice(Number(index), 1);
+
+      if (catObj.productos.length === 0) {
+        doc.menu = doc.menu.filter(c => c.categoria !== categoria);
+      }
+
+      doc.markModified('menu');
+      await doc.save();
+    }
+
+    return res.status(200).json({ mensaje: 'Producto eliminado correctamente' });
+  } catch (err) {
+    console.error("❌ Error en DELETE /api/menu/del:", err.message);
+    return res.status(500).json({ error: 'Error al eliminar producto' });
+  }
 });
 
-// Despachar / eliminar pedido de la cocina
-app.delete('/api/pedidos/:id', (req, res) => {
-  const { id } = req.params;
-  pedidosMemoria = pedidosMemoria.filter(p => p._id !== id);
-  return res.status(200).json({ mensaje: 'Pedido despachado y removido de la cocina' });
-});
-
-// --- RUTA RAIZ DE SALUD Y PRUEBA ---
+// Ruta raíz
 app.get('/', (req, res) => {
-  res.send('🚀 Servidor del Menú Digital activo y listo.');
+  res.send('🚀 API AppMenu funcionando con estructura MongoDB real.');
 });
 
-// --- INICIO DEL SERVIDOR ---
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`🔥 Servidor corriendo en el puerto ${PORT}`);
+  console.log(`🚀 Servidor ejecutándose en el puerto ${PORT}`);
 });
