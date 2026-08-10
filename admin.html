@@ -286,6 +286,9 @@
       justify-content: space-between;
       align-items: center;
       margin-top: 15px;
+      position: sticky;
+      bottom: 10px;
+      z-index: 100;
     }
 
     .cart-btn {
@@ -569,7 +572,7 @@
     
     // Configuración desde la URL
     const params = new URLSearchParams(window.location.search);
-    const localId = (params.get('local') || 'mongo').toLowerCase().trim();
+    const localId = (params.get('local') || 'default').toLowerCase().trim();
     const numeroMesa = params.get('mesa') || '1';
     const vistaModo = params.get('view');
 
@@ -596,12 +599,12 @@
       cargarDatosMenu();
       generarQRUnico();
 
-      // Intervalo de actualización automática para pedidos en cocina (cada 10s)
+      // Polling para sincronización de comandas cada 8 segundos
       setInterval(() => {
         if (document.getElementById('tab-cocina').classList.contains('active')) {
           cargarPedidosCocina();
         }
-      }, 10000);
+      }, 8000);
     });
 
     function cambiarPestana(tabId, element) {
@@ -626,7 +629,9 @@
       return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
     }
 
-    // 1. CARGA DE DATOS DE MENÚ
+    /* ==========================================
+       1. CARGA DE DATOS DE MENÚ
+    ========================================== */
     async function cargarDatosMenu() {
       const contenedorAdmin = document.getElementById('contenedor-categorias');
       contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
@@ -651,12 +656,12 @@
         renderizarClienteProductos();
 
       } catch (err) {
-        contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">Error al conectar con la API.</p>';
+        contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">Error al conectar con la API de MongoDB.</p>';
       }
     }
 
     /* ==========================================
-       GESTIÓN DE MENÚ (ADMINISTRADOR)
+       2. GESTIÓN DE MENÚ (ADMINISTRADOR)
     ========================================== */
     function renderizarAdminCategorias() {
       const contenedor = document.getElementById('contenedor-categorias');
@@ -733,7 +738,7 @@
         });
 
         if (res.ok) cargarDatosMenu();
-        else alert("Error al guardar en MongoDB.");
+        else alert("Error al guardar el producto en MongoDB.");
       } catch (err) {
         alert("Error de conexión.");
       }
@@ -802,7 +807,7 @@
     }
 
     /* ==========================================
-       VISTA PREVIA MENÚ (CLIENTE)
+       3. VISTA PREVIA MENÚ (CLIENTE)
     ========================================== */
     function renderizarClienteCategorias() {
       const bar = document.getElementById('barra-categorias-cliente');
@@ -883,7 +888,6 @@
 
     function renderModalCarrito() {
       const cont = document.getElementById('items-carrito');
-      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
       cont.innerHTML = carrito.map(i => `
         <div class="cart-item">
@@ -899,59 +903,59 @@
         </div>
       `).join('');
 
+      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
       document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
     }
 
     /* ==========================================
-       ENVÍO DE PEDIDO A MONGODB (CORREGIDO)
+       4. ENVÍO DEL PEDIDO A MONGODB (CORREGIDO)
     ========================================== */
     async function enviarPedidoCocina() {
       if (carrito.length === 0) return alert("El carrito está vacío.");
 
       const btnEnviar = document.getElementById('btn-enviar-cocina');
       btnEnviar.disabled = true;
-      btnEnviar.innerText = "Enviando...";
+      btnEnviar.innerText = "Procesando...";
 
-      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+      const totalCalculado = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
-      // Estructura completa y normalizada para guardar en la colección 'pedidos' de MongoDB
-      const payload = {
-        local: localId,
+      // Estructura de documento exacta para ser insertada en la colección 'pedidos'
+      const payloadPedido = {
+        local: String(localId),
         mesa: String(numeroMesa),
         items: carrito.map(item => ({
-          nombre: item.nombre,
+          nombre: String(item.nombre),
           precio: Number(item.precio),
           cantidad: Number(item.cantidad)
         })),
-        total: Number(total),
+        total: Number(totalCalculado),
         estado: 'pendiente',
         fecha: new Date().toISOString()
       };
 
       try {
-        const res = await fetch(`${API_URL}/pedidos`, {
+        const respuesta = await fetch(`${API_URL}/pedidos`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payloadPedido)
         });
 
-        if (res.ok || res.status === 201) {
-          alert("✅ ¡Pedido enviado e ingresado en MongoDB!");
+        if (respuesta.ok || respuesta.status === 201) {
+          alert("✅ ¡Pedido enviado con éxito! Se guardó en MongoDB.");
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalCarrito();
-          // Si estamos en vista admin, refresca la pantalla de cocina
           cargarPedidosCocina();
         } else {
-          const errText = await res.text();
-          alert("Error de respuesta al guardar en MongoDB (" + res.status + "): " + errText);
+          const errBody = await respuesta.text();
+          alert(`⚠️ MongoDB no guardó el pedido (${respuesta.status}): ${errBody}`);
         }
-      } catch (e) {
-        console.error("Error al enviar pedido:", e);
-        alert("Error de conexión al enviar el pedido a MongoDB.");
+      } catch (error) {
+        console.error("Error enviando pedido desde el móvil:", error);
+        alert(" Error de red o servidor al enviar el pedido.");
       } finally {
         btnEnviar.disabled = false;
         btnEnviar.innerText = "🚀 Enviar a Cocina";
@@ -959,7 +963,7 @@
     }
 
     /* ==========================================
-       GESTIÓN DE COCINA Y PEDIDOS
+       5. COCINA Y MONITOR DE PEDIDOS
     ========================================== */
     async function cargarPedidosCocina() {
       const contenedor = document.getElementById('contenedor-pedidos-cocina');
@@ -983,11 +987,13 @@
           pedidos = datos.data;
         }
 
-        // Filtrar pedidos por local
-        pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
+        // Filtrado cliente por ID de Local
+        if (localId && localId !== 'default') {
+          pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
+        }
 
         if (pedidos.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en la base de datos.</p>';
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos en la colección "pedidos".</p>';
           return;
         }
 
@@ -1004,7 +1010,7 @@
                   <span class="card-pedido-time">⏰ ${fechaFormateada}</span>
                 </div>
                 <div class="pedido-items-list">
-                  ${itemsList.length === 0 ? '<span style="color:var(--text-muted);">Sin detalles</span>' : ''}
+                  ${itemsList.length === 0 ? '<span style="color:var(--text-muted);">Sin detalle</span>' : ''}
                   ${itemsList.map(i => `
                     <div class="pedido-item-row">
                       <span><b>${i.cantidad || 1}x</b> ${i.nombre || 'Producto'}</span>
@@ -1015,7 +1021,7 @@
               </div>
               <div class="card-pedido-footer">
                 <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
-                <button class="btn btn-success btn-sm" onclick="despacharPedido('${idPedido}')">✓ Atendido / Listo</button>
+                <button class="btn btn-success btn-sm" onclick="despacharPedido('${idPedido}')">✓ Entregado</button>
               </div>
             </div>
           `;
@@ -1023,12 +1029,12 @@
 
       } catch (e) {
         console.error("Error al obtener pedidos:", e);
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error de conexión al cargar pedidos de MongoDB.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error de comunicación con la base de datos.</p>';
       }
     }
 
     async function despacharPedido(idPedido) {
-      if (!confirm("¿Marcar este pedido como entregado?")) return;
+      if (!confirm("¿Marcar este pedido como completado?")) return;
 
       try {
         let res = await fetch(`${API_URL}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
@@ -1049,7 +1055,7 @@
     }
 
     /* ==========================================
-       GENERACIÓN Y DESCARGA DE QR / PDF
+       6. GENERACIÓN Y EXPORTACIÓN DE QR / PDF
     ========================================== */
     function generarQRUnico() {
       const numMesa = document.getElementById('qr-num-mesa').value || '1';
@@ -1077,7 +1083,7 @@
       if (!qrCanvas) return alert("Genera primero el código QR.");
 
       const canvasFinal = document.createElement('canvas');
-      const size = 591;
+      const size = 591; // Equivale a 5x5 cm a 300 DPI
       canvasFinal.width = size;
       canvasFinal.height = size;
 
