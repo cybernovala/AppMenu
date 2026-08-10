@@ -5,44 +5,43 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Middleware
+// Middlewares
 app.use(cors());
 app.use(express.json());
 
 // --- CONEXIÓN A MONGODB ATLAS ---
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:password@cluster.mongodb.net/appmenu?retryWrites=true&w=w-majority";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:password@cluster.mongodb.net/appmenu?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
   .then(() => console.log("✅ Conectado exitosamente a MongoDB Atlas"))
   .catch(err => console.error("❌ Error de conexión a MongoDB:", err));
 
-// --- MODELO DE MONGOOSE PARA EL MENÚ ---
+// --- MODELO DE MONGOOSE PARA PRODUCTOS ---
 const ProductoSchema = new mongoose.Schema({
-  local: { type: String, required: true, default: 'mongo' },
-  categoria: { type: String, required: true, default: 'General' },
-  nombre: { type: String, required: true },
+  local: { type: String, required: true, default: 'mongo', lowercase: true, trim: true },
+  categoria: { type: String, required: true, default: 'General', trim: true },
+  nombre: { type: String, required: true, trim: true },
   precio: { type: Number, required: true }
 }, { timestamps: true });
 
 const Producto = mongoose.model('Producto', ProductoSchema);
 
-
 // --- BASE DE DATOS EN MEMORIA PARA PEDIDOS DE COCINA ---
 let pedidosMemoria = [];
-
 
 // ==========================================
 // 1. RUTAS DE MENÚ Y CARTA (MONGODB)
 // ==========================================
 
-// Obtener todos los productos de un local
+// Obtener productos de un local
 app.get('/api/menu', async (req, res) => {
   try {
-    const local = req.query.local || 'mongo';
-    const productos = await Producto.find({ local });
+    const local = (req.query.local || 'mongo').toLowerCase().trim();
+    const productos = await Producto.find({ local }).sort({ createdAt: 1 });
     res.json(productos);
   } catch (error) {
-    res.status(500).json({ error: "Error al obtener el menú" });
+    console.error("❌ Error al obtener menú:", error);
+    res.status(500).json({ error: "Error al obtener el menú desde la base de datos" });
   }
 });
 
@@ -51,56 +50,42 @@ app.post('/api/menu', async (req, res) => {
   try {
     const { local, categoria, nombre, precio } = req.body;
     
-    if (!nombre || !precio) {
-      return res.status(400).json({ error: "Faltan nombre o precio" });
+    if (!nombre || precio === undefined || precio === null) {
+      return res.status(400).json({ error: "Faltan campos obligatorios: nombre o precio" });
     }
 
     const nuevoProducto = new Producto({
-      local: local || 'mongo',
-      categoria: categoria || 'General',
-      nombre,
+      local: (local || 'mongo').toLowerCase().trim(),
+      categoria: categoria ? categoria.trim() : 'General',
+      nombre: nombre.trim(),
       precio: Number(precio)
     });
 
     await nuevoProducto.save();
     res.status(201).json({ mensaje: "Producto guardado con éxito", producto: nuevoProducto });
   } catch (error) {
-    res.status(500).json({ error: "Error al guardar el producto" });
+    console.error("❌ Error al guardar producto:", error);
+    res.status(500).json({ error: "Error interno al guardar el producto" });
   }
 });
 
-// Eliminar un producto según categoría e índice
-app.delete('/api/menu/del', async (req, res) => {
+// Eliminar producto por ID de MongoDB
+app.delete('/api/menu/:id', async (req, res) => {
   try {
-    const local = req.query.local || 'mongo';
-    const categoria = req.query.categoria;
-    const index = parseInt(req.query.index);
-
-    if (isNaN(index) || !categoria) {
-      return res.status(400).json({ error: "Parámetros inválidos" });
-    }
-
-    // Buscar los productos de esa categoría
-    const productosCat = await Producto.find({ local, categoria });
-
-    if (index >= 0 && index < productosCat.length) {
-      const productoAEliminar = productosCat[index];
-      await Producto.findByIdAndDelete(productoAEliminar._id);
-      return res.json({ mensaje: "Producto eliminado correctamente" });
-    } else {
-      return res.status(404).json({ error: "Producto no encontrado en esa posición" });
-    }
+    const { id } = req.params;
+    await Producto.findByIdAndDelete(id);
+    res.json({ mensaje: "Producto eliminado correctamente" });
   } catch (error) {
+    console.error("❌ Error al eliminar producto:", error);
     res.status(500).json({ error: "Error al eliminar el producto" });
   }
 });
-
 
 // ==========================================
 // 2. RUTAS DE PEDIDOS EN TIEMPO REAL (COCINA)
 // ==========================================
 
-// Enviar nuevo pedido desde la app/celular del cliente
+// Crear pedido desde el cliente
 app.post('/api/pedidos', (req, res) => {
   try {
     const { local, mesa, items, total } = req.body;
@@ -111,7 +96,7 @@ app.post('/api/pedidos', (req, res) => {
 
     const nuevoPedido = {
       _id: Date.now().toString(),
-      local: local || 'mongo',
+      local: (local || 'mongo').toLowerCase().trim(),
       mesa: mesa || '1',
       items: items || [],
       total: total || 0,
@@ -127,27 +112,26 @@ app.post('/api/pedidos', (req, res) => {
   }
 });
 
-// Obtener la lista de pedidos activos para el panel de Cocina
+// Obtener lista de pedidos activos para Cocina
 app.get('/api/pedidos', (req, res) => {
-  const local = req.query.local || 'mongo';
+  const local = (req.query.local || 'mongo').toLowerCase().trim();
   const pedidosLocal = pedidosMemoria.filter(p => p.local === local);
   return res.status(200).json(pedidosLocal);
 });
 
-// Marcar un pedido como despachado/completado en Cocina
+// Despachar / eliminar pedido de la cocina
 app.delete('/api/pedidos/:id', (req, res) => {
   const { id } = req.params;
   pedidosMemoria = pedidosMemoria.filter(p => p._id !== id);
   return res.status(200).json({ mensaje: 'Pedido despachado y removido de la cocina' });
 });
 
-
-// --- RUTA BASE DE PRUEBA ---
+// --- RUTA RAIZ DE SALUD Y PRUEBA ---
 app.get('/', (req, res) => {
-  res.send('🚀 Servidor del Menú Digital activo y funcionando correctamente.');
+  res.send('🚀 Servidor del Menú Digital activo y listo.');
 });
 
-// --- INICIAR SERVIDOR ---
+// --- INICIO DEL SERVIDOR ---
 app.listen(PORT, () => {
   console.log(`🔥 Servidor corriendo en el puerto ${PORT}`);
 });
