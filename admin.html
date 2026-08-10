@@ -568,11 +568,12 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    const API_URL = "https://appmenu-tavr.onrender.com/api";
+    const BASE_HOST = "https://appmenu-tavr.onrender.com";
+    const API_URL = `${BASE_HOST}/api`;
     
     // Configuración desde la URL
     const params = new URLSearchParams(window.location.search);
-    const localId = (params.get('local') || 'default').toLowerCase().trim();
+    const localId = (params.get('local') || 'mongo').toLowerCase().trim();
     const numeroMesa = params.get('mesa') || '1';
     const vistaModo = params.get('view');
 
@@ -637,7 +638,10 @@
       contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
 
       try {
-        const respuesta = await fetch(`${API_URL}/menu?local=${encodeURIComponent(localId)}`);
+        let respuesta = await fetch(`${API_URL}/menu?local=${encodeURIComponent(localId)}`);
+        if (!respuesta.ok) {
+          respuesta = await fetch(`${BASE_HOST}/menu?local=${encodeURIComponent(localId)}`);
+        }
         productosPlanos = await respuesta.json();
 
         if (!Array.isArray(productosPlanos)) productosPlanos = [];
@@ -908,7 +912,7 @@
     }
 
     /* ==========================================
-       4. ENVÍO DEL PEDIDO A MONGODB (CORREGIDO)
+       4. ENVÍO DEL PEDIDO CON ESTRATEGIA MULTI-RUTA (SOLUCIÓN AL 404)
     ========================================== */
     async function enviarPedidoCocina() {
       if (carrito.length === 0) return alert("El carrito está vacío.");
@@ -919,7 +923,6 @@
 
       const totalCalculado = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
-      // Estructura de documento exacta para ser insertada en la colección 'pedidos'
       const payloadPedido = {
         local: String(localId),
         mesa: String(numeroMesa),
@@ -933,33 +936,51 @@
         fecha: new Date().toISOString()
       };
 
-      try {
-        const respuesta = await fetch(`${API_URL}/pedidos`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(payloadPedido)
-        });
+      // Lista de rutas a probar en caso de error 404 en el servidor
+      const rutasPosibles = [
+        `${API_URL}/pedidos`,
+        `${BASE_HOST}/pedidos`,
+        `${API_URL}/pedido`,
+        `${BASE_HOST}/pedido`
+      ];
 
-        if (respuesta.ok || respuesta.status === 201) {
-          alert("✅ ¡Pedido enviado con éxito! Se guardó en MongoDB.");
-          carrito = [];
-          actualizarBarraCarrito();
-          cerrarModalCarrito();
-          cargarPedidosCocina();
-        } else {
-          const errBody = await respuesta.text();
-          alert(`⚠️ MongoDB no guardó el pedido (${respuesta.status}): ${errBody}`);
+      let guardadoExitoso = false;
+      let ultimoError = '';
+
+      for (const urlTarget of rutasPosibles) {
+        try {
+          const respuesta = await fetch(urlTarget, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(payloadPedido)
+          });
+
+          if (respuesta.ok || respuesta.status === 201) {
+            guardadoExitoso = true;
+            break;
+          } else {
+            ultimoError = `[${respuesta.status}] ${await respuesta.text()}`;
+          }
+        } catch (err) {
+          ultimoError = err.message;
         }
-      } catch (error) {
-        console.error("Error enviando pedido desde el móvil:", error);
-        alert(" Error de red o servidor al enviar el pedido.");
-      } finally {
-        btnEnviar.disabled = false;
-        btnEnviar.innerText = "🚀 Enviar a Cocina";
       }
+
+      if (guardadoExitoso) {
+        alert("✅ ¡Pedido enviado con éxito! Se guardó en MongoDB.");
+        carrito = [];
+        actualizarBarraCarrito();
+        cerrarModalCarrito();
+        cargarPedidosCocina();
+      } else {
+        alert(`⚠️ No se pudo guardar el pedido en MongoDB:\n${ultimoError}`);
+      }
+
+      btnEnviar.disabled = false;
+      btnEnviar.innerText = "🚀 Enviar a Cocina";
     }
 
     /* ==========================================
@@ -969,14 +990,26 @@
       const contenedor = document.getElementById('contenedor-pedidos-cocina');
       if (!contenedor) return;
 
-      try {
-        let respuesta = await fetch(`${API_URL}/pedidos?local=${encodeURIComponent(localId)}`);
-        
-        if (!respuesta.ok) {
-          respuesta = await fetch(`${API_URL}/pedidos`);
-        }
+      const rutasLectura = [
+        `${API_URL}/pedidos?local=${encodeURIComponent(localId)}`,
+        `${BASE_HOST}/pedidos?local=${encodeURIComponent(localId)}`,
+        `${API_URL}/pedidos`,
+        `${BASE_HOST}/pedidos`
+      ];
 
-        let datos = await respuesta.json();
+      let datos = null;
+
+      for (const url of rutasLectura) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) {
+            datos = await res.json();
+            break;
+          }
+        } catch (e) {}
+      }
+
+      try {
         let pedidos = [];
 
         if (Array.isArray(datos)) {
@@ -987,7 +1020,6 @@
           pedidos = datos.data;
         }
 
-        // Filtrado cliente por ID de Local
         if (localId && localId !== 'default') {
           pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
         }
@@ -1036,22 +1068,21 @@
     async function despacharPedido(idPedido) {
       if (!confirm("¿Marcar este pedido como completado?")) return;
 
-      try {
-        let res = await fetch(`${API_URL}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
-          method: 'DELETE'
-        });
+      const rutasBorrado = [
+        `${API_URL}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`,
+        `${BASE_HOST}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`,
+        `${API_URL}/pedidos/del?local=${encodeURIComponent(localId)}&id=${idPedido}`,
+        `${BASE_HOST}/pedidos/del?local=${encodeURIComponent(localId)}&id=${idPedido}`
+      ];
 
-        if (!res.ok) {
-          res = await fetch(`${API_URL}/pedidos/del?local=${encodeURIComponent(localId)}&id=${idPedido}`, { 
-            method: 'DELETE' 
-          });
-        }
-
-        cargarPedidosCocina();
-      } catch (e) {
-        console.error("Error al despachar pedido:", e);
-        cargarPedidosCocina();
+      for (const url of rutasBorrado) {
+        try {
+          const res = await fetch(url, { method: 'DELETE' });
+          if (res.ok) break;
+        } catch (e) {}
       }
+
+      cargarPedidosCocina();
     }
 
     /* ==========================================
@@ -1083,7 +1114,7 @@
       if (!qrCanvas) return alert("Genera primero el código QR.");
 
       const canvasFinal = document.createElement('canvas');
-      const size = 591; // Equivale a 5x5 cm a 300 DPI
+      const size = 591;
       canvasFinal.width = size;
       canvasFinal.height = size;
 
