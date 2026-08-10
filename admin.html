@@ -567,11 +567,11 @@
 
     <!-- PESTAÑA 5: CONTROL DE GARZÓN & HISTORIAL -->
     <div id="tab-garzon" class="tab-content">
-      <!-- SECCIÓN QR SIEMPRE VISIBLE -->
+      <!-- SECCIÓN QR SIEMPRE VISIBLE PARA DESCARGAR E IMPRIMIR -->
       <div class="section-card" style="border-color: var(--neon-blue);">
         <h3>🔲 QR Exclusivo para Garzones (Imprimir / Pegar en Cocina)</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-          Código permanentemente disponible. Al escanear este QR con el celular, se abrirá el panel de garzón para pedir el RUT y registrar las entregas.
+          Código de garzón permanentemente listo para descargar e imprimir. Al escanear este QR se abrirá el panel con solicitud de RUT.
         </p>
         <div class="qr-card-container" style="text-align: center;">
           <div class="qr-preview-box">
@@ -583,22 +583,22 @@
         </div>
       </div>
 
-      <!-- REGISTRO Y IDENTIFICACIÓN DE RUT -->
+      <!-- CAMPO REGISTRO DE RUT DEL GARZÓN -->
       <div class="section-card">
-        <h3>🪪 Identificación del Garzón (Ingreso de RUT)</h3>
+        <h3>🪪 Registro y Selección de RUT Garzón</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-          Ingresa o modifica el RUT del garzón activo en este dispositivo. Toda entrega quedará registrada a este RUT en `historials`.
+          Ingresa o actualiza el RUT del garzón. Las entregas marcadas quedarán registradas bajo este RUT en la colección `historials`.
         </p>
         <div class="form-inline">
           <input type="text" id="input-rut-directo" placeholder="Ej: 12345678-9">
-          <button class="btn btn-blue" onclick="guardarRutDirecto()">💾 Guardar / Activar RUT</button>
+          <button class="btn btn-blue" onclick="guardarRutDirecto()">💾 Activar / Guardar RUT</button>
         </div>
         <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">
-          RUT Activo en el sistema: <b style="color: var(--neon-blue);" id="lbl-rut-activo">Sin RUT registrado</b>
+          RUT Activo actualmente: <b style="color: var(--neon-blue);" id="lbl-rut-activo">Sin RUT registrado</b>
         </div>
       </div>
 
-      <!-- ENTREGAS PENDIENTES -->
+      <!-- PEDIDOS PENDIENTES GARZÓN -->
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <h3>🤵 Pedidos Pendientes por Llevar a Mesa</h3>
@@ -614,7 +614,7 @@
       <div class="section-card">
         <h3>📊 Historial de Entregas (`historials`) & Métricas por RUT</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Registro guardado en la colección `historials` con el RUT del garzón para bonificaciones de desempeño.
+          Registro acumulativo guardado en MongoDB con RUT del garzón.
         </p>
 
         <div class="stats-grid">
@@ -691,11 +691,11 @@
     </div>
   </div>
 
-  <!-- MODAL AUTOPROMPT PEDIR RUT SI ESTA VACIO AL ESCANEAR -->
+  <!-- MODAL PROMPT RUT -->
   <div class="modal" id="modal-rut-garzon">
     <div class="modal-content">
       <h3>🤵 Registro de Garzón</h3>
-      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">Ingresa tu RUT para asociar tus entregas en el historial:</p>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">Ingresa tu RUT para asociar tus entregas:</p>
       <input type="text" id="input-rut-garzon-modal" placeholder="Ej: 12345678-9">
       <div style="margin-top: 15px;">
         <button class="btn btn-blue" style="width: 100%;" onclick="guardarRutModal()">Guardar RUT y Continuar</button>
@@ -743,7 +743,6 @@
 
       cargarDatosMenu();
       generarQRUnico();
-      generarQRGarzon();
 
       setInterval(() => {
         if (document.getElementById('tab-cocina').classList.contains('active')) {
@@ -765,6 +764,7 @@
       if (tabId === 'tab-cocina') {
         cargarPedidosCocina();
       } else if (tabId === 'tab-garzon') {
+        generarQRGarzon(); // Forzar dibujo al hacer visible el tab
         verificarRutGarzon();
         cargarPedidosGarzon();
       }
@@ -774,6 +774,7 @@
       cargarDatosMenu();
       cargarPedidosCocina();
       cargarPedidosGarzon();
+      generarQRGarzon();
     }
 
     /* ==========================================
@@ -1202,7 +1203,7 @@
     }
 
     /* ==========================================
-       6. CONTROL DE GARZÓN & COLECCIÓN `historials`
+       6. CONTROL DE GARZÓN & CORRECCIÓN DE QR Y RENDER
     ========================================== */
     function generarQRGarzon() {
       const container = document.getElementById('qr-garzon-render');
@@ -1220,32 +1221,43 @@
     }
 
     function descargarQRGarzon() {
-      const qrCanvas = document.querySelector('#qr-garzon-render canvas');
-      if (!qrCanvas) return alert("Generando QR...");
+      // Asegurar renderizado previo
+      generarQRGarzon();
 
-      const canvasFinal = document.createElement('canvas');
-      const size = 591;
-      canvasFinal.width = size;
-      canvasFinal.height = size;
+      setTimeout(() => {
+        const qrCanvas = document.querySelector('#qr-garzon-render canvas');
+        const qrImg = document.querySelector('#qr-garzon-render img');
 
-      const ctx = canvasFinal.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, size, size);
+        const canvasFinal = document.createElement('canvas');
+        const size = 591;
+        canvasFinal.width = size;
+        canvasFinal.height = size;
 
-      ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
+        const ctx = canvasFinal.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
 
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 32px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(localId.toUpperCase(), size / 2, 500);
+        if (qrCanvas) {
+          ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
+        } else if (qrImg) {
+          ctx.drawImage(qrImg, (size - 420) / 2, 40, 420, 420);
+        } else {
+          return alert("Error al capturar QR. Intenta nuevamente.");
+        }
 
-      ctx.font = 'bold 36px sans-serif';
-      ctx.fillText(`ACCESO GARZÓN - ENTREGAS`, size / 2, 550);
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 32px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(localId.toUpperCase(), size / 2, 500);
 
-      const link = document.createElement('a');
-      link.download = `QR_Garzon_${localId}.png`;
-      link.href = canvasFinal.toDataURL('image/png');
-      link.click();
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText(`ACCESO GARZÓN - ENTREGAS`, size / 2, 550);
+
+        const link = document.createElement('a');
+        link.download = `QR_Garzon_${localId}.png`;
+        link.href = canvasFinal.toDataURL('image/png');
+        link.click();
+      }, 100);
     }
 
     async function cargarPedidosGarzon() {
