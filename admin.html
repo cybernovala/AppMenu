@@ -3,136 +3,253 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Administrador - Menú Digital</title>
+  <title>Panel de Administración - Gestión de Menú</title>
   <style>
     :root {
-      --bg-dark: #0f111a;
-      --bg-card: #181b29;
-      --neon-green: #00ff88;
-      --neon-yellow: #ffb703;
-      --neon-red: #ff3344;
-      --text-main: #f0f3f8;
-      --text-muted: #8c9ba5;
-      --border-color: #2a2f45;
+      --bg-dark: #09090c;
+      --card-bg: #121218;
+      --neon-orange: #ff5500;
+      --neon-yellow: #ffea00;
+      --grad-neon: linear-gradient(135deg, #ff5500, #ffea00);
+      --text-main: #ffffff;
+      --text-muted: #a0a0b0;
+      --border-color: rgba(255, 85, 0, 0.25);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: var(--bg-dark); color: var(--text-main); padding: 20px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
 
-    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
-    h1 { font-size: 24px; color: var(--neon-green); }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding: 15px;
+    }
 
-    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab-btn { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-    .tab-btn.active { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
+    .container { max-width: 800px; margin: 0 auto; }
 
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    /* HEADER */
+    .header-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
 
-    /* Estilos para Gestión de Menú */
-    .grid-categorias { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-    .category-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; }
-    .category-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
-    .category-name { font-size: 18px; font-weight: bold; color: var(--neon-green); }
+    .local-title {
+      font-size: 22px;
+      color: var(--neon-yellow);
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
 
-    .product-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; margin-bottom: 8px; }
-    .add-product-box { display: flex; gap: 8px; margin-top: 15px; }
-    
-    input, select { background: #0c0e17; border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 6px; outline: none; }
-    input:focus { border-color: var(--neon-green); }
+    .btn {
+      background: var(--grad-neon);
+      border: none;
+      color: #000;
+      padding: 10px 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
+    .btn-danger { background: #ff3344; color: #fff; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
 
-    .btn { background: var(--neon-green); border: none; color: #000; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .btn-danger { background: var(--neon-red); color: #fff; }
-    .btn-sm { padding: 4px 8px; font-size: 12px; }
+    /* SECCIÓN CREAR CATEGORÍA */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
 
-    /* Estilos para Pantalla de Cocina */
-    .grid-pedidos { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-    .pedido-card { background: var(--bg-card); border: 2px solid var(--neon-yellow); border-radius: 12px; padding: 15px; }
-    .pedido-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
-    .pedido-items { list-style: none; margin-bottom: 15px; }
-    .pedido-items li { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+    .section-card h3 {
+      font-size: 15px;
+      color: var(--neon-orange);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .form-inline { display: flex; gap: 10px; }
+
+    input {
+      flex: 1;
+      padding: 10px 12px;
+      background: #181822;
+      border: 1px solid #333;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    /* TARJETAS DE CATEGORÍA */
+    .category-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .category-header {
+      background: rgba(255, 85, 0, 0.08);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 85, 0, 0.2);
+    }
+
+    .category-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--neon-yellow);
+    }
+
+    .product-list { padding: 15px; }
+
+    .product-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #16161e;
+      border: 1px solid #262630;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .product-info { display: flex; flex-direction: column; gap: 3px; }
+    .product-title { font-weight: 600; font-size: 15px; color: #fff; }
+    .product-price { font-size: 14px; color: var(--neon-yellow); font-weight: bold; }
+    .product-actions { display: flex; gap: 8px; }
+
+    /* FORMULARIO AGREGAR PRODUCTO */
+    .add-product-box {
+      background: #14141c;
+      border-top: 1px dashed #333;
+      padding: 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .add-product-box input { min-width: 140px; }
+
+    /* MODAL DE EDICIÓN */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: #16161e;
+      border: 1px solid var(--neon-orange);
+      padding: 25px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .modal-content h3 { color: var(--neon-yellow); margin-bottom: 15px; }
+    .modal-content label { display: block; font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>⚙️ Administración de Menú y Cocina</h1>
-    <div>
-      <label>Local ID: </label>
-      <input type="text" id="input-local" value="mongo" style="width: 100px;">
-      <button class="btn btn-sm" onclick="cambiarLocal()">Cargar</button>
+  <div class="container">
+    
+    <!-- HEADER -->
+    <div class="header-bar">
+      <div>
+        <span style="font-size: 12px; color: var(--text-muted);">Administrando Cliente:</span>
+        <div class="local-title" id="lbl-local-nombre">CARGANDO...</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="cargarProductos()">🔄 Recargar Menú</button>
     </div>
-  </header>
 
-  <div class="nav-tabs">
-    <button class="tab-btn active" onclick="mostrarPestana('pestana-menu')">📋 Gestión de Menú</button>
-    <button class="tab-btn" onclick="mostrarPestana('pestana-cocina')">🍳 Pantalla de Cocina</button>
+    <!-- CREAR CATEGORÍA -->
+    <div class="section-card">
+      <h3>📁 Crear Nueva Categoría</h3>
+      <div class="form-inline">
+        <input type="text" id="nueva-categoria" placeholder="Ej: Entradas, Bebidas, Promociones">
+        <button class="btn" onclick="crearCategoria()">+ Agregar Categoría</button>
+      </div>
+    </div>
+
+    <!-- LISTADO DE CATEGORÍAS Y PRODUCTOS -->
+    <div id="contenedor-categorias">
+      <p style="color: var(--text-muted); text-align: center;">Cargando menú de MongoDB...</p>
+    </div>
+
   </div>
 
-  <!-- PESTAÑA 1: GESTIÓN DE MENÚ -->
-  <div id="pestana-menu" class="tab-content active">
-    <div style="margin-bottom: 15px; display: flex; gap: 10px;">
-      <input type="text" id="nueva-categoria-nombre" placeholder="Nombre de nueva categoría">
-      <button class="btn" onclick="crearCategoria()">+ Nueva Categoría</button>
-    </div>
+  <!-- MODAL DE EDICIÓN -->
+  <div class="modal" id="modal-editar">
+    <div class="modal-content">
+      <h3>✏️ Editar Producto</h3>
+      <input type="hidden" id="edit-cat-orig">
+      <input type="hidden" id="edit-index-orig">
+      
+      <label>Nombre del Producto</label>
+      <input type="text" id="edit-nombre">
 
-    <div id="contenedor-categorias" class="grid-categorias">
-      <!-- Se carga dinámicamente -->
-    </div>
-  </div>
+      <label>Precio ($)</label>
+      <input type="number" id="edit-precio">
 
-  <!-- PESTAÑA 2: PANTALLA DE COCINA -->
-  <div id="pestana-cocina" class="tab-content">
-    <div id="contenedor-pedidos" class="grid-pedidos">
-      <!-- Se carga dinámicamente -->
+      <label>Categoría</label>
+      <input type="text" id="edit-categoria">
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn" style="flex:1;" onclick="guardarEdicion()">Guardar Cambios</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      </div>
     </div>
   </div>
 
   <script>
-    // Configuración base de la API
-    const API_URL = 'http://localhost:10000/api';
-    let urlParams = new URLSearchParams(window.location.search);
-    let localId = (urlParams.get('local') || 'mongo').toLowerCase().trim();
-
-    document.getElementById('input-local').value = localId;
+    const API_URL = "https://appmenu-tavr.onrender.com/api";
+    
+    const params = new URLSearchParams(window.location.search);
+    const localId = (params.get('local') || 'mongo').toLowerCase().trim();
 
     let productosPlanos = [];
     let categoriasSet = new Set();
 
-    function cambiarLocal() {
-      const nuevoLocal = document.getElementById('input-local').value.trim().toLowerCase();
-      if (nuevoLocal) {
-        window.location.search = `?local=${encodeURIComponent(nuevoLocal)}`;
-      }
-    }
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
+      cargarProductos();
+    });
 
-    function mostrarPestana(idPestana) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-
-      document.getElementById(idPestana).classList.add('active');
-      event.target.classList.add('active');
-
-      if (idPestana === 'pestana-menu') cargarProductos();
-      if (idPestana === 'pestana-cocina') cargarPedidos();
-    }
-
-    // --- GESTIÓN DE MENÚ ---
+    // 1. OBTIENE EL MENÚ DESDE MONGO
     async function cargarProductos() {
       const contenedor = document.getElementById('contenedor-categorias');
-      contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1;">Cargando datos desde MongoDB...</p>';
+      contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
 
       try {
         const respuesta = await fetch(`${API_URL}/menu?local=${encodeURIComponent(localId)}`);
         productosPlanos = await respuesta.json();
 
-        if (!Array.isArray(productosPlanos)) {
-          productosPlanos = [];
-        }
+        if (!Array.isArray(productosPlanos)) productosPlanos = [];
 
         categoriasSet.clear();
-        productosPlanos.forEach(p => { 
-          if (p.categoria) categoriasSet.add(p.categoria); 
+        productosPlanos.forEach(p => {
+          if (p.categoria) categoriasSet.add(p.categoria);
         });
 
         if (categoriasSet.size === 0) {
@@ -141,58 +258,73 @@
 
         renderizarCategorias();
       } catch (err) {
-        console.error("Error al cargar productos:", err);
-        contenedor.innerHTML = '<p style="color: var(--neon-red); text-align: center; grid-column: 1/-1;">❌ Error al conectar con el servidor.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; text-align: center;">Error al conectar con la API.</p>';
       }
     }
 
+    // 2. RENDERIZA LAS CATEGORÍAS Y SUS PRODUCTOS
     function renderizarCategorias() {
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '';
 
       categoriasSet.forEach(catNombre => {
         const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
+
         const catCard = document.createElement('div');
         catCard.className = 'category-card';
 
         catCard.innerHTML = `
           <div class="category-header">
             <span class="category-name">📂 ${catNombre}</span>
-            <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} prod.</span>
+            <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
           </div>
+
           <div class="product-list">
-            ${productosCat.length === 0 
-              ? '<p style="font-size:12px; color:#666; padding:10px;">Sin productos registrados.</p>' 
-              : productosCat.map(prod => `
+            ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>' : ''}
+            ${productosCat.map((prod, subIndex) => {
+              const nombreEscaped = prod.nombre.replace(/'/g, "\\'");
+              return `
                 <div class="product-item">
-                  <div>
-                    <strong>${prod.nombre}</strong><br>
-                    <span style="color:var(--neon-yellow);">$${Number(prod.precio || 0).toLocaleString('es-CL')}</span>
+                  <div class="product-info">
+                    <span class="product-title">${prod.nombre}</span>
+                    <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
                   </div>
-                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${prod._id}')">🗑️</button>
+                  <div class="product-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${subIndex}, '${nombreEscaped}', ${prod.precio})">✏️ Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${subIndex})">🗑️ Eliminar</button>
+                  </div>
                 </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
+
           <div class="add-product-box">
-            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Producto" style="flex:2;">
-            <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio" style="flex:1;">
-            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+</button>
+            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
+            <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
+            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
           </div>
         `;
+
         contenedor.appendChild(catCard);
       });
     }
 
+    // 3. CREAR CATEGORÍA EN LA PANTALLA
     function crearCategoria() {
-      const inputCat = document.getElementById('nueva-categoria-nombre');
+      const inputCat = document.getElementById('nueva-categoria');
       const nombreCat = inputCat.value.trim();
-      if (!nombreCat) return alert("Ingresa un nombre para la categoría");
+
+      if (!nombreCat) {
+        alert("Ingresa un nombre para la categoría.");
+        return;
+      }
 
       categoriasSet.add(nombreCat);
       inputCat.value = '';
       renderizarCategorias();
     }
 
+    // 4. GUARDAR PRODUCTO NUEVO EN MONGO DB
     async function agregarProducto(categoria) {
       const inputNombre = document.getElementById(`nuevo-nombre-${categoria}`);
       const inputPrecio = document.getElementById(`nuevo-precio-${categoria}`);
@@ -201,95 +333,102 @@
       const precio = parseFloat(inputPrecio.value);
 
       if (!nombre || isNaN(precio)) {
-        return alert("Por favor ingresa un nombre y precio válidos.");
+        alert("Ingresa un nombre y un precio válido.");
+        return;
       }
 
       try {
         const res = await fetch(`${API_URL}/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, categoria, nombre, precio })
+          body: JSON.stringify({
+            local: localId,
+            categoria: categoria,
+            nombre: nombre,
+            precio: precio
+          })
         });
 
         if (res.ok) {
           cargarProductos();
         } else {
-          alert("Error al guardar en el servidor.");
+          alert("Error al guardar en MongoDB.");
         }
-      } catch (e) {
-        alert("Error de red al guardar producto.");
+      } catch (err) {
+        alert("Error de conexión.");
       }
     }
 
-    async function eliminarProducto(idMongo) {
-      if (!idMongo) return;
-      if (!confirm("¿Seguro que deseas eliminar este producto?")) return;
+    // 5. ELIMINAR PRODUCTO DE MONGO DB
+    async function eliminarProducto(categoria, index) {
+      if (!confirm("¿Deseas eliminar este producto del menú?")) return;
 
       try {
-        await fetch(`${API_URL}/menu/${idMongo}`, { method: 'DELETE' });
-        cargarProductos();
-      } catch (e) {
-        alert("Error al eliminar producto.");
-      }
-    }
+        const res = await fetch(`${API_URL}/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, {
+          method: 'DELETE'
+        });
 
-    // --- COCINA ---
-    async function cargarPedidos() {
-      const contenedor = document.getElementById('contenedor-pedidos');
-
-      try {
-        const res = await fetch(`${API_URL}/pedidos?local=${encodeURIComponent(localId)}`);
-        const pedidos = await res.json();
-
-        if (!Array.isArray(pedidos) || pedidos.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1;">Sin pedidos pendientes.</p>';
-          return;
+        if (res.ok) {
+          cargarProductos();
+        } else {
+          alert("Error al eliminar el producto.");
         }
-
-        contenedor.innerHTML = pedidos.map(p => `
-          <div class="pedido-card">
-            <div class="pedido-header">
-              <span>Mesa #${p.mesa}</span>
-              <span style="color: var(--neon-yellow);">${p.hora}</span>
-            </div>
-            <ul class="pedido-items">
-              ${p.items.map(i => `
-                <li>
-                  <span>${i.cant}x ${i.nombre}</span>
-                  <span>$${(i.precio * i.cant).toLocaleString('es-CL')}</span>
-                </li>
-              `).join('')}
-            </ul>
-            <div style="display:flex; justify-between; align-items:center; margin-bottom:10px;">
-              <strong>Total:</strong>
-              <strong style="color: var(--neon-green); font-size: 18px;">$${Number(p.total).toLocaleString('es-CL')}</strong>
-            </div>
-            <button class="btn btn-danger" style="width:100%;" onclick="despacharPedido('${p._id}')">✔ Marcar Completado</button>
-          </div>
-        `).join('');
-
-      } catch (e) {
-        contenedor.innerHTML = '<p style="color: var(--neon-red); grid-column: 1/-1;">Error al consultar pedidos.</p>';
+      } catch (err) {
+        alert("Error de conexión.");
       }
     }
 
-    async function despacharPedido(id) {
+    // 6. FUNCIONES MODAL DE EDICIÓN
+    function abrirModalEdicion(catOrig, indexOrig, nombre, precio) {
+      document.getElementById('edit-cat-orig').value = catOrig;
+      document.getElementById('edit-index-orig').value = indexOrig;
+      document.getElementById('edit-nombre').value = nombre;
+      document.getElementById('edit-precio').value = precio;
+      document.getElementById('edit-categoria').value = catOrig;
+      document.getElementById('modal-editar').style.display = 'flex';
+    }
+
+    function cerrarModal() {
+      document.getElementById('modal-editar').style.display = 'none';
+    }
+
+    async function guardarEdicion() {
+      const catOrig = document.getElementById('edit-cat-orig').value;
+      const indexOrig = document.getElementById('edit-index-orig').value;
+      const nuevoNombre = document.getElementById('edit-nombre').value.trim();
+      const nuevoPrecio = parseFloat(document.getElementById('edit-precio').value);
+      const nuevaCategoria = document.getElementById('edit-categoria').value.trim();
+
+      if (!nuevoNombre || isNaN(nuevoPrecio) || !nuevaCategoria) {
+        alert("Por favor completa los campos correctamente.");
+        return;
+      }
+
       try {
-        await fetch(`${API_URL}/pedidos/${id}`, { method: 'DELETE' });
-        cargarPedidos();
-      } catch (e) {
-        alert("Error al despachar el pedido.");
+        const res = await fetch(`${API_URL}/menu/edit`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            local: localId,
+            categoriaOriginal: catOrig,
+            indexOriginal: Number(indexOrig),
+            nuevoNombre: nuevoNombre,
+            nuevoPrecio: nuevoPrecio,
+            nuevaCategoria: nuevaCategoria
+          })
+        });
+
+        if (res.ok) {
+          cerrarModal();
+          cargarProductos();
+        } else {
+          alert("Error al actualizar el producto.");
+        }
+      } catch (err) {
+        alert("Error de conexión.");
       }
     }
-
-    // Inicialización
-    cargarProductos();
-    setInterval(() => {
-      // Recarga la cocina automáticamente si la pestaña activa es la de cocina
-      if (document.getElementById('pestana-cocina').classList.contains('active')) {
-        cargarPedidos();
-      }
-    }, 5000);
   </script>
+
 </body>
 </html>
