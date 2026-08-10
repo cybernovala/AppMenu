@@ -17,6 +17,7 @@
       --neon-pink: #ff007f;
       --neon-yellow: #ffee00;
       --neon-green: #00ff66;
+      --neon-blue: #00d2ff;
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
       --border-neon: rgba(255, 0, 127, 0.3);
@@ -119,6 +120,7 @@
     .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
     .btn-danger { background: #ff3344; color: #fff; }
     .btn-success { background: var(--neon-green); color: #000; }
+    .btn-blue { background: linear-gradient(135deg, var(--neon-blue), #0077ff); color: #fff; }
     .btn-sm { padding: 6px 12px; font-size: 12px; }
 
     /* SECCIONES Y FORMULARIOS */
@@ -139,7 +141,7 @@
 
     .form-inline { display: flex; gap: 10px; flex-wrap: wrap; }
 
-    input {
+    input, select {
       flex: 1;
       padding: 10px 12px;
       background: #181822;
@@ -302,7 +304,7 @@
       cursor: pointer;
     }
 
-    /* ESTILOS COCINA / PEDIDOS */
+    /* ESTILOS COCINA / PEDIDOS / GARZON */
     .grid-pedidos {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -361,6 +363,48 @@
       padding-top: 10px;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
+
+    /* METRICAS GARZON Y TABLAS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #141420;
+      border: 1px solid #2a2a3c;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--neon-green);
+      margin-top: 5px;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #222;
+    }
+
+    th { background: #12121c; color: var(--neon-yellow); }
 
     /* MODALES */
     .modal {
@@ -433,6 +477,7 @@
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Menú Cliente</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Generador de QR</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
+      <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control de Garzón</button>
     </div>
 
     <!-- PESTAÑA 1: GESTIÓN DE MENÚ -->
@@ -520,6 +565,72 @@
       </div>
     </div>
 
+    <!-- PESTAÑA 5: CONTROL DE GARZÓN & HISTORIAL -->
+    <div id="tab-garzon" class="tab-content">
+      <div class="section-card">
+        <h3>📱 QR Exclusivo para Garzones (Pegar en Cocina/Barra)</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
+          El dueño puede descargar este QR e imprimirlo/pegarlo en el restaurant. El garzón solo debe escanearlo desde su celular para abrir directamente su panel de entregas.
+        </p>
+        <div class="qr-card-container" style="text-align: center;">
+          <div class="qr-preview-box">
+            <div id="qr-garzon-render"></div>
+            <p style="color: #000; font-weight: bold; margin-top: 8px; font-size: 13px;">ACCESO GARZÓN - COCINA</p>
+          </div>
+          <br>
+          <button class="btn btn-blue btn-sm" onclick="descargarQRGarzon()">📥 Descargar QR Garzón (PNG)</button>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <h3>🤵 Pedidos Pendientes de Entrega (Vista Celular Garzón)</h3>
+          <button class="btn btn-secondary btn-sm" onclick="cargarPedidosGarzon()">🔄 Actualizar</button>
+        </div>
+
+        <div id="contenedor-pedidos-garzon" class="grid-pedidos">
+          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando comandas para garzón...</p>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h3>📊 Historial de Entregas & Métricas de Desempeño</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+          Registro histórico de comandas entregadas para cálculo de bonificaciones por desempeño del personal.
+        </p>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span style="font-size: 12px; color: var(--text-muted);">Total Entregados</span>
+            <div class="stat-number" id="lbl-stat-entregados">0</div>
+          </div>
+          <div class="stat-card">
+            <span style="font-size: 12px; color: var(--text-muted);">Monto Total Atendido</span>
+            <div class="stat-number" id="lbl-stat-monto">$0</div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Mesa</th>
+                <th>Fecha / Hora</th>
+                <th>Ítems</th>
+                <th>Total</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-historial-garzon">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">Sin historial cargado...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- MODAL DE EDICIÓN -->
@@ -587,14 +698,22 @@
         document.getElementById('admin-header').style.display = 'none';
         document.getElementById('admin-nav-tabs').style.display = 'none';
         cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
+      } else if (vistaModo === 'garzon') {
+        document.getElementById('admin-header').style.display = 'none';
+        document.getElementById('admin-nav-tabs').style.display = 'none';
+        cambiarPestana('tab-garzon', document.getElementById('btn-tab-garzon'));
       }
 
       cargarDatosMenu();
       generarQRUnico();
+      generarQRGarzon();
 
       setInterval(() => {
         if (document.getElementById('tab-cocina').classList.contains('active')) {
           cargarPedidosCocina();
+        }
+        if (document.getElementById('tab-garzon').classList.contains('active')) {
+          cargarPedidosGarzon();
         }
       }, 8000);
     });
@@ -608,17 +727,25 @@
 
       if (tabId === 'tab-cocina') {
         cargarPedidosCocina();
+      } else if (tabId === 'tab-garzon') {
+        cargarPedidosGarzon();
       }
     }
 
     function recargarTodo() {
       cargarDatosMenu();
       cargarPedidosCocina();
+      cargarPedidosGarzon();
     }
 
     function construirUrlMesa(mesa) {
       const baseUrl = window.location.origin + window.location.pathname;
       return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
+    }
+
+    function construirUrlGarzon() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      return `${baseUrl}?local=${encodeURIComponent(localId)}&view=garzon`;
     }
 
     /* ==========================================
@@ -804,7 +931,6 @@
         return;
       }
 
-      // CORREGIDO: Pasa la categoría como primer argumento a agregarAlCarrito
       cont.innerHTML = filtrados.map(p => `
         <div class="product-card-client">
           <div>
@@ -816,7 +942,6 @@
       `).join('');
     }
 
-    // CORREGIDO: Incluye la categoría en el nombre completo del ítem
     function agregarAlCarrito(categoria, nombre, precio) {
       let nombreCompleto = nombre;
       if (categoria && !nombre.toLowerCase().startsWith(categoria.toLowerCase())) {
@@ -881,7 +1006,7 @@
     }
 
     /* ==========================================
-       4. ENVIAR PEDIDO A MONGODB (RENDER EXCLUSIVO)
+       4. ENVIAR PEDIDO A MONGODB
     ========================================== */
     async function enviarPedidoCocina() {
       if (carrito.length === 0) return alert("El carrito está vacío.");
@@ -905,10 +1030,8 @@
         fecha: new Date().toISOString()
       };
 
-      const urlDestino = `${BACKEND_URL}/api/pedidos`;
-
       try {
-        const res = await fetch(urlDestino, {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -918,11 +1041,12 @@
         });
 
         if (res.ok || res.status === 201) {
-          alert("✅ ¡Pedido recibido! Registrado con éxito en MongoDB.");
+          alert("✅ ¡Pedido recibido! Registrado con éxito.");
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalCarrito();
           cargarPedidosCocina();
+          cargarPedidosGarzon();
         } else {
           const textErr = await res.text();
           alert(`⚠️ El servidor backend respondió con error (${res.status}):\n${textErr}`);
@@ -953,12 +1077,14 @@
           pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
         }
 
-        if (pedidos.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comandas activas en la colección "pedidos".</p>';
+        const pendientes = pedidos.filter(p => p.estado !== 'entregado');
+
+        if (pendientes.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comandas activas en la cocina.</p>';
           return;
         }
 
-        contenedor.innerHTML = pedidos.map((p, idx) => {
+        contenedor.innerHTML = pendientes.map((p, idx) => {
           const idPedido = p._id || p.id || idx;
           const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
           const itemsList = Array.isArray(p.items) ? p.items : [];
@@ -982,7 +1108,7 @@
               </div>
               <div class="card-pedido-footer">
                 <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
-                <button class="btn btn-success btn-sm" onclick="despacharPedido('${idPedido}')">✓ Completado</button>
+                <button class="btn btn-success btn-sm" onclick="despacharPedido('${idPedido}')">✓ Listo en Cocina</button>
               </div>
             </div>
           `;
@@ -994,17 +1120,155 @@
     }
 
     async function despacharPedido(idPedido) {
-      if (!confirm("¿Completar y retirar este pedido?")) return;
+      if (!confirm("¿Marcar este pedido como preparado?")) return;
 
       try {
         await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' });
       } catch (e) {}
 
       cargarPedidosCocina();
+      cargarPedidosGarzon();
     }
 
     /* ==========================================
-       6. GENERACIÓN DE QR Y PDF
+       6. CONTROL DE GARZÓN & HISTORIAL
+    ========================================== */
+    function generarQRGarzon() {
+      const container = document.getElementById('qr-garzon-render');
+      if (!container) return;
+      container.innerHTML = '';
+
+      new QRCode(container, {
+        text: construirUrlGarzon(),
+        width: 220,
+        height: 220,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function descargarQRGarzon() {
+      const qrCanvas = document.querySelector('#qr-garzon-render canvas');
+      if (!qrCanvas) return alert("Generando QR...");
+
+      const canvasFinal = document.createElement('canvas');
+      const size = 591;
+      canvasFinal.width = size;
+      canvasFinal.height = size;
+
+      const ctx = canvasFinal.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(localId.toUpperCase(), size / 2, 500);
+
+      ctx.font = 'bold 36px sans-serif';
+      ctx.fillText(`ACCESO GARZÓN - ENTREGAS`, size / 2, 550);
+
+      const link = document.createElement('a');
+      link.download = `QR_Garzon_${localId}.png`;
+      link.href = canvasFinal.toDataURL('image/png');
+      link.click();
+    }
+
+    async function cargarPedidosGarzon() {
+      const contenedor = document.getElementById('contenedor-pedidos-garzon');
+      const tablaHistorial = document.getElementById('tabla-historial-garzon');
+      if (!contenedor) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+
+        const datos = await res.json();
+        let pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
+
+        if (localId && localId !== 'default') {
+          pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
+        }
+
+        const pendientes = pedidos.filter(p => p.estado !== 'entregado');
+        const entregados = pedidos.filter(p => p.estado === 'entregado');
+
+        // 1. Mostrar Pendientes para Garzón
+        if (pendientes.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">🎉 No hay pedidos pendientes por llevar a mesa.</p>';
+        } else {
+          contenedor.innerHTML = pendientes.map((p, idx) => {
+            const idPedido = p._id || p.id || idx;
+            const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
+            const itemsList = Array.isArray(p.items) ? p.items : [];
+
+            return `
+              <div class="card-pedido" style="border-color: var(--neon-blue);">
+                <div>
+                  <div class="card-pedido-header">
+                    <span class="card-pedido-mesa" style="color: var(--neon-blue);">MESA N° ${p.mesa || '--'}</span>
+                    <span class="card-pedido-time">⏰ ${fechaFormateada}</span>
+                  </div>
+                  <div class="pedido-items-list">
+                    ${itemsList.map(i => `
+                      <div class="pedido-item-row">
+                        <span><b>${i.cantidad || 1}x</b> ${i.nombre || 'Producto'}</span>
+                        <span style="color:var(--text-muted);">$${((i.precio || 0) * (i.cantidad || 1)).toLocaleString('es-CL')}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+                <div class="card-pedido-footer">
+                  <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
+                  <button class="btn btn-blue btn-sm" onclick="marcarEntregadoGarzon('${idPedido}')">✅ Entregado en Mesa</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // 2. Métricas e Historial
+        let totalMonto = 0;
+        entregados.forEach(p => totalMonto += (p.total || 0));
+
+        document.getElementById('lbl-stat-entregados').innerText = entregados.length;
+        document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
+
+        if (entregados.length === 0) {
+          tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aún no hay entregas registradas en el historial.</td></tr>';
+        } else {
+          tablaHistorial.innerHTML = entregados.map(p => `
+            <tr>
+              <td><b>Mesa ${p.mesa}</b></td>
+              <td>${p.fecha ? new Date(p.fecha).toLocaleString('es-CL') : 'Reciente'}</td>
+              <td>${(p.items || []).map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}</td>
+              <td style="color: var(--neon-yellow); font-weight: bold;">$${(p.total || 0).toLocaleString('es-CL')}</td>
+              <td><span style="color: var(--neon-green); font-weight: bold;">✔ Entregado</span></td>
+            </tr>
+          `).join('');
+        }
+
+      } catch (e) {
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al cargar datos para Garzón.</p>';
+      }
+    }
+
+    async function marcarEntregadoGarzon(idPedido) {
+      try {
+        await fetch(`${BACKEND_URL}/api/pedidos/entregar/${idPedido}?local=${encodeURIComponent(localId)}`, {
+          method: 'PUT'
+        });
+      } catch (e) {}
+
+      cargarPedidosGarzon();
+      cargarPedidosCocina();
+    }
+
+    /* ==========================================
+       7. GENERACIÓN DE QR Y PDF MESAS
     ========================================== */
     function generarQRUnico() {
       const numMesa = document.getElementById('qr-num-mesa').value || '1';
