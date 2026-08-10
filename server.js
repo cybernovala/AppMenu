@@ -21,7 +21,9 @@ mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB Conectado Exitosamente'))
   .catch(err => console.error('❌ Error crítico al conectar a MongoDB:', err));
 
-// --- 3. ESQUEMA Y MODELO ---
+// --- 3. ESQUEMAS Y MODELOS ---
+
+// Esquema de Locales
 const LocalSchema = new mongoose.Schema({
   id: String,
   local: String,
@@ -33,6 +35,18 @@ const LocalSchema = new mongoose.Schema({
 }, { strict: false, timestamps: true });
 
 const Local = mongoose.models.Local || mongoose.model('Local', LocalSchema, 'locals');
+
+// Esquema de Pedidos / Comandas (NUEVO)
+const PedidoSchema = new mongoose.Schema({
+  local: String,
+  mesa: String,
+  items: Array,
+  total: Number,
+  estado: { type: String, default: 'pendiente' },
+  fecha: { type: Date, default: Date.now }
+}, { strict: false, timestamps: true });
+
+const Pedido = mongoose.models.Pedido || mongoose.model('Pedido', PedidoSchema, 'pedidos');
 
 // --- 4. RUTAS DE LA API ---
 
@@ -201,9 +215,68 @@ app.delete('/api/menu/del', async (req, res) => {
   }
 });
 
+/* ==========================================
+   5. RUTAS DE PEDIDOS Y COMANDAS (/api/pedidos)
+========================================== */
+
+// 5.1 Obtener todos los pedidos activos de un local (Para la vista de cocina)
+app.get('/api/pedidos', async (req, res) => {
+  try {
+    const { local } = req.query;
+    let query = {};
+    if (local) {
+      query.local = local.toLowerCase().trim();
+    }
+
+    const pedidos = await Pedido.find(query).sort({ fecha: -1 }).lean();
+    return res.status(200).json(pedidos);
+  } catch (err) {
+    console.error("❌ Error en GET /api/pedidos:", err.message);
+    return res.status(500).json([]);
+  }
+});
+
+// 5.2 Registrar un nuevo pedido enviado por el cliente
+app.post('/api/pedidos', async (req, res) => {
+  try {
+    const { local, mesa, items, total, estado, fecha } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'El pedido no contiene productos válidos' });
+    }
+
+    const nuevoPedido = new Pedido({
+      local: (local || 'mongo').toLowerCase().trim(),
+      mesa: String(mesa || '1'),
+      items,
+      total: Number(total) || 0,
+      estado: estado || 'pendiente',
+      fecha: fecha ? new Date(fecha) : new Date()
+    });
+
+    await nuevoPedido.save();
+    return res.status(201).json({ mensaje: 'Pedido recibido y registrado en MongoDB con éxito', id: nuevoPedido._id });
+  } catch (err) {
+    console.error("❌ Error en POST /api/pedidos:", err.message);
+    return res.status(500).json({ error: 'Error interno al procesar el pedido' });
+  }
+});
+
+// 5.3 Eliminar / Despachar un pedido completado en cocina
+app.delete('/api/pedidos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Pedido.findByIdAndDelete(id);
+    return res.status(200).json({ mensaje: 'Pedido completado y eliminado' });
+  } catch (err) {
+    console.error("❌ Error en DELETE /api/pedidos/:id:", err.message);
+    return res.status(500).json({ error: 'Error al eliminar el pedido' });
+  }
+});
+
 // Ruta raíz
 app.get('/', (req, res) => {
-  res.send('🚀 API AppMenu funcionando con estructura MongoDB real.');
+  res.send('🚀 API AppMenu funcionando con estructura MongoDB real y soporte de pedidos.');
 });
 
 const PORT = process.env.PORT || 10000;
