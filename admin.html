@@ -68,10 +68,11 @@
     }
 
     .license-banner.blocked {
-      background: linear-gradient(135deg, rgba(255, 0, 0, 0.4), rgba(150, 0, 0, 0.4));
-      border: 1px solid #ff3344;
-      color: #ffffff;
-      box-shadow: 0 0 15px rgba(255, 51, 68, 0.4);
+      background: linear-gradient(135deg, rgba(255, 0, 0, 0.8), rgba(150, 0, 0, 0.9)) !important;
+      border: 2px solid #ff0022 !important;
+      color: #ffffff !important;
+      font-size: 16px !important;
+      box-shadow: 0 0 20px rgba(255, 0, 34, 0.8) !important;
     }
 
     /* HEADER Y TABS */
@@ -460,7 +461,7 @@
     
     <!-- BANNER DE LICENCIA CON CONTADOR DINÁMICO Y ESTADO DE BLOQUEO -->
     <div class="license-banner" id="license-banner">
-      <span>⚠️ Su licencia vence en <span id="lbl-dias-licencia" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.</span>
+      <span>⚠️ Verificando estado de licencia...</span>
     </div>
 
     <!-- HEADER GENERAL -->
@@ -564,13 +565,9 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 5: CONTROL DE GARZÓN (OPERATIVA DESDE MÓVIL) -->
+    <!-- PESTAÑA 5: CONTROL DE GARZÓN -->
     <div id="tab-garzon" class="tab-content">
-      
-      <!-- GRID DE PRIMERA VISTA: QR GARZÓN Y CAMPO RUT AL LADO -->
       <div class="garzon-top-grid">
-        
-        <!-- SECCIÓN 1: QR GARZÓN SIEMPRE VISIBLE -->
         <div class="section-card" style="border-color: var(--neon-blue); margin-bottom: 0;">
           <h3>🔲 QR Exclusivo para Garzones</h3>
           <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
@@ -585,7 +582,6 @@
           </div>
         </div>
 
-        <!-- SECCIÓN 2: INGRESAR Y ACTIVAR RUT DE GARZÓN DIRECTO -->
         <div class="section-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: center;">
           <h3>🪪 Activar / Registrar RUT Garzón</h3>
           <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
@@ -599,10 +595,8 @@
             RUT Activo actualmente: <b style="color: var(--neon-blue); font-size: 16px;" id="lbl-rut-activo">Sin RUT activo</b>
           </div>
         </div>
-
       </div>
 
-      <!-- PEDIDOS PENDIENTES GARZÓN -->
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <h3>🤵 Pedidos Pendientes por Llevar a Mesa</h3>
@@ -615,7 +609,7 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS (EXCLUSIVA ADMIN - INFORMES POR DESPLEGABLE) -->
+    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS -->
     <div id="tab-historial" class="tab-content">
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
@@ -626,7 +620,6 @@
           </div>
         </div>
 
-        <!-- SELECTOR DESPLEGABLE DE INFORMES -->
         <div style="background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px;">
           <h4 style="color: var(--neon-yellow); font-size: 14px; margin-bottom: 10px;">📄 Generar Informe Personalizado</h4>
           <div class="form-inline">
@@ -636,10 +629,7 @@
               <option value="fechas">📅 Informe por Rango de Fechas</option>
             </select>
 
-            <!-- Campo Dinámico: RUT -->
             <input type="text" id="filtro-informe-rut" placeholder="Ej: 12022962-1" style="display: none;">
-
-            <!-- Campos Dinámicos: Fechas -->
             <input type="date" id="filtro-informe-desde" style="display: none;">
             <input type="date" id="filtro-informe-hasta" style="display: none;">
 
@@ -648,7 +638,6 @@
           </div>
         </div>
 
-        <!-- RESUMEN / MÉTRICAS -->
         <div class="stats-grid">
           <div class="stat-card">
             <span style="font-size: 12px; color: var(--text-muted);">Total Pedidos Atendidos</span>
@@ -664,7 +653,6 @@
           </div>
         </div>
 
-        <!-- TABLA DE RESULTADOS -->
         <div class="table-wrapper">
           <table>
             <thead>
@@ -776,6 +764,7 @@
       generarQRGarzon();
 
       setInterval(() => {
+        obtenerDiasLicencia();
         if (document.getElementById('tab-cocina').classList.contains('active')) {
           cargarPedidosCocina();
         }
@@ -788,7 +777,7 @@
       }, 8000);
     });
 
-    /* GESTIÓN Y CÁLCULO DE LICENCIA CON BLOQUEO */
+    /* GESTIÓN Y CÁLCULO DE LICENCIA CON VERIFICACIÓN DE BLOQUEO */
     async function obtenerDiasLicencia() {
       const bannerEl = document.getElementById('license-banner');
       let fechaVencimiento = null;
@@ -798,11 +787,19 @@
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.bloqueado) estaBloqueado = true;
-          if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
+          // Detecta adecuadamente el atributo enviado por la vista superadmin
+          if (data.bloqueado === true || data.bloqueado === 'true' || data.estado === 'bloqueado') {
+            estaBloqueado = true;
+          }
+          if (data.fechaVencimiento) {
+            fechaVencimiento = new Date(data.fechaVencimiento);
+          }
         }
-      } catch (err) {}
+      } catch (err) {
+        console.warn("No se pudo verificar la licencia con el servidor.", err);
+      }
 
+      // Si no existe registro explicito de fecha y no está bloqueado por el superadmin, calcula 30 días
       if (!fechaVencimiento && !estaBloqueado) {
         const hoy = new Date();
         fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
