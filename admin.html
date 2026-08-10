@@ -555,7 +555,7 @@
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button class="cart-btn" style="flex:1;" onclick="enviarPedidoCocina()">🚀 Enviar a Cocina</button>
+        <button class="cart-btn" style="flex:1;" id="btn-enviar-cocina" onclick="enviarPedidoCocina()">🚀 Enviar a Cocina</button>
         <button class="cart-btn" style="background:#222; color:#fff; flex:1;" onclick="cerrarModalCarrito()">Añadir Más</button>
       </div>
     </div>
@@ -596,12 +596,12 @@
       cargarDatosMenu();
       generarQRUnico();
 
-      // Intervalo de actualización automática para pedidos en cocina (cada 15s)
+      // Intervalo de actualización automática para pedidos en cocina (cada 10s)
       setInterval(() => {
         if (document.getElementById('tab-cocina').classList.contains('active')) {
           cargarPedidosCocina();
         }
-      }, 15000);
+      }, 10000);
     });
 
     function cambiarPestana(tabId, element) {
@@ -902,51 +902,79 @@
       document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
     }
 
+    /* ==========================================
+       ENVÍO DE PEDIDO A MONGODB (CORREGIDO)
+    ========================================== */
     async function enviarPedidoCocina() {
-      if (carrito.length === 0) return;
+      if (carrito.length === 0) return alert("El carrito está vacío.");
+
+      const btnEnviar = document.getElementById('btn-enviar-cocina');
+      btnEnviar.disabled = true;
+      btnEnviar.innerText = "Enviando...";
 
       const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+      // Estructura completa y normalizada para guardar en la colección 'pedidos' de MongoDB
+      const payload = {
+        local: localId,
+        mesa: String(numeroMesa),
+        items: carrito.map(item => ({
+          nombre: item.nombre,
+          precio: Number(item.precio),
+          cantidad: Number(item.cantidad)
+        })),
+        total: Number(total),
+        estado: 'pendiente',
+        fecha: new Date().toISOString()
+      };
 
       try {
         const res = await fetch(`${API_URL}/pedidos`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, mesa: numeroMesa, items: carrito, total })
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload)
         });
 
-        if (res.ok) {
-          alert("✅ ¡Pedido enviado a la cocina con éxito!");
+        if (res.ok || res.status === 201) {
+          alert("✅ ¡Pedido enviado e ingresado en MongoDB!");
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalCarrito();
+          // Si estamos en vista admin, refresca la pantalla de cocina
+          cargarPedidosCocina();
         } else {
-          alert("Ocurrió un inconveniente al enviar el pedido.");
+          const errText = await res.text();
+          alert("Error de respuesta al guardar en MongoDB (" + res.status + "): " + errText);
         }
       } catch (e) {
-        alert("Error de red al enviar el pedido.");
+        console.error("Error al enviar pedido:", e);
+        alert("Error de conexión al enviar el pedido a MongoDB.");
+      } finally {
+        btnEnviar.disabled = false;
+        btnEnviar.innerText = "🚀 Enviar a Cocina";
       }
     }
 
     /* ==========================================
-       GESTIÓN DE COCINA Y PEDIDOS (CORREGIDO Y ROBUSTO)
+       GESTIÓN DE COCINA Y PEDIDOS
     ========================================== */
     async function cargarPedidosCocina() {
       const contenedor = document.getElementById('contenedor-pedidos-cocina');
-      contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando comandas...</p>';
+      if (!contenedor) return;
 
       try {
-        // Intenta obtener los pedidos con filtro de local
         let respuesta = await fetch(`${API_URL}/pedidos?local=${encodeURIComponent(localId)}`);
         
         if (!respuesta.ok) {
-          // Fallback en caso de formato alternativo del endpoint
           respuesta = await fetch(`${API_URL}/pedidos`);
         }
 
         let datos = await respuesta.json();
         let pedidos = [];
 
-        // Extrae el array independientemente del nombre de la propiedad entregada por el backend
         if (Array.isArray(datos)) {
           pedidos = datos;
         } else if (datos && Array.isArray(datos.pedidos)) {
@@ -955,11 +983,11 @@
           pedidos = datos.data;
         }
 
-        // Si el backend no filtra por local cliente, se filtra en el frontend
+        // Filtrar pedidos por local
         pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
 
         if (pedidos.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en cocina.</p>';
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en la base de datos.</p>';
           return;
         }
 
@@ -995,38 +1023,27 @@
 
       } catch (e) {
         console.error("Error al obtener pedidos:", e);
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error de conexión al cargar las comandas de cocina.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error de conexión al cargar pedidos de MongoDB.</p>';
       }
     }
 
     async function despacharPedido(idPedido) {
-      if (!confirm("¿Marcar este pedido como entregado / finalizado?")) return;
+      if (!confirm("¿Marcar este pedido como entregado?")) return;
 
       try {
-        // Intenta eliminar/completar por endpoint REST estándar
         let res = await fetch(`${API_URL}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
           method: 'DELETE'
         });
 
         if (!res.ok) {
-          // Intenta con query parameter por compatibilidad de rutas
           res = await fetch(`${API_URL}/pedidos/del?local=${encodeURIComponent(localId)}&id=${idPedido}`, { 
             method: 'DELETE' 
           });
         }
 
-        if (!res.ok) {
-          // Intenta con método POST
-          res = await fetch(`${API_URL}/pedidos/completar`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: idPedido, local: localId })
-          });
-        }
-
         cargarPedidosCocina();
       } catch (e) {
-        console.error("Error al despachar el pedido:", e);
+        console.error("Error al despachar pedido:", e);
         cargarPedidosCocina();
       }
     }
