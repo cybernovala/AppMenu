@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Panel de Administración & Menú Digital</title>
+
+  <!-- Librerías para Generación de QR y PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     :root {
       --bg-dark: #08070d;
@@ -27,7 +32,6 @@
       position: relative;
     }
 
-    /* Fondo de malla Cyberpunk */
     body::before {
       content: "";
       position: fixed;
@@ -43,7 +47,7 @@
 
     .container { max-width: 900px; margin: 0 auto; padding: 15px; }
 
-    /* HEADER Y NAVEGACIÓN POR PESTAÑAS */
+    /* HEADER Y TABS */
     .header-bar {
       background: rgba(18, 18, 24, 0.95);
       border: 1px solid var(--border-neon);
@@ -66,7 +70,6 @@
       letter-spacing: 0.5px;
     }
 
-    /* BARRA DE PESTAÑAS (TABS) */
     .nav-tabs {
       display: flex;
       gap: 10px;
@@ -116,7 +119,7 @@
     .btn-danger { background: #ff3344; color: #fff; }
     .btn-sm { padding: 6px 12px; font-size: 12px; }
 
-    /* ESTILOS PESTAÑA 1: GESTIÓN DE MENÚ */
+    /* SECCIONES Y FORMULARIOS */
     .section-card {
       background: var(--card-bg);
       border: 1px solid #222;
@@ -132,7 +135,7 @@
       text-transform: uppercase;
     }
 
-    .form-inline { display: flex; gap: 10px; }
+    .form-inline { display: flex; gap: 10px; flex-wrap: wrap; }
 
     input {
       flex: 1;
@@ -191,7 +194,7 @@
 
     .add-product-box input { min-width: 140px; }
 
-    /* ESTILOS PESTAÑA 2: VISTA PREVIA MENÚ DIGITAL */
+    /* VISTA CLIENTE PREVIEW */
     .preview-header {
       background: rgba(8, 7, 13, 0.95);
       border-bottom: 2px solid var(--neon-pink);
@@ -328,6 +331,22 @@
 
     .qty-controls { display: flex; gap: 10px; align-items: center; }
     .btn-qty { background: #222; border: 1px solid #444; color: #fff; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; }
+
+    /* SECCIÓN QR */
+    .qr-preview-box {
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-top: 15px;
+    }
+
+    .qr-card-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
   </style>
 </head>
 <body>
@@ -347,7 +366,8 @@
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="cambiarPestana('tab-admin', this)">⚙️ Gestión de Menú</button>
       <button class="tab-btn" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Menú Cliente</button>
-      <button class="tab-btn" onclick="cambiarPestana('tab-proxima', this)">📋 Cocina / Pedidos (Próximamente)</button>
+      <button class="tab-btn" onclick="cambiarPestana('tab-qr', this)">🔲 Generador de QR</button>
+      <button class="tab-btn" onclick="cambiarPestana('tab-proxima', this)">📋 Cocina / Pedidos</button>
     </div>
 
     <!-- PESTAÑA 1: GESTIÓN DE MENÚ (ADMINISTRADOR) -->
@@ -387,11 +407,44 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 3: ESPACIO RESERVADO PARA FUTURAS PESTAÑAS -->
+    <!-- PESTAÑA 3: GENERADOR DE QR -->
+    <div id="tab-qr" class="tab-content">
+      <!-- GENERAR QR INDIVIDUAL (5x5 cm) -->
+      <div class="section-card">
+        <h3>🔲 Generar QR Individual (Imagen 5 x 5 cm)</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Genera e imprime el código individual listo para la mesa seleccionada.</p>
+        <div class="form-inline">
+          <input type="number" id="qr-num-mesa" placeholder="Número de Mesa" value="1" min="1">
+          <button class="btn" onclick="generarQRUnico()">Ver / Generar QR</button>
+        </div>
+
+        <div class="qr-card-container" style="margin-top: 20px; text-align: center;">
+          <div class="qr-preview-box" id="box-qr-single">
+            <div id="qr-single-render"></div>
+            <p id="lbl-qr-single-mesa" style="color: #000; font-weight: bold; margin-top: 8px; font-size: 14px; text-transform: uppercase;"></p>
+          </div>
+          <br>
+          <button class="btn btn-secondary btn-sm" onclick="descargarQRImagen()">📥 Descargar Imagen PNG (5x5 cm)</button>
+        </div>
+      </div>
+
+      <!-- GENERAR PDF DE RANGO DE MESAS -->
+      <div class="section-card">
+        <h3>📄 Exportar Planilla PDF por Rango de Mesas</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Genera un documento PDF listo para imprimir con etiquetas de $5 \times 5\text{ cm}$ ordenadas en cuadrícula.</p>
+        <div class="form-inline">
+          <input type="number" id="qr-rango-desde" placeholder="Mesa Desde" value="1" min="1">
+          <input type="number" id="qr-rango-hasta" placeholder="Mesa Hasta" value="12" min="1">
+          <button class="btn" onclick="generarPDFMesas()">📥 Descargar PDF Imprimible</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 4: PRÓXIMA SECCIÓN -->
     <div id="tab-proxima" class="tab-content">
       <div class="section-card" style="text-align: center; padding: 40px;">
-        <h3 style="color: var(--neon-yellow);">🚀 Espacio para Nueva Pestaña</h3>
-        <p style="color: var(--text-muted); margin-top: 10px;">Aquí puedes añadir el Panel de Control de Pedidos de Cocina, Métricas de Venta o Configuración del Local.</p>
+        <h3 style="color: var(--neon-yellow);">🚀 Panel de Cocina y Comandas</h3>
+        <p style="color: var(--text-muted); margin-top: 10px;">En desarrollo: visualización de pedidos en tiempo real por mesa.</p>
       </div>
     </div>
 
@@ -437,6 +490,9 @@
     </div>
   </div>
 
+  <!-- DIV OCULTO AUXILIAR PARA GENERAR QR EN PDF -->
+  <div id="qr-hidden-temp" style="display: none;"></div>
+
   <script>
     const API_URL = "https://appmenu-tavr.onrender.com/api";
     
@@ -445,11 +501,12 @@
     const localId = (params.get('local') || 'mongo').toLowerCase().trim();
     const numeroMesa = params.get('mesa') || '1';
 
-    // Estado global de datos
+    // Estado global
     let productosPlanos = [];
     let categoriasSet = new Set();
     let carrito = [];
     let catSeleccionadaCliente = 'TODOS';
+    let qrSingleObj = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
@@ -457,9 +514,9 @@
       document.getElementById('txt-mesa-cliente').innerText = `MESA N° ${numeroMesa}`;
       
       cargarDatosMenu();
+      generarQRUnico();
     });
 
-    // Control de Navegación por Pestañas
     function cambiarPestana(tabId, element) {
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -472,7 +529,12 @@
       cargarDatosMenu();
     }
 
-    // 1. CARGA DE DATOS DE MENÚ DESDE MONGO DB
+    function construirUrlMesa(mesa) {
+      const baseUrl = window.location.origin + window.location.pathname;
+      return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}`;
+    }
+
+    // 1. CARGA DE DATOS DE MENÚ
     async function cargarDatosMenu() {
       const contenedorAdmin = document.getElementById('contenedor-categorias');
       contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
@@ -483,7 +545,6 @@
 
         if (!Array.isArray(productosPlanos)) productosPlanos = [];
 
-        // Extraer categorías
         categoriasSet.clear();
         productosPlanos.forEach(p => {
           if (p.categoria) categoriasSet.add(p.categoria);
@@ -493,7 +554,6 @@
           categoriasSet.add("General");
         }
 
-        // Renderizar ambas vistas
         renderizarAdminCategorias();
         renderizarClienteCategorias();
         renderizarClienteProductos();
@@ -504,7 +564,7 @@
     }
 
     /* ==========================================
-       LÓGICA PESTAÑA 1: GESTIÓN DE MENÚ (ADMIN)
+       GESTIÓN DE MENÚ (ADMINISTRADOR)
     ========================================== */
     function renderizarAdminCategorias() {
       const contenedor = document.getElementById('contenedor-categorias');
@@ -650,7 +710,7 @@
     }
 
     /* ==========================================
-       LÓGICA PESTAÑA 2: VISTA PREVIA MENÚ (CLIENTE)
+       VISTA PREVIA MENÚ (CLIENTE)
     ========================================== */
     function renderizarClienteCategorias() {
       const bar = document.getElementById('barra-categorias-cliente');
@@ -767,6 +827,145 @@
       } catch (e) {
         alert("Error al enviar el pedido.");
       }
+    }
+
+    /* ==========================================
+       GENERACIÓN Y DESCARGA DE QR / PDF
+    ========================================== */
+    function generarQRUnico() {
+      const numMesa = document.getElementById('qr-num-mesa').value || '1';
+      const container = document.getElementById('qr-single-render');
+      container.innerHTML = '';
+
+      const urlTarget = construirUrlMesa(numMesa);
+
+      // Renderiza QR a alta definición (591px ~ 5x5cm a 300 DPI)
+      qrSingleObj = new QRCode(container, {
+        text: urlTarget,
+        width: 250,
+        height: 250,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      document.getElementById('lbl-qr-single-mesa').innerText = `${localId.toUpperCase()} - MESA ${numMesa}`;
+    }
+
+    function descargarQRImagen() {
+      const numMesa = document.getElementById('qr-num-mesa').value || '1';
+      const qrCanvas = document.querySelector('#qr-single-render canvas');
+      
+      if (!qrCanvas) return alert("Genera primero el código QR.");
+
+      // Crear Canvas final con dimensiones físicas exactas (5x5 cm a 300DPI => 591x591px)
+      const canvasFinal = document.createElement('canvas');
+      const size = 591;
+      canvasFinal.width = size;
+      canvasFinal.height = size;
+
+      const ctx = canvasFinal.getContext('2d');
+
+      // Fondo blanco
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      // Dibujar QR centrado
+      const qrSize = 420;
+      const qrX = (size - qrSize) / 2;
+      const qrY = 40;
+      ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+      // Textos informativos
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(localId.toUpperCase(), size / 2, 500);
+
+      ctx.font = 'bold 38px sans-serif';
+      ctx.fillText(`MESA N° ${numMesa}`, size / 2, 550);
+
+      // Enlace de descarga
+      const link = document.createElement('a');
+      link.download = `QR_Mesa_${numMesa}_${localId}_5x5cm.png`;
+      link.href = canvasFinal.toDataURL('image/png');
+      link.click();
+    }
+
+    async function generarPDFMesas() {
+      const desde = parseInt(document.getElementById('qr-rango-desde').value);
+      const hasta = parseInt(document.getElementById('qr-rango-hasta').value);
+
+      if (isNaN(desde) || isNaN(hasta) || desde > hasta || desde < 1) {
+        return alert("Ingresa un rango de mesas válido.");
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'p', unit: 'cm', format: 'a4' });
+
+      // Configuración de cuadrícula A4 (21 x 29.7 cm)
+      const itemW = 5; // 5 cm de ancho
+      const itemH = 5; // 5 cm de alto
+      const gapX = 1.2;
+      const gapY = 1.2;
+      const marginX = 1.8;
+      const marginY = 2.0;
+      const maxCols = 3;
+      const maxRows = 4;
+      const itemsPerPage = maxCols * maxRows;
+
+      let count = 0;
+
+      for (let m = desde; m <= hasta; m++) {
+        if (count > 0 && count % itemsPerPage === 0) {
+          doc.addPage();
+        }
+
+        const idxInPage = count % itemsPerPage;
+        const col = idxInPage % maxCols;
+        const row = Math.floor(idxInPage / maxCols);
+
+        const x = marginX + col * (itemW + gapX);
+        const y = marginY + row * (itemH + gapY);
+
+        // Generar QR en elemento invisible auxiliar
+        const tempDiv = document.getElementById('qr-hidden-temp');
+        tempDiv.innerHTML = '';
+        
+        new QRCode(tempDiv, {
+          text: construirUrlMesa(m),
+          width: 200,
+          height: 200,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // Esperar renderizado del Canvas
+        await new Promise(r => setTimeout(r, 50));
+
+        const canvasElem = tempDiv.querySelector('canvas');
+        const imgData = canvasElem.toDataURL('image/png');
+
+        // Borde exterior guía de corte (5x5 cm)
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.02);
+        doc.rect(x, y, itemW, itemH);
+
+        // Renderizar QR e información de mesa
+        doc.addImage(imgData, 'PNG', x + 0.6, y + 0.3, 3.8, 3.8);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.text(localId.toUpperCase(), x + (itemW / 2), y + 4.3, { align: 'center' });
+
+        doc.setFontSize(9);
+        doc.text(`MESA N° ${m}`, x + (itemW / 2), y + 4.7, { align: 'center' });
+
+        count++;
+      }
+
+      doc.save(`QR_Mesas_${desde}_al_${hasta}_${localId}.pdf`);
     }
   </script>
 </body>
