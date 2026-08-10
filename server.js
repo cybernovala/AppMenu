@@ -48,6 +48,22 @@ const PedidoSchema = new mongoose.Schema({
 
 const Pedido = mongoose.models.Pedido || mongoose.model('Pedido', PedidoSchema, 'pedidos');
 
+// Esquema de Historial de Entregas (NUEVO)
+const HistorialSchema = new mongoose.Schema({
+  id: String,
+  local: String,
+  mesa: String,
+  items: Array,
+  total: Number,
+  estado: { type: String, default: 'entregado' },
+  hora: String,
+  rutGarzon: String,
+  horaEntrega: String,
+  fechaEntrega: String
+}, { strict: false, timestamps: true });
+
+const Historial = mongoose.models.Historial || mongoose.model('Historial', HistorialSchema, 'historials');
+
 // --- 4. RUTAS DE LA API ---
 
 // 4.1 Obtener lista de todos los locales (Para SuperAdmin)
@@ -307,9 +323,67 @@ app.delete('/api/pedidos/:id', async (req, res) => {
   }
 });
 
+/* ==========================================
+   6. RUTAS DE HISTORIAL DE ENTREGAS (/api/historials)
+========================================== */
+
+// 6.1 Guardar pedido entregado desde la App del Garzón
+app.post('/api/historials', async (req, res) => {
+  try {
+    const data = req.body;
+    console.log("📥 Recibiendo registro de entrega desde móvil del garzón:", data);
+
+    const ahora = new Date();
+    const fechaActual = ahora.toISOString().split('T')[0];
+    const horaActual = ahora.toLocaleTimeString('es-CL', { hour12: false });
+
+    const nuevoRegistro = new Historial({
+      id: data.id || String(Date.now()),
+      local: (data.local || 'mongo').toLowerCase().trim(),
+      mesa: String(data.mesa || '1'),
+      items: data.items || [],
+      total: Number(data.total) || 0,
+      estado: data.estado || 'entregado',
+      hora: data.hora || horaActual,
+      rutGarzon: data.rutGarzon || '12022962-1',
+      horaEntrega: data.horaEntrega || horaActual,
+      fechaEntrega: data.fechaEntrega || fechaActual
+    });
+
+    const guardado = await nuevoRegistro.save();
+    console.log("💾 Historial registrado en MongoDB Atlas con _id:", guardado._id);
+
+    return res.status(201).json({ 
+      mensaje: 'Entrega guardada exitosamente en el historial', 
+      id: guardado._id 
+    });
+  } catch (err) {
+    console.error("❌ Error en POST /api/historials:", err.message);
+    return res.status(500).json({ error: 'Error interno al guardar historial' });
+  }
+});
+
+// 6.2 Leer registros del historial de un local
+app.get('/api/historials', async (req, res) => {
+  try {
+    const { local } = req.query;
+    let query = {};
+
+    if (local && local !== 'default' && local !== 'all') {
+      query.local = local.toLowerCase().trim();
+    }
+
+    const registros = await Historial.find(query).sort({ createdAt: -1 }).lean();
+    return res.status(200).json(registros);
+  } catch (err) {
+    console.error("❌ Error en GET /api/historials:", err.message);
+    return res.status(500).json([]);
+  }
+});
+
 // Ruta raíz
 app.get('/', (req, res) => {
-  res.send('🚀 API AppMenu funcionando con estructura MongoDB real y soporte de pedidos.');
+  res.send('🚀 API AppMenu funcionando con soporte completo de Menú, Pedidos e Historial.');
 });
 
 const PORT = process.env.PORT || 10000;
