@@ -49,13 +49,13 @@
 
     .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
 
-    /* BANNER LICENCIA ALERTA */
+    /* BANNER LICENCIA ALERTA / BLOQUEO */
     .license-banner {
       background: linear-gradient(135deg, rgba(255, 0, 127, 0.2), rgba(255, 85, 0, 0.2));
       border: 1px solid var(--neon-pink);
       color: var(--text-main);
       text-align: center;
-      padding: 10px 15px;
+      padding: 12px 15px;
       border-radius: 8px;
       margin-bottom: 15px;
       font-size: 14px;
@@ -65,6 +65,13 @@
       align-items: center;
       gap: 10px;
       box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+    }
+
+    .license-banner.blocked {
+      background: linear-gradient(135deg, rgba(255, 0, 0, 0.4), rgba(150, 0, 0, 0.4));
+      border: 1px solid #ff3344;
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(255, 51, 68, 0.4);
     }
 
     /* HEADER Y TABS */
@@ -451,9 +458,9 @@
 
   <div class="container">
     
-    <!-- BANNER DE LICENCIA CON CONTADOR DINÁMICO -->
+    <!-- BANNER DE LICENCIA CON CONTADOR DINÁMICO Y ESTADO DE BLOQUEO -->
     <div class="license-banner" id="license-banner">
-      ⚠️ Su licencia vence en <span id="lbl-dias-licencia" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
+      <span>⚠️ Su licencia vence en <span id="lbl-dias-licencia" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.</span>
     </div>
 
     <!-- HEADER GENERAL -->
@@ -781,27 +788,37 @@
       }, 8000);
     });
 
-    /* GESTIÓN Y CÁLCULO DE LICENCIA */
+    /* GESTIÓN Y CÁLCULO DE LICENCIA CON BLOQUEO */
     async function obtenerDiasLicencia() {
+      const bannerEl = document.getElementById('license-banner');
       let fechaVencimiento = null;
+      let estaBloqueado = false;
+
       try {
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}`);
         if (res.ok) {
           const data = await res.json();
+          if (data.bloqueado) estaBloqueado = true;
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         }
       } catch (err) {}
 
-      if (!fechaVencimiento) {
+      if (!fechaVencimiento && !estaBloqueado) {
         const hoy = new Date();
         fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
       }
 
       const ahora = new Date();
-      const diferenciaMs = fechaVencimiento - ahora;
+      const diferenciaMs = fechaVencimiento ? (fechaVencimiento - ahora) : 0;
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
-      document.getElementById('lbl-dias-licencia').innerText = diasRestantes;
+      if (estaBloqueado || diasRestantes <= 0) {
+        bannerEl.classList.add('blocked');
+        bannerEl.innerHTML = `🚫 Su licencia ha sido bloqueada. Contactarse con su proveedor.`;
+      } else {
+        bannerEl.classList.remove('blocked');
+        bannerEl.innerHTML = `⚠️ Su licencia vence en <span id="lbl-dias-licencia" style="color: var(--neon-yellow); text-decoration: underline;">${diasRestantes}</span> días.`;
+      }
     }
 
     function cambiarPestana(tabId, element) {
