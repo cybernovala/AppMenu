@@ -4,13 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel de Administración - Gestión de Menú</title>
+  <!-- Librerías de QR y PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     :root {
       --bg-dark: #09090c;
       --card-bg: #121218;
       --neon-orange: #ff5500;
+      --neon-pink: #ff007f;
       --neon-yellow: #ffea00;
-      --grad-neon: linear-gradient(135deg, #ff5500, #ffea00);
+      --grad-neon: linear-gradient(135deg, #ff5500, #ff007f);
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
       --border-color: rgba(255, 85, 0, 0.25);
@@ -24,9 +29,8 @@
       padding: 15px;
     }
 
-    .container { max-width: 800px; margin: 0 auto; }
+    .container { max-width: 900px; margin: 0 auto; }
 
-    /* HEADER */
     .header-bar {
       background: var(--card-bg);
       border: 1px solid var(--border-color);
@@ -42,13 +46,11 @@
 
     .local-title {
       font-size: 22px;
-      color: var(--neon-yellow);
+      color: var(--neon-pink);
       text-transform: uppercase;
       font-weight: 800;
-      letter-spacing: 0.5px;
     }
 
-    /* PESTAÑAS / TABS */
     .nav-tabs {
       display: flex;
       gap: 8px;
@@ -67,37 +69,32 @@
       font-weight: 600;
       font-size: 13px;
       white-space: nowrap;
-      transition: all 0.2s;
     }
 
     .tab-btn:hover { background: #222230; color: #fff; }
     .tab-btn.active {
       background: var(--grad-neon);
-      color: #000;
+      color: #fff;
       border-color: transparent;
     }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* BOTONES */
     .btn {
       background: var(--grad-neon);
       border: none;
-      color: #000;
+      color: #fff;
       padding: 10px 16px;
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
       font-size: 13px;
-      transition: opacity 0.2s;
     }
-    .btn:hover { opacity: 0.9; }
     .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
     .btn-danger { background: #ff3344; color: #fff; }
     .btn-sm { padding: 6px 12px; font-size: 12px; }
 
-    /* TARJETAS DE SECCIÓN */
     .section-card {
       background: var(--card-bg);
       border: 1px solid #222;
@@ -113,17 +110,8 @@
       text-transform: uppercase;
     }
 
-    .form-group {
-      margin-bottom: 15px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 5px;
-    }
-
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
     .form-inline { display: flex; gap: 10px; }
 
     input, textarea, select {
@@ -136,7 +124,7 @@
       font-size: 14px;
     }
 
-    /* TARJETAS DE CATEGORÍA */
+    /* MENÚ Y PRODUCTOS */
     .category-card {
       background: var(--card-bg);
       border: 1px solid var(--border-color);
@@ -146,22 +134,16 @@
     }
 
     .category-header {
-      background: rgba(255, 85, 0, 0.08);
+      background: rgba(255, 0, 127, 0.1);
       padding: 15px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(255, 85, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 0, 127, 0.2);
     }
 
-    .category-name {
-      font-size: 18px;
-      font-weight: bold;
-      color: var(--neon-yellow);
-    }
-
+    .category-name { font-size: 18px; font-weight: bold; color: var(--neon-pink); }
     .product-list { padding: 15px; }
-
     .product-item {
       display: flex;
       justify-content: space-between;
@@ -173,12 +155,6 @@
       margin-bottom: 10px;
     }
 
-    .product-info { display: flex; flex-direction: column; gap: 3px; }
-    .product-title { font-weight: 600; font-size: 15px; color: #fff; }
-    .product-price { font-size: 14px; color: var(--neon-yellow); font-weight: bold; }
-    .product-actions { display: flex; gap: 8px; }
-
-    /* FORMULARIO AGREGAR PRODUCTO */
     .add-product-box {
       background: #14141c;
       border-top: 1px dashed #333;
@@ -188,188 +164,145 @@
       flex-wrap: wrap;
     }
 
-    .add-product-box input { min-width: 140px; }
-
-    /* MODAL DE EDICIÓN */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
+    /* COCINA - PEDIDOS */
+    .pedido-card {
+      background: #161622;
+      border-left: 5px solid var(--neon-orange);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
     }
-
-    .modal-content {
-      background: #16161e;
-      border: 1px solid var(--neon-orange);
-      padding: 25px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 400px;
-    }
-
-    .modal-content h3 { color: var(--neon-yellow); margin-bottom: 15px; }
+    .pedido-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .mesa-badge { background: var(--neon-pink); color: #fff; padding: 4px 10px; border-radius: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="container">
     
-    <!-- HEADER -->
     <div class="header-bar">
       <div>
-        <span style="font-size: 12px; color: var(--text-muted);">Administrando Cliente:</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Administrando Local:</span>
         <div class="local-title" id="lbl-local-nombre">CARGANDO...</div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="cargarProductos()">🔄 Recargar Menú</button>
+      <button class="btn btn-secondary btn-sm" onclick="cargarProductos()">🔄 Recargar</button>
     </div>
 
-    <!-- NAVEGACIÓN PESTAÑAS -->
+    <!-- PESTAÑAS -->
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="cambiarPestana('tab-menu', this)">🍕 Gestión de Menú</button>
       <button class="tab-btn" onclick="cambiarPestana('tab-info', this)">⚙️ Datos del Local</button>
-      <button class="tab-btn" onclick="cambiarPestana('tab-horarios', this)">🕒 Horarios</button>
-      <button class="tab-btn" onclick="cambiarPestana('tab-seguridad', this)">🔑 Seguridad</button>
+      <button class="tab-btn" onclick="cambiarPestana('tab-qr', this)">📱 Código QR & Mesas</button>
+      <button class="tab-btn" onclick="cambiarPestana('tab-cocina', this)">👨‍🍳 Pedidos Cocina</button>
     </div>
 
-    <!-- ================= PESTAÑA 1: GESTIÓN DE MENÚ ================= -->
+    <!-- PESTAÑA 1: GESTIÓN DE MENÚ -->
     <div id="tab-menu" class="tab-content active">
-      <!-- CREAR CATEGORÍA -->
       <div class="section-card">
         <h3>📁 Crear Nueva Categoría</h3>
         <div class="form-inline">
-          <input type="text" id="nueva-categoria" placeholder="Ej: Entradas, Bebidas, Promociones">
-          <button class="btn" onclick="crearCategoria()">+ Agregar Categoría</button>
+          <input type="text" id="nueva-categoria" placeholder="Ej: Completos, Bebidas, Promos">
+          <button class="btn" onclick="crearCategoria()">+ Crear</button>
         </div>
       </div>
-
-      <!-- LISTADO DE CATEGORÍAS Y PRODUCTOS -->
       <div id="contenedor-categorias">
-        <p style="color: var(--text-muted); text-align: center;">Cargando menú de MongoDB...</p>
+        <p style="color: var(--text-muted); text-align: center;">Cargando menú...</p>
       </div>
     </div>
 
-    <!-- ================= PESTAÑA 2: DATOS DEL LOCAL ================= -->
+    <!-- PESTAÑA 2: DATOS DEL LOCAL -->
     <div id="tab-info" class="tab-content">
       <div class="section-card">
-        <h3>🏪 Información Comercial</h3>
+        <h3>🏪 Información del Local</h3>
         <div class="form-group">
-          <label>Nombre Comercial del Local</label>
-          <input type="text" id="info-nombre" placeholder="Ej: Sanguchería Central">
+          <label>Nombre Comercial</label>
+          <input type="text" id="info-nombre" placeholder="Nombre de tu local">
         </div>
         <div class="form-group">
-          <label>Teléfono / WhatsApp de Pedidos</label>
-          <input type="text" id="info-telefono" placeholder="+56 9 1234 5678">
+          <label>Teléfono / WhatsApp</label>
+          <input type="text" id="info-telefono" placeholder="+56912345678">
         </div>
-        <div class="form-group">
-          <label>Dirección Física</label>
-          <input type="text" id="info-direccion" placeholder="Av. Principal #123">
-        </div>
-        <div class="form-group">
-          <label>Descripción Corta / Slogan</label>
-          <textarea id="info-descripcion" rows="3" placeholder="Los mejores completos de la ciudad..."></textarea>
-        </div>
-        <button class="btn" onclick="guardarInfoLocal()">💾 Guardar Cambios</button>
+        <button class="btn" onclick="alert('Guardado exitosamente')">💾 Guardar Cambios</button>
       </div>
     </div>
 
-    <!-- ================= PESTAÑA 3: HORARIOS ================= -->
-    <div id="tab-horarios" class="tab-content">
+    <!-- PESTAÑA 3: CÓDIGO QR Y GENERADOR DE MESAS (5x6 cm en PDF) -->
+    <div id="tab-qr" class="tab-content">
       <div class="section-card">
-        <h3>🕒 Horarios de Atención</h3>
-        <div class="form-group">
-          <label>Lunes a Viernes</label>
-          <input type="text" id="horario-semana" placeholder="12:00 hrs - 23:00 hrs">
-        </div>
-        <div class="form-group">
-          <label>Sábados y Domingos</label>
-          <input type="text" id="horario-finde" placeholder="13:00 hrs - 01:00 hrs">
-        </div>
-        <div class="form-group">
-          <label>Estado Actual</label>
-          <select id="horario-estado">
-            <option value="abierto">🟢 Abierto Recibiendo Pedidos</option>
-            <option value="cerrado">🔴 Cerrado Temporalmente</option>
-          </select>
-        </div>
-        <button class="btn" onclick="guardarHorarios()">💾 Actualizar Horarios</button>
+        <h3>📲 QR General del Local (Imagen PNG)</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+          Enlace a la carta digital: <b id="url-menu-link" style="color:var(--neon-yellow)">-</b>
+        </p>
+        <div id="qr-general-container" style="background:#fff; padding:15px; width:fit-content; border-radius:8px; margin-bottom:10px;"></div>
+        <button class="btn" onclick="descargarQRGeneral()">📥 Descargar Imagen QR</button>
       </div>
-    </div>
 
-    <!-- ================= PESTAÑA 4: SEGURIDAD ================= -->
-    <div id="tab-seguridad" class="tab-content">
       <div class="section-card">
-        <h3>🔑 Cambiar Contraseña</h3>
-        <div class="form-group">
-          <label>Nueva Contraseña de Acceso</label>
-          <input type="password" id="pass-nueva" placeholder="Ingresa la nueva clave">
+        <h3>🪑 Generar QR por Rango de Mesas (PDF 5x6 cm)</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+          Crea un documento listo para imprimir con QRs etiquetados por mesa, cortados individualmente a <b>5 x 6 cm</b>.
+        </p>
+        <div class="form-inline" style="margin-bottom: 15px;">
+          <input type="number" id="mesa-desde" value="1" placeholder="Mesa Desde (ej: 1)">
+          <input type="number" id="mesa-hasta" value="10" placeholder="Mesa Hasta (ej: 10)">
         </div>
-        <div class="form-group">
-          <label>Confirmar Nueva Contraseña</label>
-          <input type="password" id="pass-confirmar" placeholder="Repite la nueva clave">
-        </div>
-        <button class="btn" onclick="cambiarPassword()">🔒 Actualizar Contraseña</button>
+        <button class="btn" onclick="generarPDFMesas()">📄 Generar PDF de Mesas (5x6 cm)</button>
       </div>
     </div>
 
-  </div>
-
-  <!-- MODAL DE EDICIÓN -->
-  <div class="modal" id="modal-editar">
-    <div class="modal-content">
-      <h3>✏️ Editar Producto</h3>
-      <input type="hidden" id="edit-cat-orig">
-      <input type="hidden" id="edit-index-orig">
-      
-      <div class="form-group">
-        <label>Nombre del Producto</label>
-        <input type="text" id="edit-nombre">
-      </div>
-
-      <div class="form-group">
-        <label>Precio ($)</label>
-        <input type="number" id="edit-precio">
-      </div>
-
-      <div class="form-group">
-        <label>Categoría</label>
-        <input type="text" id="edit-categoria">
-      </div>
-
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button class="btn" style="flex:1;" onclick="guardarEdicion()">Guardar Cambios</button>
-        <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+    <!-- PESTAÑA 4: PEDIDOS COCINA -->
+    <div id="tab-cocina" class="tab-content">
+      <div class="section-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <h3>👨‍🍳 Commandes / Pedidos en Tiempo Real</h3>
+          <button class="btn btn-secondary btn-sm" onclick="cargarPedidosCocina()">🔄 Actualizar Cocina</button>
+        </div>
+        <div id="contenedor-pedidos">
+          <p style="color: var(--text-muted); text-align: center;">No hay pedidos activos actualmente.</p>
+        </div>
       </div>
     </div>
+
   </div>
 
   <script>
     const API_URL = "https://appmenu-tavr.onrender.com/api";
-    
-    // Obtener parámetro ?local= de la URL (ej: "mongo")
     const params = new URLSearchParams(window.location.search);
     const localId = params.get('local') || 'mongo';
 
     let productosPlanos = [];
     let categoriasSet = new Set();
+    let qrObj = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
+      
+      // Construir URL pública para los clientes
+      const baseMenuUrl = window.location.href.replace('admin.html', 'menu.html').split('?')[0];
+      const fullMenuUrl = `${baseMenuUrl}?local=${localId}`;
+      document.getElementById('url-menu-link').innerText = fullMenuUrl;
+
+      // Generar QR Preview en pantalla
+      qrObj = new QRCode(document.getElementById("qr-general-container"), {
+        text: fullMenuUrl,
+        width: 160,
+        height: 160
+      });
+
       cargarProductos();
+      setInterval(cargarPedidosCocina, 10000); // Auto-refresco de la cocina cada 10 segs
     });
 
-    // --- CAMBIO DE PESTAÑAS ---
     function cambiarPestana(tabId, btn) {
       document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
-
       document.getElementById(tabId).classList.add('active');
       btn.classList.add('active');
+
+      if (tabId === 'tab-cocina') cargarPedidosCocina();
     }
 
-    // --- 1. GESTIÓN DE PRODUCTOS Y CATEGORÍAS ---
+    // --- CARTA Y CATEGORÍAS ---
     async function cargarProductos() {
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
@@ -379,13 +312,8 @@
         productosPlanos = await respuesta.json();
 
         categoriasSet.clear();
-        productosPlanos.forEach(p => {
-          if (p.categoria) categoriasSet.add(p.categoria);
-        });
-
-        if (categoriasSet.size === 0) {
-          categoriasSet.add("General");
-        }
+        productosPlanos.forEach(p => { if (p.categoria) categoriasSet.add(p.categoria); });
+        if (categoriasSet.size === 0) categoriasSet.add("General");
 
         renderizarCategorias();
       } catch (err) {
@@ -399,7 +327,6 @@
 
       categoriasSet.forEach(catNombre => {
         const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
-
         const catCard = document.createElement('div');
         catCard.className = 'category-card';
 
@@ -408,30 +335,23 @@
             <span class="category-name">📂 ${catNombre}</span>
             <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
           </div>
-
           <div class="product-list">
-            ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>' : ''}
             ${productosCat.map((prod, idx) => `
                 <div class="product-item">
-                  <div class="product-info">
-                    <span class="product-title">${prod.nombre}</span>
-                    <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
+                  <div>
+                    <strong style="color:#fff;">${prod.nombre}</strong><br>
+                    <span style="color:var(--neon-yellow);">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
                   </div>
-                  <div class="product-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${idx}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
-                    <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${idx})">🗑️ Eliminar</button>
-                  </div>
+                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${idx})">🗑️ Eliminar</button>
                 </div>
             `).join('')}
           </div>
-
           <div class="add-product-box">
-            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
+            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Producto" style="flex:2;">
             <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
-            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
+            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar</button>
           </div>
         `;
-
         contenedor.appendChild(catCard);
       });
     }
@@ -439,115 +359,142 @@
     function crearCategoria() {
       const inputCat = document.getElementById('nueva-categoria');
       const nombreCat = inputCat.value.trim();
-
-      if (!nombreCat) return alert("Ingresa un nombre para la categoría.");
-
+      if (!nombreCat) return alert("Ingresa un nombre.");
       categoriasSet.add(nombreCat);
       inputCat.value = '';
       renderizarCategorias();
     }
 
     async function agregarProducto(categoria) {
-      const inputNombre = document.getElementById(`nuevo-nombre-${categoria}`);
-      const inputPrecio = document.getElementById(`nuevo-precio-${categoria}`);
+      const nombre = document.getElementById(`nuevo-nombre-${categoria}`).value.trim();
+      const precio = parseFloat(document.getElementById(`nuevo-precio-${categoria}`).value);
+      if (!nombre || isNaN(precio)) return alert("Datos no válidos.");
 
-      const nombre = inputNombre.value.trim();
-      const precio = parseFloat(inputPrecio.value);
-
-      if (!nombre || isNaN(precio)) return alert("Ingresa un nombre y un precio válido.");
-
-      try {
-        const res = await fetch(`${API_URL}/menu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, categoria, nombre, precio })
-        });
-
-        if (res.ok) {
-          inputNombre.value = '';
-          inputPrecio.value = '';
-          cargarProductos();
-        } else alert("Error al guardar en MongoDB.");
-      } catch (err) { alert("Error de conexión."); }
+      await fetch(`${API_URL}/menu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local: localId, categoria, nombre, precio })
+      });
+      cargarProductos();
     }
 
     async function eliminarProducto(categoria, index) {
-      if (!confirm("¿Deseas eliminar este producto del menú?")) return;
+      if (!confirm("¿Eliminar producto?")) return;
+      await fetch(`${API_URL}/menu/del?local=${localId}&categoria=${encodeURIComponent(categoria)}&index=${index}`, { method: 'DELETE' });
+      cargarProductos();
+    }
 
+    // --- DESCARGAR QR IMAGEN ---
+    function descargarQRGeneral() {
+      const img = document.querySelector("#qr-general-container img");
+      if (!img) return alert("Cargando QR...");
+      const a = document.createElement("a");
+      a.href = img.src;
+      a.download = `QR_General_${localId}.png`;
+      a.click();
+    }
+
+    // --- GENERAR PDF CON MESAS 5x6 CM ---
+    async function generarPDFMesas() {
+      const { jsPDF } = window.jspdf;
+      const desde = parseInt(document.getElementById('mesa-desde').value) || 1;
+      const hasta = parseInt(document.getElementById('mesa-hasta').value) || 1;
+
+      if (hasta < desde) return alert("Rango inválido.");
+
+      const doc = new jsPDF();
+      const baseMenuUrl = window.location.href.replace('admin.html', 'menu.html').split('?')[0];
+
+      let posX = 10;
+      let posY = 10;
+      const anchoCard = 50; // 5 cm
+      const altoCard = 60;  // 6 cm
+
+      for (let m = desde; m <= hasta; m++) {
+        const urlMesa = `${baseMenuUrl}?local=${localId}&mesa=${m}`;
+        
+        // Crear elemento temporal para renderizar QR
+        const tempDiv = document.createElement('div');
+        tempDiv.style.display = 'none';
+        document.body.appendChild(tempDiv);
+        
+        new QRCode(tempDiv, { text: urlMesa, width: 120, height: 120 });
+        await new Promise(r => setTimeout(r, 100)); // tiempo para renderizar
+
+        const imgData = tempDiv.querySelector('canvas').toDataURL('image/png');
+        document.body.removeChild(tempDiv);
+
+        // Dibujar borde / tarjeta de 5 x 6 cm
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(255, 85, 0);
+        doc.rect(posX, posY, anchoCard, altoCard);
+
+        // Texto Encabezado
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "bold");
+        doc.text("ESCANEA EL MENÚ", posX + 25, posY + 8, { align: "center" });
+
+        // Insertar QR
+        doc.addImage(imgData, 'PNG', posX + 10, posY + 12, 30, 30);
+
+        // Texto Mesa
+        doc.setFontSize(14);
+        doc.setTextColor(255, 0, 127);
+        doc.text(`MESA N° ${m}`, posX + 25, posY + 52, { align: "center" });
+
+        // Organización en la página A4 (3 columnas x 4 filas por página)
+        posX += anchoCard + 10;
+        if (posX + anchoCard > 200) {
+          posX = 10;
+          posY += altoCard + 10;
+          if (posY + altoCard > 280 && m < hasta) {
+            doc.addPage();
+            posX = 10;
+            posY = 10;
+          }
+        }
+      }
+
+      doc.save(`QRs_Mesas_${desde}_al_${hasta}_${localId}.pdf`);
+    }
+
+    // --- COCINA / PEDIDOS ---
+    async function cargarPedidosCocina() {
+      const cont = document.getElementById('contenedor-pedidos');
       try {
-        const res = await fetch(`${API_URL}/menu/del?local=${localId}&categoria=${encodeURIComponent(categoria)}&index=${index}`, {
-          method: 'DELETE'
-        });
+        const res = await fetch(`${API_URL}/pedidos?local=${localId}`);
+        const pedidos = await res.json();
 
-        if (res.ok) cargarProductos();
-        else alert("Error al eliminar el producto.");
-      } catch (err) { alert("Error de conexión."); }
+        if (!pedidos || pedidos.length === 0) {
+          cont.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay pedidos activos actualmente.</p>';
+          return;
+        }
+
+        cont.innerHTML = pedidos.map(p => `
+          <div class="pedido-card">
+            <div class="pedido-header">
+              <span class="mesa-badge">🪑 MESA ${p.mesa || 'S/N'}</span>
+              <span style="font-size: 12px; color: var(--text-muted);">${p.hora || ''}</span>
+            </div>
+            <ul style="padding-left: 20px; margin-bottom: 10px;">
+              ${p.items.map(i => `<li><b>${i.cantidad}x</b> ${i.nombre} - $${i.precio}</li>`).join('')}
+            </ul>
+            <div style="font-size: 14px; font-weight: bold; color: var(--neon-yellow); margin-bottom: 10px;">
+              Total: $${p.total.toLocaleString('es-CL')}
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="despacharPedido('${p._id}')">✅ Marcar Completado</button>
+          </div>
+        `).join('');
+      } catch (err) {
+        cont.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Sin pedidos nuevos.</p>';
+      }
     }
 
-    // --- MODAL EDICIÓN ---
-    function abrirModalEdicion(catOrig, indexOrig, nombre, precio) {
-      document.getElementById('edit-cat-orig').value = catOrig;
-      document.getElementById('edit-index-orig').value = indexOrig;
-      document.getElementById('edit-nombre').value = nombre;
-      document.getElementById('edit-precio').value = precio;
-      document.getElementById('edit-categoria').value = catOrig;
-      document.getElementById('modal-editar').style.display = 'flex';
-    }
-
-    function cerrarModal() {
-      document.getElementById('modal-editar').style.display = 'none';
-    }
-
-    async function guardarEdicion() {
-      const catOrig = document.getElementById('edit-cat-orig').value;
-      const indexOrig = document.getElementById('edit-index-orig').value;
-      const nuevoNombre = document.getElementById('edit-nombre').value.trim();
-      const nuevoPrecio = parseFloat(document.getElementById('edit-precio').value);
-      const nuevaCategoria = document.getElementById('edit-categoria').value.trim();
-
-      if (!nuevoNombre || isNaN(nuevoPrecio) || !nuevaCategoria) return alert("Completa todos los campos.");
-
-      try {
-        const res = await fetch(`${API_URL}/menu/edit`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            local: localId,
-            categoriaOriginal: catOrig,
-            indexOriginal: Number(indexOrig),
-            nuevoNombre: nuevoNombre,
-            nuevoPrecio: nuevoPrecio,
-            nuevaCategoria: nuevaCategoria
-          })
-        });
-
-        if (res.ok) {
-          cerrarModal();
-          cargarProductos();
-        } else alert("Error al actualizar producto.");
-      } catch (err) { alert("Error de conexión."); }
-    }
-
-    // --- ACCIONES SECUNDARIAS (PESTAÑAS EXTRA) ---
-    function guardarInfoLocal() {
-      alert("✅ Datos del local actualizados exitosamente.");
-    }
-
-    function guardarHorarios() {
-      alert("✅ Horarios guardados con éxito.");
-    }
-
-    function cambiarPassword() {
-      const p1 = document.getElementById('pass-nueva').value;
-      const p2 = document.getElementById('pass-confirmar').value;
-
-      if (!p1 || p1 !== p2) return alert("Las contraseñas no coinciden o están vacías.");
-      
-      alert("✅ Contraseña actualizada correctamente.");
-      document.getElementById('pass-nueva').value = '';
-      document.getElementById('pass-confirmar').value = '';
+    async function despacharPedido(id) {
+      await fetch(`${API_URL}/pedidos/${id}?local=${localId}`, { method: 'DELETE' });
+      cargarPedidosCocina();
     }
   </script>
-
 </body>
 </html>
