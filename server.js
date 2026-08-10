@@ -7,7 +7,7 @@ const app = express();
 // --- 1. CONFIGURACIÓN CORS ---
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -29,8 +29,9 @@ const LocalSchema = new mongoose.Schema({
   local: String,
   nombre: String,
   password: String,
-  fechaCreacion: String,
-  fechaVencimiento: String,
+  activo: { type: Boolean, default: true },
+  fechaCreacion: { type: String, default: () => new Date().toISOString() },
+  fechaVencimiento: { type: String, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() },
   menu: Array
 }, { strict: false, timestamps: true });
 
@@ -48,7 +49,7 @@ const PedidoSchema = new mongoose.Schema({
 
 const Pedido = mongoose.models.Pedido || mongoose.model('Pedido', PedidoSchema, 'pedidos');
 
-// Esquema de Historial de Entregas (NUEVO)
+// Esquema de Historial de Entregas
 const HistorialSchema = new mongoose.Schema({
   id: String,
   local: String,
@@ -64,25 +65,92 @@ const HistorialSchema = new mongoose.Schema({
 
 const Historial = mongoose.models.Historial || mongoose.model('Historial', HistorialSchema, 'historials');
 
-// --- 4. RUTAS DE LA API ---
+// --- 4. RUTAS DE LA API DE LOCALES Y LICENCIAS ---
 
-// 4.1 Obtener lista de todos los locales (Para SuperAdmin)
+// 4.1 Obtener lista completa de locales con sus estados de licencia (SuperAdmin)
 app.get('/api/locales', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) return res.status(200).json([]);
 
     const docs = await Local.find({}).lean();
-    const locales = docs.map(d => d.id || d.local || d.slug || d.nombre).filter(Boolean);
-    const unicos = [...new Set(locales)];
+    
+    // Si no existen documentos todavía, retornar arreglo vacío
+    if (!docs || docs.length === 0) return res.status(200).json([]);
 
-    return res.status(200).json(unicos);
+    const localesNormalizados = docs.map(d => {
+      const idFinal = d.local || d.id || d.slug || d.nombre;
+      return {
+        localId: idFinal ? idFinal.toLowerCase().trim() : 'desconocido',
+        nombre: d.nombre || idFinal,
+        activo: d.activo !== false, // Por defecto true si no está definido
+        fechaVencimiento: d.fechaVencimiento || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      };
+    }).filter(d => d.localId !== 'desconocido');
+
+    // Filtrar duplicados dejando la última versión registrada
+    const unicosMap = new Map();
+    localesNormalizados.forEach(item => unicosMap.set(item.localId, item));
+
+    return res.status(200).json(Array.from(unicosMap.values()));
   } catch (err) {
     console.error("❌ Error en GET /api/locales:", err.message);
-    return res.status(200).json([]);
+    return res.status(500).json([]);
   }
 });
 
-// 4.2 Obtener el menú aplanado de un local específico
+// 4.2 Obtener la licencia y estado de un local específico
+app.get('/api/locales/:id', async (req, res) => {
+  try {
+    const localQuery = req.params.id.toLowerCase().trim();
+    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] }).lean();
+
+    if (!doc) {
+      return res.status(404).json({ error: 'Local no encontrado' });
+    }
+
+    return res.status(200).json({
+      localId: doc.local || doc.id,
+      nombre: doc.nombre || doc.local || doc.id,
+      activo: doc.activo !== false,
+      fechaVencimiento: doc.fechaVencimiento || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    });
+  } catch (err) {
+    console.error("❌ Error en GET /api/locales/:id:", err.message);
+    return res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+// 4.3 Actualizar estado de licencia o renovar (SuperAdmin)
+app.patch('/api/locales/:id/licencia', async (req, res) => {
+  try {
+    const localQuery = req.params.id.toLowerCase().trim();
+    const { activo, fechaVencimiento } = req.body;
+
+    const updateFields = {};
+    if (typeof activo === 'boolean') updateFields.activo = activo;
+    if (fechaVencimiento) updateFields.fechaVencimiento = fechaVencimiento;
+
+    const doc = await Local.findOneAndUpdate(
+      { $or: [{ id: localQuery }, { local: localQuery }] },
+      { $set: updateFields },
+      { new: true, upsert: true }
+    );
+
+    return res.status(200).json({
+      mensaje: 'Licencia actualizada correctamente',
+      localId: doc.local || doc.id,
+      activo: doc.activo,
+      fechaVencimiento: doc.fechaVencimiento
+    });
+  } catch (err) {
+    console.error("❌ Error en PATCH /api/locales/:id/licencia:", err.message);
+    return res.status(500).json({ error: 'Error al actualizar la licencia' });
+  }
+});
+
+// --- 5. RUTAS DEL MENÚ ---
+
+// Obtener el menú aplanado de un local
 app.get('/api/menu', async (req, res) => {
   try {
     const { local } = req.query;
@@ -115,10 +183,10 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
-// 4.3 Agregar un producto al arreglo `menu` en MongoDB
+// Agregar producto al menú
 app.post('/api/menu', async (req, res) => {
   try {
-    const { local, categoria, nombre, precio } = req.body;
+    const { local, categoria, nombre, precio, fechaVencimiento } = req.body;
     if (!local || !categoria || !nombre) {
       return res.status(400).json({ error: 'Faltan datos obligatorios' });
     }
@@ -127,10 +195,14 @@ app.post('/api/menu', async (req, res) => {
     let doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
 
     if (!doc) {
+      const fVenc = fechaVencimiento || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       doc = new Local({
         id: localQuery,
         local: localQuery,
-        fechaCreacion: new Date().toISOString().split('T')[0],
+        nombre: local,
+        activo: true,
+        fechaCreacion: new Date().toISOString(),
+        fechaVencimiento: fVenc,
         menu: []
       });
     }
@@ -160,7 +232,7 @@ app.post('/api/menu', async (req, res) => {
   }
 });
 
-// 4.4 Editar un producto dentro de la estructura anidada
+// Editar un producto
 app.put('/api/menu/edit', async (req, res) => {
   try {
     const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaCategoria } = req.body;
@@ -203,7 +275,7 @@ app.put('/api/menu/edit', async (req, res) => {
   }
 });
 
-// 4.5 Eliminar un producto del arreglo en MongoDB
+// Eliminar producto
 app.delete('/api/menu/del', async (req, res) => {
   try {
     const { local, categoria, index } = req.query;
@@ -231,11 +303,8 @@ app.delete('/api/menu/del', async (req, res) => {
   }
 });
 
-/* ==========================================
-   5. RUTAS DE PEDIDOS Y COMANDAS (/api/pedidos)
-========================================== */
+// --- 6. RUTAS DE PEDIDOS Y COMANDAS ---
 
-// 5.1 Obtener todos los pedidos activos de un local (Formateado para Cocina)
 app.get('/api/pedidos', async (req, res) => {
   try {
     const { local } = req.query;
@@ -246,21 +315,14 @@ app.get('/api/pedidos', async (req, res) => {
 
     const pedidos = await Pedido.find(query).sort({ fecha: -1 }).lean();
 
-    // Formatear los ítems para asegurar que incluyan la Categoría en el Nombre
     const pedidosFormateados = pedidos.map(pedido => {
       if (Array.isArray(pedido.items)) {
         pedido.items = pedido.items.map(item => {
           let nombreFinal = item.nombre || '';
-          
-          // Si tiene categoría y el nombre no empieza ya con esa categoría, la anteponemos
           if (item.categoria && !nombreFinal.toLowerCase().startsWith(item.categoria.toLowerCase())) {
             nombreFinal = `${item.categoria} ${nombreFinal}`;
           }
-
-          return {
-            ...item,
-            nombre: nombreFinal
-          };
+          return { ...item, nombre: nombreFinal };
         });
       }
       return pedido;
@@ -273,7 +335,6 @@ app.get('/api/pedidos', async (req, res) => {
   }
 });
 
-// 5.2 Registrar un nuevo pedido enviado por el cliente
 app.post('/api/pedidos', async (req, res) => {
   try {
     const { local, mesa, items, total, estado, fecha } = req.body;
@@ -282,16 +343,12 @@ app.post('/api/pedidos', async (req, res) => {
       return res.status(400).json({ error: 'El pedido no contiene productos válidos' });
     }
 
-    // Asegurar formato Categoria + Nombre al guardar
     const itemsFormateados = items.map(item => {
       let nombreFinal = item.nombre || '';
       if (item.categoria && !nombreFinal.toLowerCase().startsWith(item.categoria.toLowerCase())) {
         nombreFinal = `${item.categoria} ${nombreFinal}`;
       }
-      return {
-        ...item,
-        nombre: nombreFinal
-      };
+      return { ...item, nombre: nombreFinal };
     });
 
     const nuevoPedido = new Pedido({
@@ -311,7 +368,6 @@ app.post('/api/pedidos', async (req, res) => {
   }
 });
 
-// 5.3 Eliminar / Despachar un pedido completado en cocina
 app.delete('/api/pedidos/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -323,16 +379,11 @@ app.delete('/api/pedidos/:id', async (req, res) => {
   }
 });
 
-/* ==========================================
-   6. RUTAS DE HISTORIAL DE ENTREGAS (/api/historials)
-========================================== */
+// --- 7. RUTAS DE HISTORIAL DE ENTREGAS ---
 
-// 6.1 Guardar pedido entregado desde la App del Garzón
 app.post('/api/historials', async (req, res) => {
   try {
     const data = req.body;
-    console.log("📥 Recibiendo registro de entrega desde móvil del garzón:", data);
-
     const ahora = new Date();
     const fechaActual = ahora.toISOString().split('T')[0];
     const horaActual = ahora.toLocaleTimeString('es-CL', { hour12: false });
@@ -351,7 +402,6 @@ app.post('/api/historials', async (req, res) => {
     });
 
     const guardado = await nuevoRegistro.save();
-    console.log("💾 Historial registrado en MongoDB Atlas con _id:", guardado._id);
 
     return res.status(201).json({ 
       mensaje: 'Entrega guardada exitosamente en el historial', 
@@ -363,7 +413,6 @@ app.post('/api/historials', async (req, res) => {
   }
 });
 
-// 6.2 Leer registros del historial de un local
 app.get('/api/historials', async (req, res) => {
   try {
     const { local } = req.query;
@@ -381,9 +430,8 @@ app.get('/api/historials', async (req, res) => {
   }
 });
 
-// Ruta raíz
 app.get('/', (req, res) => {
-  res.send('🚀 API AppMenu funcionando con soporte completo de Menú, Pedidos e Historial.');
+  res.send('🚀 API AppMenu funcionando con gestión de licencias, menú, pedidos e historial.');
 });
 
 const PORT = process.env.PORT || 10000;
