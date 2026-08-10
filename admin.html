@@ -92,7 +92,7 @@
       transition: all 0.2s ease;
       flex: 1;
       text-align: center;
-      min-width: 140px;
+      min-width: 130px;
       touch-action: manipulation;
     }
 
@@ -448,7 +448,8 @@
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 QR Mesas</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
-      <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control de Garzón</button>
+      <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
+      <button class="tab-btn" id="btn-tab-historial" onclick="cambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
     </div>
 
     <!-- PESTAÑA 1: GESTIÓN DE MENÚ -->
@@ -533,7 +534,7 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 5: CONTROL DE GARZÓN (DIRECTO A PRIMERA VISTA) -->
+    <!-- PESTAÑA 5: CONTROL DE GARZÓN (LIMPIA - SOLO OPERATIVA) -->
     <div id="tab-garzon" class="tab-content">
       
       <!-- GRID DE PRIMERA VISTA: QR GARZÓN Y CAMPO RUT AL LADO -->
@@ -582,10 +583,15 @@
           <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando comandas para garzón...</p>
         </div>
       </div>
+    </div>
 
-      <!-- HISTORIAL Y MÉTRICAS MONGO (`historials`) -->
+    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS (PESTAÑA EXCLUSIVA ADMIN) -->
+    <div id="tab-historial" class="tab-content">
       <div class="section-card">
-        <h3>📊 Historial de Entregas (`historials`) & Métricas por RUT</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+          <h3>📊 Historial General de Entregas & Métricas por RUT</h3>
+          <button class="btn btn-secondary btn-sm" onclick="cargarHistorialGarantizado()">🔄 Cargar Historial</button>
+        </div>
 
         <div class="stats-grid">
           <div class="stat-card">
@@ -611,7 +617,7 @@
             </thead>
             <tbody id="tabla-historial-garzon">
               <tr>
-                <td colspan="5" style="text-align: center; color: var(--text-muted);">Sin historial cargado...</td>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando historial de MongoDB...</td>
               </tr>
             </tbody>
           </table>
@@ -709,6 +715,9 @@
         if (document.getElementById('tab-garzon').classList.contains('active')) {
           cargarPedidosGarzon();
         }
+        if (document.getElementById('tab-historial').classList.contains('active')) {
+          cargarHistorialGarantizado();
+        }
       }, 8000);
     });
 
@@ -724,6 +733,8 @@
       } else if (tabId === 'tab-garzon') {
         generarQRGarzon();
         cargarPedidosGarzon();
+      } else if (tabId === 'tab-historial') {
+        cargarHistorialGarantizado();
       }
     }
 
@@ -731,6 +742,7 @@
       cargarDatosMenu();
       cargarPedidosCocina();
       cargarPedidosGarzon();
+      cargarHistorialGarantizado();
       generarQRGarzon();
     }
 
@@ -1149,7 +1161,7 @@
     }
 
     /* ==========================================
-       6. CONTROL DE GARZÓN (COMPLETAMENTE CORREGIDO PARA MÓVIL)
+       6. CONTROL DE GARZÓN (VISTA PENDIENTES)
     ========================================== */
     function generarQRGarzon() {
       const container = document.getElementById('qr-garzon-render');
@@ -1207,11 +1219,9 @@
 
     async function cargarPedidosGarzon() {
       const contenedor = document.getElementById('contenedor-pedidos-garzon');
-      const tablaHistorial = document.getElementById('tabla-historial-garzon');
       if (!contenedor) return;
 
       try {
-        // 1. Cargar Pendientes desde `pedidos`
         const resPedidos = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
         let pedidos = [];
         if (resPedidos.ok) {
@@ -1257,8 +1267,85 @@
             `;
           }).join('');
         }
+      } catch (e) {
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al consultar comandas de garzón.</p>';
+      }
+    }
 
-        // 2. Cargar Historial desde `historials`
+    /* ACCIÓN COMPLETAMENTE CORREGIDA PARA MARCAR Y GUARDAR EN HISTORIAL */
+    async function marcarEntregadoGarzon(idPedido) {
+      if (!rutGarzonSesion) {
+        const inputVal = document.getElementById('input-rut-directo').value.trim();
+        if (inputVal && inputVal.length >= 7) {
+          rutGarzonSesion = inputVal.toUpperCase();
+          localStorage.setItem('rutGarzon', rutGarzonSesion);
+          document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+        } else {
+          alert("⚠️ Ingresa y guarda el RUT del Garzón en la casilla de arriba.");
+          document.getElementById('input-rut-directo').focus();
+          return;
+        }
+      }
+
+      // 1. Obtener datos exactos del pedido desde la caché local
+      const pedidoObj = cachePedidos.find(p => (p._id || p.id || '') == idPedido) || {
+        local: localId,
+        mesa: '1',
+        total: 0,
+        items: []
+      };
+
+      const docHistorial = {
+        local: String(localId),
+        mesa: String(pedidoObj.mesa || '1'),
+        rutGarzon: String(rutGarzonSesion),
+        items: pedidoObj.items || [],
+        total: Number(pedidoObj.total || 0),
+        fecha: new Date().toISOString()
+      };
+
+      // 2. Registrar siempre en la colección de Mongo `historials`
+      try {
+        await fetch(`${BACKEND_URL}/api/historials`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(docHistorial)
+        });
+      } catch (e) {}
+
+      // 3. Eliminar o actualizar estado en `pedidos`
+      try {
+        await fetch(`${BACKEND_URL}/api/pedidos/entregar/${idPedido}?local=${encodeURIComponent(localId)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rutGarzon: rutGarzonSesion })
+        });
+      } catch (err) {}
+
+      try {
+        await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
+          method: 'DELETE'
+        });
+      } catch (err) {}
+
+      // 4. Quitar la tarjeta de la interfaz inmediatamente
+      const cardEl = document.getElementById(`card-garzon-${idPedido}`);
+      if (cardEl) cardEl.remove();
+
+      // Recargar datos
+      cargarPedidosGarzon();
+      cargarPedidosCocina();
+      cargarHistorialGarantizado();
+    }
+
+    /* ==========================================
+       7. HISTORIAL & MÉTRICAS (PESTAÑA ADMIN)
+    ========================================== */
+    async function cargarHistorialGarantizado() {
+      const tablaHistorial = document.getElementById('tabla-historial-garzon');
+      if (!tablaHistorial) return;
+
+      try {
         const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
         let entregados = [];
         if (resHistorial.ok) {
@@ -1274,7 +1361,7 @@
         document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
 
         if (entregados.length === 0) {
-          tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aún no hay entregas registradas en `historials`.</td></tr>';
+          tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aún no hay entregas registradas en el historial.</td></tr>';
         } else {
           tablaHistorial.innerHTML = entregados.map(p => `
             <tr>
@@ -1286,84 +1373,13 @@
             </tr>
           `).join('');
         }
-
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al consultar comandas de garzón.</p>';
+        tablaHistorial.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff3344;">Error al cargar el historial desde MongoDB.</td></tr>';
       }
-    }
-
-    /* ACCIÓN COMPLETAMENTE CORREGIDA PARA ENTREGAR EN MESA (COMPATIBLE CON CUALQUIER DISPOSITIVO) */
-    async function marcarEntregadoGarzon(idPedido) {
-      if (!rutGarzonSesion) {
-        const inputVal = document.getElementById('input-rut-directo').value.trim();
-        if (inputVal && inputVal.length >= 7) {
-          rutGarzonSesion = inputVal.toUpperCase();
-          localStorage.setItem('rutGarzon', rutGarzonSesion);
-          document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
-        } else {
-          alert("⚠️ Ingresa y guarda el RUT del Garzón en la casilla de arriba.");
-          document.getElementById('input-rut-directo').focus();
-          return;
-        }
-      }
-
-      // Buscar comanda en caché local
-      const pedidoObj = cachePedidos.find(p => (p._id || p.id || '') == idPedido) || {
-        local: localId,
-        mesa: '1',
-        total: 0,
-        items: []
-      };
-
-      // 1. Intentar endpoint principal PUT /api/pedidos/entregar/:id
-      let exito = false;
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos/entregar/${idPedido}?local=${encodeURIComponent(localId)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rutGarzon: rutGarzonSesion })
-        });
-
-        if (res.ok) exito = true;
-      } catch (err) {}
-
-      // 2. Si falla el PUT, ejecutar Fallback (Guardar en historials y borrar de pedidos)
-      if (!exito) {
-        try {
-          const docHistorial = {
-            local: String(localId),
-            mesa: String(pedidoObj.mesa || '1'),
-            rutGarzon: String(rutGarzonSesion),
-            items: pedidoObj.items || [],
-            total: Number(pedidoObj.total || 0),
-            fecha: new Date().toISOString()
-          };
-
-          // Guardar en historials
-          await fetch(`${BACKEND_URL}/api/historials`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(docHistorial)
-          });
-
-          // Eliminar de pedidos activos
-          await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
-            method: 'DELETE'
-          });
-        } catch (err) {}
-      }
-
-      // 3. Ocultar la tarjeta en pantalla de inmediato
-      const cardEl = document.getElementById(`card-garzon-${idPedido}`);
-      if (cardEl) cardEl.remove();
-
-      // Recargar datos actualizados
-      cargarPedidosGarzon();
-      cargarPedidosCocina();
     }
 
     /* ==========================================
-       7. GENERACIÓN DE QR Y PDF MESAS
+       8. GENERACIÓN DE QR Y PDF MESAS
     ========================================== */
     function generarQRUnico() {
       const numMesa = document.getElementById('qr-num-mesa').value || '1';
