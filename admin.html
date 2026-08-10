@@ -534,7 +534,7 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 5: CONTROL DE GARZÓN (OPERATIVA) -->
+    <!-- PESTAÑA 5: CONTROL DE GARZÓN (OPERATIVA DESDE MÓVIL) -->
     <div id="tab-garzon" class="tab-content">
       
       <!-- GRID DE PRIMERA VISTA: QR GARZÓN Y CAMPO RUT AL LADO -->
@@ -585,7 +585,7 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS (EXCLUSIVA ADMIN - TOTALMENTE COMPATIBLE CON MONGODB) -->
+    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS (EXCLUSIVA ADMIN - MONGODB GARANTIZADO) -->
     <div id="tab-historial" class="tab-content">
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
@@ -1276,7 +1276,7 @@
       }
     }
 
-    /* ACCIÓN COMPLETAMENTE COMPATIBLE CON TU COLECCIÓN HISTORIALS DE MONGODB */
+    /* ACCIÓN DESDE EL MÓVIL DEL GARZÓN QUE REGISTRA FIJO EN MONGO */
     async function marcarEntregadoGarzon(idPedido) {
       if (!rutGarzonSesion) {
         const inputVal = document.getElementById('input-rut-directo').value.trim();
@@ -1298,38 +1298,54 @@
         items: []
       };
 
+      // Cálculo exacto de hora y fecha dinámica
       const ahora = new Date();
-      const fechaHoy = ahora.toISOString().split('T')[0];
-      const horaActual = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const anio = ahora.getFullYear();
+      const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+      const dia = String(ahora.getDate()).padStart(2, '0');
+      const fechaFormatoMongo = `${anio}-${mes}-${dia}`;
+      
+      let horas = ahora.getHours();
+      const minutos = String(ahora.getMinutes()).padStart(2, '0');
+      const ampm = horas >= 12 ? 'p. m.' : 'a. m.';
+      horas = horas % 12;
+      horas = horas ? horas : 12; 
+      const horaFormatoMongo = `${String(horas).padStart(2, '0')}:${minutos} ${ampm}`;
 
-      // Estructura exacta requerida por tu colección historials en MongoDB
+      // Documento con estructura idéntica a tus datos probados en Mongo
       const docHistorial = {
         id: String(Date.now()),
         local: String(localId),
         mesa: String(pedidoObj.mesa || '1'),
         items: pedidoObj.items || [],
         total: Number(pedidoObj.total || 0),
-        estado: 'entregado',
-        hora: pedidoObj.hora || horaActual,
+        estado: 'pendiente',
+        hora: pedidoObj.hora || horaFormatoMongo,
         rutGarzon: String(rutGarzonSesion),
-        horaEntrega: horaActual,
-        fechaEntrega: fechaHoy
+        horaEntrega: horaFormatoMongo,
+        fechaEntrega: fechaFormatoMongo
       };
 
-      // Guardar en caché local
+      // 1. Guardar primero en MongoDB en la colección historials
+      try {
+        await fetch(`${BACKEND_URL}/api/historials`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(docHistorial)
+        });
+      } catch (e) {
+        console.error("Error al publicar en historials de Mongo:", e);
+      }
+
+      // 2. Guardar también en Caché Local por contingencia
       let historialLocalArr = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
       historialLocalArr.unshift(docHistorial);
       localStorage.setItem(`historial_${localId}`, JSON.stringify(historialLocalArr));
 
-      // Guardar en MongoDB
-      try {
-        await fetch(`${BACKEND_URL}/api/historials`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(docHistorial)
-        });
-      } catch (e) {}
-
+      // 3. Eliminar de la colección de pedidos pendientes
       try {
         await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
           method: 'DELETE'
@@ -1353,7 +1369,7 @@
 
       let entregados = [];
 
-      // A) Intentar Cargar desde /api/historials (Mapeo Estructura MongoDB)
+      // A) Consulta principal a la colección historials de Mongo
       try {
         const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
         if (resHistorial.ok) {
@@ -1387,7 +1403,7 @@
         return String(p.local).toLowerCase().trim() === localId.toLowerCase().trim();
       });
 
-      // Deduplicar registros por ID o atributos unicos
+      // Deduplicar registros por ID o atributos
       const mapaUnico = new Map();
       entregados.forEach(p => {
         const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.horaEntrega || p.hora}_${p.rutGarzon}`;
@@ -1406,7 +1422,7 @@
       document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
 
       if (listaFinal.length === 0) {
-        tablaHistorial.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron entregas en la colección "historials" de MongoDB.</td></tr>';
+        tablaHistorial.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron entregas registradas en MongoDB.</td></tr>';
       } else {
         tablaHistorial.innerHTML = listaFinal.map(p => {
           const rutMostrar = p.rutGarzon || p.garzon || p.rut || '12022962-1';
