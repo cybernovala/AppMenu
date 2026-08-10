@@ -16,6 +16,7 @@
       --neon-orange: #ff5500;
       --neon-pink: #ff007f;
       --neon-yellow: #ffee00;
+      --neon-green: #00ff66;
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
       --border-neon: rgba(255, 0, 127, 0.3);
@@ -117,6 +118,7 @@
     .btn:hover { opacity: 0.9; }
     .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
     .btn-danger { background: #ff3344; color: #fff; }
+    .btn-success { background: var(--neon-green); color: #000; }
     .btn-sm { padding: 6px 12px; font-size: 12px; }
 
     /* SECCIONES Y FORMULARIOS */
@@ -297,6 +299,66 @@
       cursor: pointer;
     }
 
+    /* ESTILOS COCINA / PEDIDOS */
+    .grid-pedidos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .card-pedido {
+      background: var(--card-bg);
+      border: 1px solid var(--neon-orange);
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 4px 12px rgba(255, 85, 0, 0.15);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-pedido-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+
+    .card-pedido-mesa {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--neon-yellow);
+    }
+
+    .card-pedido-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .pedido-items-list {
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+
+    .pedido-item-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .card-pedido-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
     /* MODALES */
     .modal {
       display: none;
@@ -367,7 +429,7 @@
       <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Gestión de Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Menú Cliente</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Generador de QR</button>
-      <button class="tab-btn" id="btn-tab-proxima" onclick="cambiarPestana('tab-proxima', this)">📋 Cocina / Pedidos</button>
+      <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
     </div>
 
     <!-- PESTAÑA 1: GESTIÓN DE MENÚ (ADMINISTRADOR) -->
@@ -440,11 +502,20 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 4: PRÓXIMA SECCIÓN -->
-    <div id="tab-proxima" class="tab-content">
-      <div class="section-card" style="text-align: center; padding: 40px;">
-        <h3 style="color: var(--neon-yellow);">🚀 Panel de Cocina y Comandas</h3>
-        <p style="color: var(--text-muted); margin-top: 10px;">En desarrollo: visualización de pedidos en tiempo real por mesa.</p>
+    <!-- PESTAÑA 4: COCINA / PEDIDOS -->
+    <div id="tab-cocina" class="tab-content">
+      <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3>🚀 Comandas y Pedidos en Tiempo Real</h3>
+          <button class="btn btn-secondary btn-sm" onclick="cargarPedidosCocina()">🔄 Actualizar Pedidos</button>
+        </div>
+        <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">
+          Los pedidos de las mesas aparecen aquí en tiempo real.
+        </p>
+
+        <div id="contenedor-pedidos-cocina" class="grid-pedidos">
+          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando pedidos de la cocina...</p>
+        </div>
       </div>
     </div>
 
@@ -500,7 +571,7 @@
     const params = new URLSearchParams(window.location.search);
     const localId = (params.get('local') || 'mongo').toLowerCase().trim();
     const numeroMesa = params.get('mesa') || '1';
-    const vistaModo = params.get('view'); // Detecta si viene desde el QR escaneado (?view=cliente)
+    const vistaModo = params.get('view');
 
     // Estado global
     let productosPlanos = [];
@@ -524,6 +595,13 @@
 
       cargarDatosMenu();
       generarQRUnico();
+
+      // Intervalo de actualización automática para pedidos en cocina (cada 15s)
+      setInterval(() => {
+        if (document.getElementById('tab-cocina').classList.contains('active')) {
+          cargarPedidosCocina();
+        }
+      }, 15000);
     });
 
     function cambiarPestana(tabId, element) {
@@ -532,10 +610,15 @@
       
       document.getElementById(tabId).classList.add('active');
       if (element) element.classList.add('active');
+
+      if (tabId === 'tab-cocina') {
+        cargarPedidosCocina();
+      }
     }
 
     function recargarTodo() {
       cargarDatosMenu();
+      cargarPedidosCocina();
     }
 
     function construirUrlMesa(mesa) {
@@ -837,6 +920,73 @@
         cerrarModalCarrito();
       } catch (e) {
         alert("Error al enviar el pedido.");
+      }
+    }
+
+    /* ==========================================
+       GESTIÓN DE COCINA Y PEDIDOS
+    ========================================== */
+    async function cargarPedidosCocina() {
+      const contenedor = document.getElementById('contenedor-pedidos-cocina');
+      try {
+        const respuesta = await fetch(`${API_URL}/pedidos?local=${encodeURIComponent(localId)}`);
+        const pedidos = await respuesta.json();
+
+        if (!Array.isArray(pedidos) || pedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en cocina.</p>';
+          return;
+        }
+
+        contenedor.innerHTML = pedidos.map((p, idx) => {
+          const idPedido = p._id || p.id || idx;
+          const fecha = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Reciente';
+
+          return `
+            <div class="card-pedido">
+              <div>
+                <div class="card-pedido-header">
+                  <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
+                  <span class="card-pedido-time">⏰ ${fecha}</span>
+                </div>
+                <div class="pedido-items-list">
+                  ${(p.items || []).map(i => `
+                    <div class="pedido-item-row">
+                      <span><b>${i.cantidad}x</b> ${i.nombre}</span>
+                      <span style="color:var(--text-muted);">$${(i.precio * i.cantidad).toLocaleString('es-CL')}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="card-pedido-footer">
+                <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
+                <button class="btn btn-success btn-sm" onclick="despacharPedido('${idPedido}')">✓ Atendido / Listo</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (e) {
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al cargar pedidos de cocina.</p>';
+      }
+    }
+
+    async function despacharPedido(idPedido) {
+      if (!confirm("¿Marcar este pedido como entregado?")) return;
+
+      try {
+        const res = await fetch(`${API_URL}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
+          method: 'DELETE'
+        });
+
+        if (res.ok) {
+          cargarPedidosCocina();
+        } else {
+          // Si la API usa query param o endpoint distinto
+          await fetch(`${API_URL}/pedidos/del?local=${encodeURIComponent(localId)}&id=${idPedido}`, { method: 'DELETE' });
+          cargarPedidosCocina();
+        }
+      } catch (e) {
+        cargarPedidosCocina();
       }
     }
 
