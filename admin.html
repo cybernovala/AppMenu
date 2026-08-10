@@ -565,7 +565,7 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    // URL ABSOLUTA OBLIGATORIA A RENDER
+    // URL ABSOLUTA A RENDER
     const BACKEND_URL = 'https://appmenu-tavr.onrender.com';
 
     const params = new URLSearchParams(window.location.search);
@@ -804,23 +804,30 @@
         return;
       }
 
+      // CORREGIDO: Pasa la categoría como primer argumento a agregarAlCarrito
       cont.innerHTML = filtrados.map(p => `
         <div class="product-card-client">
           <div>
             <div style="font-weight: bold; color: #fff; font-size: 15px;">${p.nombre}</div>
             <div style="color: var(--neon-yellow); font-weight: bold; font-size: 14px; margin-top: 3px;">$${(p.precio || 0).toLocaleString('es-CL')}</div>
           </div>
-          <button class="btn-add" onclick="agregarAlCarrito('${p.nombre.replace(/'/g, "\\'")}', ${p.precio})">+ Agregar</button>
+          <button class="btn-add" onclick="agregarAlCarrito('${(p.categoria || '').replace(/'/g, "\\'")}', '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})">+ Agregar</button>
         </div>
       `).join('');
     }
 
-    function agregarAlCarrito(nombre, precio) {
-      const idx = carrito.findIndex(i => i.nombre === nombre);
+    // CORREGIDO: Incluye la categoría en el nombre completo del ítem
+    function agregarAlCarrito(categoria, nombre, precio) {
+      let nombreCompleto = nombre;
+      if (categoria && !nombre.toLowerCase().startsWith(categoria.toLowerCase())) {
+        nombreCompleto = `${categoria} - ${nombre}`;
+      }
+
+      const idx = carrito.findIndex(i => i.nombre === nombreCompleto);
       if (idx > -1) {
         carrito[idx].cantidad++;
       } else {
-        carrito.push({ nombre, precio, cantidad: 1 });
+        carrito.push({ nombre: nombreCompleto, precio, cantidad: 1 });
       }
       actualizarBarraCarrito();
     }
