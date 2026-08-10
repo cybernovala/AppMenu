@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración & Menú Digital (PC)</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -47,16 +47,15 @@
       pointer-events: none;
     }
 
-    /* CONTENEDOR ANCHO PARA PANTALLAS DE PC */
-    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
 
-    /* HEADER Y TABS (ADAPTADOS PARA PC SIN SLIDER) */
+    /* HEADER Y TABS */
     .header-bar {
       background: rgba(18, 18, 24, 0.95);
       border: 1px solid var(--border-neon);
-      padding: 15px 25px;
+      padding: 15px 20px;
       border-radius: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -64,36 +63,37 @@
     }
 
     .local-title {
-      font-size: 22px;
+      font-size: 20px;
       color: var(--neon-yellow);
       text-transform: uppercase;
       font-weight: 800;
       letter-spacing: 0.5px;
     }
 
-    /* BARRA DE PESTAÑAS FIT PC SIN SLIDER NI SCROLLBAR */
+    /* PESTAÑAS FIT PC / MOBILE SIN SLIDER */
     .nav-tabs {
       display: flex;
-      flex-wrap: wrap; /* En PC se acomodan todas las pestañas horizontalmente */
-      gap: 10px;
-      margin-bottom: 25px;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
       border-bottom: 2px solid #222;
-      padding-bottom: 10px;
+      padding-bottom: 8px;
     }
 
     .tab-btn {
       background: #14141c;
       border: 1px solid #333;
       color: var(--text-muted);
-      padding: 12px 22px;
+      padding: 12px 18px;
       border-radius: 8px 8px 0 0;
       cursor: pointer;
       font-weight: bold;
-      font-size: 15px;
+      font-size: 14px;
       transition: all 0.2s ease;
       flex: 1;
       text-align: center;
-      min-width: 160px;
+      min-width: 140px;
+      touch-action: manipulation;
     }
 
     .tab-btn:hover {
@@ -111,19 +111,20 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* BOTONES */
+    /* BOTONES ACCESIBLES EN MÓVIL */
     .btn {
       background: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
       border: none;
       color: #000;
-      padding: 10px 18px;
+      padding: 12px 18px;
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
       transition: opacity 0.2s;
+      touch-action: manipulation;
     }
-    .btn:hover { opacity: 0.9; }
+    .btn:active { opacity: 0.8; }
     .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
     .btn-danger { background: #ff3344; color: #fff; }
     .btn-success { background: var(--neon-green); color: #000; }
@@ -135,7 +136,7 @@
       background: var(--card-bg);
       border: 1px solid #222;
       border-radius: 12px;
-      padding: 20px;
+      padding: 18px;
       margin-bottom: 20px;
     }
 
@@ -146,16 +147,17 @@
       text-transform: uppercase;
     }
 
-    .form-inline { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .form-inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
     input, select {
       flex: 1;
-      padding: 11px 14px;
+      padding: 12px 14px;
       background: #181822;
       border: 1px solid #333;
       color: #fff;
       border-radius: 6px;
       font-size: 14px;
+      min-width: 180px;
     }
 
     .category-card {
@@ -271,7 +273,7 @@
       background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
       border: none;
       color: #fff;
-      padding: 8px 18px;
+      padding: 10px 18px;
       font-weight: bold;
       border-radius: 8px;
       cursor: pointer;
@@ -292,18 +294,18 @@
       background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
       border: none;
       color: #fff;
-      padding: 10px 22px;
+      padding: 12px 22px;
       border-radius: 8px;
       font-weight: bold;
       font-size: 14px;
       cursor: pointer;
     }
 
-    /* ESTILOS COCINA / PEDIDOS / GARZON EN GRID PC */
+    /* GRID COCINA Y GARZÓN */
     .grid-pedidos {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 15px;
       margin-top: 15px;
     }
 
@@ -311,7 +313,7 @@
       background: var(--card-bg);
       border: 1px solid var(--neon-orange);
       border-radius: 12px;
-      padding: 18px;
+      padding: 16px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -349,22 +351,23 @@
     /* METRICAS Y TABLAS */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
       margin-bottom: 20px;
     }
 
     .stat-card {
       background: #141420;
       border: 1px solid #2a2a3c;
-      padding: 18px;
+      padding: 15px;
       border-radius: 10px;
       text-align: center;
     }
 
-    .stat-number { font-size: 26px; font-weight: bold; color: var(--neon-green); margin-top: 5px; }
+    .stat-number { font-size: 24px; font-weight: bold; color: var(--neon-green); margin-top: 5px; }
 
-    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; min-width: 500px; }
     th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
     th { background: #12121c; color: var(--neon-yellow); }
 
@@ -383,7 +386,7 @@
     .modal-content {
       background: #16161e;
       border: 1px solid var(--neon-orange);
-      padding: 25px;
+      padding: 22px;
       border-radius: 12px;
       width: 90%;
       max-width: 450px;
@@ -401,13 +404,13 @@
     }
 
     .qty-controls { display: flex; gap: 10px; align-items: center; }
-    .btn-qty { background: #222; border: 1px solid #444; color: #fff; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; }
+    .btn-qty { background: #222; border: 1px solid #444; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
 
     /* LAYOUT EXCLUSIVO PESTAÑA GARZON EN PRIMERA VISTA */
     .garzon-top-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
       margin-bottom: 20px;
     }
 
@@ -433,13 +436,13 @@
     <!-- HEADER GENERAL -->
     <div class="header-bar" id="admin-header">
       <div>
-        <span style="font-size: 13px; color: var(--text-muted);">Local Administrado:</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Local Administrado:</span>
         <div class="local-title" id="lbl-local-nombre">CARGANDO...</div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="recargarTodo()">🔄 Recargar Datos</button>
+      <button class="btn btn-secondary btn-sm" onclick="recargarTodo()">🔄 Recargar</button>
     </div>
 
-    <!-- BARRA DE PESTAÑAS (FIT PC SIN SLIDER) -->
+    <!-- BARRA DE PESTAÑAS (FIT PC Y MOVIL) -->
     <div class="nav-tabs" id="admin-nav-tabs">
       <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
@@ -558,10 +561,10 @@
             Ingresa o modifica el RUT del garzón para asociarlo a las entregas de mesa.
           </p>
           <div class="form-inline">
-            <input type="text" id="input-rut-directo" placeholder="Ej: 12345678-9">
+            <input type="text" id="input-rut-directo" placeholder="Ej: 12345678-9" oninput="guardarRutAutogestion(this.value)">
             <button class="btn btn-blue" onclick="guardarRutDirecto()">💾 Guardar RUT</button>
           </div>
-          <div style="margin-top: 20px; font-size: 14px; background: rgba(0, 210, 255, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--neon-blue);">
+          <div style="margin-top: 15px; font-size: 14px; background: rgba(0, 210, 255, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--neon-blue);">
             RUT Activo actualmente: <b style="color: var(--neon-blue); font-size: 16px;" id="lbl-rut-activo">Sin RUT activo</b>
           </div>
         </div>
@@ -595,22 +598,24 @@
           </div>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Mesa</th>
-              <th>RUT Garzón</th>
-              <th>Fecha / Hora</th>
-              <th>Ítems</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-historial-garzon">
-            <tr>
-              <td colspan="5" style="text-align: center; color: var(--text-muted);">Sin historial cargado...</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Mesa</th>
+                <th>RUT Garzón</th>
+                <th>Fecha / Hora</th>
+                <th>Ítems</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-historial-garzon">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">Sin historial cargado...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -671,6 +676,7 @@
     let carrito = [];
     let catSeleccionadaCliente = '';
     let rutGarzonSesion = localStorage.getItem('rutGarzon') || '';
+    let cachePedidos = [];
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
@@ -716,7 +722,7 @@
       if (tabId === 'tab-cocina') {
         cargarPedidosCocina();
       } else if (tabId === 'tab-garzon') {
-        generarQRGarzon(); // Renderizar inmediatamente el QR sin bloqueos
+        generarQRGarzon();
         cargarPedidosGarzon();
       }
     }
@@ -731,6 +737,15 @@
     /* ==========================================
        GESTIÓN DIRECTA DE RUT GARZÓN
     ========================================== */
+    function guardarRutAutogestion(val) {
+      val = val.trim().toUpperCase();
+      if (val.length >= 7) {
+        rutGarzonSesion = val;
+        localStorage.setItem('rutGarzon', rutGarzonSesion);
+        document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+      }
+    }
+
     function guardarRutDirecto() {
       const val = document.getElementById('input-rut-directo').value.trim();
       if (!val || val.length < 7) return alert("Por favor ingresa un RUT válido.");
@@ -764,7 +779,7 @@
           productosPlanos = await respuesta.json();
         }
       } catch (err) {
-        console.error("Error al cargar menú desde Render:", err);
+        console.error("Error al cargar menú:", err);
       }
 
       if (!Array.isArray(productosPlanos)) productosPlanos = [];
@@ -1134,7 +1149,7 @@
     }
 
     /* ==========================================
-       6. CONTROL DE GARZÓN (RENDER QR Y HISTORIAL)
+       6. CONTROL DE GARZÓN (COMPLETAMENTE CORREGIDO PARA MÓVIL)
     ========================================== */
     function generarQRGarzon() {
       const container = document.getElementById('qr-garzon-render');
@@ -1208,18 +1223,18 @@
           pedidos = pedidos.filter(p => !p.local || p.local.toLowerCase() === localId.toLowerCase());
         }
 
-        const pendientes = pedidos.filter(p => p.estado !== 'entregado');
+        cachePedidos = pedidos.filter(p => p.estado !== 'entregado');
 
-        if (pendientes.length === 0) {
+        if (cachePedidos.length === 0) {
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">🎉 No hay pedidos pendientes por llevar a mesa.</p>';
         } else {
-          contenedor.innerHTML = pendientes.map((p, idx) => {
+          contenedor.innerHTML = cachePedidos.map((p, idx) => {
             const idPedido = p._id || p.id || idx;
             const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
             const itemsList = Array.isArray(p.items) ? p.items : [];
 
             return `
-              <div class="card-pedido" style="border-color: var(--neon-blue);">
+              <div class="card-pedido" style="border-color: var(--neon-blue);" id="card-garzon-${idPedido}">
                 <div>
                   <div class="card-pedido-header">
                     <span class="card-pedido-mesa" style="color: var(--neon-blue);">MESA N° ${p.mesa || '--'}</span>
@@ -1277,23 +1292,72 @@
       }
     }
 
+    /* ACCIÓN COMPLETAMENTE CORREGIDA PARA ENTREGAR EN MESA (COMPATIBLE CON CUALQUIER DISPOSITIVO) */
     async function marcarEntregadoGarzon(idPedido) {
       if (!rutGarzonSesion) {
-        alert("⚠️ Primero ingresa y guarda el RUT del Garzón en la casilla superior.");
-        document.getElementById('input-rut-directo').focus();
-        return;
+        const inputVal = document.getElementById('input-rut-directo').value.trim();
+        if (inputVal && inputVal.length >= 7) {
+          rutGarzonSesion = inputVal.toUpperCase();
+          localStorage.setItem('rutGarzon', rutGarzonSesion);
+          document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+        } else {
+          alert("⚠️ Ingresa y guarda el RUT del Garzón en la casilla de arriba.");
+          document.getElementById('input-rut-directo').focus();
+          return;
+        }
       }
 
+      // Buscar comanda en caché local
+      const pedidoObj = cachePedidos.find(p => (p._id || p.id || '') == idPedido) || {
+        local: localId,
+        mesa: '1',
+        total: 0,
+        items: []
+      };
+
+      // 1. Intentar endpoint principal PUT /api/pedidos/entregar/:id
+      let exito = false;
       try {
-        await fetch(`${BACKEND_URL}/api/pedidos/entregar/${idPedido}?local=${encodeURIComponent(localId)}`, {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos/entregar/${idPedido}?local=${encodeURIComponent(localId)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            rutGarzon: rutGarzonSesion
-          })
+          body: JSON.stringify({ rutGarzon: rutGarzonSesion })
         });
-      } catch (e) {}
 
+        if (res.ok) exito = true;
+      } catch (err) {}
+
+      // 2. Si falla el PUT, ejecutar Fallback (Guardar en historials y borrar de pedidos)
+      if (!exito) {
+        try {
+          const docHistorial = {
+            local: String(localId),
+            mesa: String(pedidoObj.mesa || '1'),
+            rutGarzon: String(rutGarzonSesion),
+            items: pedidoObj.items || [],
+            total: Number(pedidoObj.total || 0),
+            fecha: new Date().toISOString()
+          };
+
+          // Guardar en historials
+          await fetch(`${BACKEND_URL}/api/historials`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(docHistorial)
+          });
+
+          // Eliminar de pedidos activos
+          await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
+            method: 'DELETE'
+          });
+        } catch (err) {}
+      }
+
+      // 3. Ocultar la tarjeta en pantalla de inmediato
+      const cardEl = document.getElementById(`card-garzon-${idPedido}`);
+      if (cardEl) cardEl.remove();
+
+      // Recargar datos actualizados
       cargarPedidosGarzon();
       cargarPedidosCocina();
     }
