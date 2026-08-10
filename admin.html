@@ -565,14 +565,8 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    // LISTA DE HOSTS BACKEND A PROBAR AUTOMÁTICAMENTE
-    const POSIBLES_SERVIDORES = [
-      window.location.origin,
-      'https://appmenu-tavr.onrender.com',
-      'https://appmenu.onrender.com'
-    ];
-
-    let backendUrlValido = null;
+    // SERVIDOR OFICIAL EN RENDER
+    const BACKEND_URL = 'https://appmenu-tavr.onrender.com';
 
     const params = new URLSearchParams(window.location.search);
     const localId = (params.get('local') || 'mongo').toLowerCase().trim();
@@ -584,7 +578,7 @@
     let carrito = [];
     let catSeleccionadaCliente = '';
 
-    document.addEventListener("DOMContentLoaded", async () => {
+    document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
       document.getElementById('txt-local-cliente').innerText = localId.toUpperCase();
       document.getElementById('txt-mesa-cliente').innerText = `MESA N° ${numeroMesa}`;
@@ -595,7 +589,6 @@
         cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
       }
 
-      await detectarBackend();
       cargarDatosMenu();
       generarQRUnico();
 
@@ -605,19 +598,6 @@
         }
       }, 8000);
     });
-
-    async function detectarBackend() {
-      for (const host of POSIBLES_SERVIDORES) {
-        try {
-          const res = await fetch(`${host}/api/menu?local=${encodeURIComponent(localId)}`);
-          if (res.status !== 404) {
-            backendUrlValido = host;
-            return;
-          }
-        } catch (e) {}
-      }
-      backendUrlValido = POSIBLES_SERVIDORES[0];
-    }
 
     function cambiarPestana(tabId, element) {
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -649,8 +629,8 @@
       contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
 
       const endpoints = [
-        `${backendUrlValido}/api/menu?local=${encodeURIComponent(localId)}`,
-        `${backendUrlValido}/menu?local=${encodeURIComponent(localId)}`
+        `${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`,
+        `${BACKEND_URL}/menu?local=${encodeURIComponent(localId)}`
       ];
 
       for (const url of endpoints) {
@@ -744,7 +724,7 @@
       if (!nombre || isNaN(precio)) return alert("Ingresa un nombre y precio válido.");
 
       try {
-        const res = await fetch(`${backendUrlValido}/api/menu`, {
+        const res = await fetch(`${BACKEND_URL}/api/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ local: localId, categoria, nombre, precio })
@@ -756,7 +736,7 @@
     async function eliminarProducto(categoria, index) {
       if (!confirm("¿Deseas eliminar este producto?")) return;
       try {
-        await fetch(`${backendUrlValido}/api/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, {
+        await fetch(`${BACKEND_URL}/api/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, {
           method: 'DELETE'
         });
         cargarDatosMenu();
@@ -784,7 +764,7 @@
       const nuevaCategoria = document.getElementById('edit-categoria').value.trim();
 
       try {
-        await fetch(`${backendUrlValido}/api/menu/edit`, {
+        await fetch(`${BACKEND_URL}/api/menu/edit`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -900,7 +880,7 @@
     }
 
     /* ==========================================
-       4. GUARDA EN MONGODB (COLECCIÓN "pedidos")
+       4. ENVIAR PEDIDO A MONGODB (RENDER)
     ========================================== */
     async function enviarPedidoCocina() {
       if (carrito.length === 0) return alert("El carrito está vacío.");
@@ -911,7 +891,6 @@
 
       const totalCalculado = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
-      // Estructura exacta de campos para guardar en la colección 'pedidos' de MongoDB
       const documentoMongoPedido = {
         local: String(localId),
         mesa: String(numeroMesa),
@@ -926,10 +905,8 @@
       };
 
       const rutasEnvio = [
-        `${backendUrlValido}/api/pedidos`,
-        `${backendUrlValido}/pedidos`,
-        `${backendUrlValido}/api/pedido`,
-        `${backendUrlValido}/pedido`
+        `${BACKEND_URL}/api/pedidos`,
+        `${BACKEND_URL}/pedidos`
       ];
 
       let guardadoOk = false;
@@ -950,7 +927,8 @@
             guardadoOk = true;
             break;
           } else {
-            errorMsg = `[Status ${res.status}] ${await res.text()}`;
+            const resTexto = await res.text();
+            errorMsg = `[Status ${res.status}] ${resTexto}`;
           }
         } catch (e) {
           errorMsg = e.message;
@@ -958,7 +936,7 @@
       }
 
       if (guardadoOk) {
-        alert("✅ ¡Pedido recibido! Se ha insertado correctamente en la colección 'pedidos' de MongoDB.");
+        alert("✅ ¡Pedido recibido! Se ha insertado correctamente en MongoDB.");
         carrito = [];
         actualizarBarraCarrito();
         cerrarModalCarrito();
@@ -979,10 +957,8 @@
       if (!contenedor) return;
 
       const rutasConsulta = [
-        `${backendUrlValido}/api/pedidos?local=${encodeURIComponent(localId)}`,
-        `${backendUrlValido}/pedidos?local=${encodeURIComponent(localId)}`,
-        `${backendUrlValido}/api/pedidos`,
-        `${backendUrlValido}/pedidos`
+        `${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`,
+        `${BACKEND_URL}/pedidos?local=${encodeURIComponent(localId)}`
       ];
 
       let datos = null;
@@ -1056,9 +1032,8 @@
       if (!confirm("¿Completar y retirar este pedido?")) return;
 
       const rutasBorrado = [
-        `${backendUrlValido}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`,
-        `${backendUrlValido}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`,
-        `${backendUrlValido}/api/pedidos/del?local=${encodeURIComponent(localId)}&id=${idPedido}`
+        `${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`,
+        `${BACKEND_URL}/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`
       ];
 
       for (const url of rutasBorrado) {
