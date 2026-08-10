@@ -3,218 +3,151 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
+const PORT = process.env.PORT || 10000;
 
-// --- 1. CONFIGURACIÓN CORS ---
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.options('*', cors());
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// --- 2. CONEXIÓN A MONGO DB ATLAS ---
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:juan2073@cluster0.w3kjxzs.mongodb.net/appmenu?retryWrites=true&w=majority";
+// --- CONEXIÓN A MONGODB ATLAS ---
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:password@cluster.mongodb.net/appmenu?retryWrites=true&w=w-majority";
 
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅ MongoDB Conectado Exitosamente'))
-  .catch(err => console.error('❌ Error crítico al conectar a MongoDB:', err));
+  .then(() => console.log("✅ Conectado exitosamente a MongoDB Atlas"))
+  .catch(err => console.error("❌ Error de conexión a MongoDB:", err));
 
-// --- 3. ESQUEMA Y MODELO ÚNICO/FLEXIBLE ---
-const LocalSchema = new mongoose.Schema({
-  id: String,
-  local: String,
-  nombre: String,
-  password: String,
-  fechaCreacion: String,
-  fechaVencimiento: String,
-  menu: Array
-}, { strict: false, timestamps: true });
+// --- MODELO DE MONGOOSE PARA EL MENÚ ---
+const ProductoSchema = new mongoose.Schema({
+  local: { type: String, required: true, default: 'mongo' },
+  categoria: { type: String, required: true, default: 'General' },
+  nombre: { type: String, required: true },
+  precio: { type: Number, required: true }
+}, { timestamps: true });
 
-const Local = mongoose.models.Local || mongoose.model('Local', LocalSchema, 'locals');
+const Producto = mongoose.model('Producto', ProductoSchema);
 
-// --- 4. RUTAS DE LA API ---
 
-// 4.1 Obtener lista de todos los locales (Para SuperAdmin)
-app.get('/api/locales', async (req, res) => {
-  try {
-    if (mongoose.connection.readyState !== 1) return res.status(200).json([]);
+// --- BASE DE DATOS EN MEMORIA PARA PEDIDOS DE COCINA ---
+let pedidosMemoria = [];
 
-    const docs = await Local.find({}).lean();
-    const locales = docs.map(d => d.id || d.local || d.slug || d.nombre).filter(Boolean);
-    const unicos = [...new Set(locales)];
 
-    return res.status(200).json(unicos);
-  } catch (err) {
-    console.error("❌ Error en GET /api/locales:", err.message);
-    return res.status(200).json([]);
-  }
-});
+// ==========================================
+// 1. RUTAS DE MENÚ Y CARTA (MONGODB)
+// ==========================================
 
-// 4.2 Obtener el menú desplegado/plano de un local específico
+// Obtener todos los productos de un local
 app.get('/api/menu', async (req, res) => {
   try {
-    const { local } = req.query;
-    if (!local) return res.status(200).json([]);
-
-    // Buscar el documento que coincida con el id o local
-    const doc = await Local.findOne({ $or: [{ id: local }, { local: local }] }).lean();
-
-    if (!doc || !doc.menu) return res.status(200).json([]);
-
-    // Aplanar las categorías y productos para que el frontend los reciba fácilmente
-    let listaProductos = [];
-    doc.menu.forEach((catObj) => {
-      const categoriaNombre = catObj.categoria || 'General';
-      if (Array.isArray(catObj.productos)) {
-        catObj.productos.forEach((prod, index) => {
-          listaProductos.push({
-            _id: `${categoriaNombre}||${index}`, // ID virtual basado en posición
-            nombre: prod.nombre,
-            precio: prod.precio,
-            categoria: categoriaNombre
-          });
-        });
-      }
-    });
-
-    return res.status(200).json(listaProductos);
-  } catch (err) {
-    console.error("❌ Error en GET /api/menu:", err.message);
-    return res.status(500).json([]);
+    const local = req.query.local || 'mongo';
+    const productos = await Producto.find({ local });
+    res.json(productos);
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener el menú" });
   }
 });
 
-// 4.3 Agregar un producto al arreglo `menu` en MongoDB
+// Guardar un nuevo producto
 app.post('/api/menu', async (req, res) => {
   try {
     const { local, categoria, nombre, precio } = req.body;
-    if (!local || !categoria || !nombre) {
-      return res.status(400).json({ error: 'Faltan datos obligatorios' });
+    
+    if (!nombre || !precio) {
+      return res.status(400).json({ error: "Faltan nombre o precio" });
     }
 
-    let doc = await Local.findOne({ $or: [{ id: local }, { local: local }] });
-
-    // Si no existe el local, lo creamos con el formato adecuado
-    if (!doc) {
-      doc = new Local({
-        id: local,
-        local: local,
-        fechaCreacion: new Date().toISOString().split('T')[0],
-        menu: []
-      });
-    }
-
-    if (!Array.isArray(doc.menu)) doc.menu = [];
-
-    // Buscar si ya existe la categoría
-    let catExistente = doc.menu.find(c => c.categoria === categoria);
-    if (!catExistente) {
-      catExistente = { categoria: categoria, productos: [] };
-      doc.menu.push(catExistente);
-    }
-
-    if (!Array.isArray(catExistente.productos)) catExistente.productos = [];
-
-    // Agregar el producto a la lista de esa categoría
-    catExistente.productos.push({
-      nombre: nombre,
-      precio: Number(precio) || 0
+    const nuevoProducto = new Producto({
+      local: local || 'mongo',
+      categoria: categoria || 'General',
+      nombre,
+      precio: Number(precio)
     });
 
-    doc.markModified('menu');
-    await doc.save();
-
-    return res.status(200).json({ mensaje: 'Producto guardado con éxito' });
-  } catch (err) {
-    console.error("❌ Error en POST /api/menu:", err.message);
-    return res.status(500).json({ error: 'Error al agregar producto' });
+    await nuevoProducto.save();
+    res.status(201).json({ mensaje: "Producto guardado con éxito", producto: nuevoProducto });
+  } catch (error) {
+    res.status(500).json({ error: "Error al guardar el producto" });
   }
 });
 
-// 4.4 Editar un producto dentro de la estructura anidada
-app.put('/api/menu/:id', async (req, res) => {
+// Eliminar un producto según categoría e índice
+app.delete('/api/menu/del', async (req, res) => {
   try {
-    const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaCategoria } = req.body;
-    
-    const doc = await Local.findOne({ $or: [{ id: local }, { local: local }] });
-    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
+    const local = req.query.local || 'mongo';
+    const categoria = req.query.categoria;
+    const index = parseInt(req.query.index);
 
-    // Localizar la categoría original
-    let catObj = doc.menu.find(c => c.categoria === categoriaOriginal);
-    if (!catObj || !catObj.productos[indexOriginal]) {
-      return res.status(404).json({ error: 'Producto no encontrado' });
+    if (isNaN(index) || !categoria) {
+      return res.status(400).json({ error: "Parámetros inválidos" });
     }
 
-    // Si cambió de categoría
-    if (nuevaCategoria && nuevaCategoria !== categoriaOriginal) {
-      // Eliminar de la antigua
-      catObj.productos.splice(indexOriginal, 1);
-      // Si la categoría vieja quedó vacía, eliminarla
-      if (catObj.productos.length === 0) {
-        doc.menu = doc.menu.filter(c => c.categoria !== categoriaOriginal);
-      }
+    // Buscar los productos de esa categoría
+    const productosCat = await Producto.find({ local, categoria });
 
-      // Buscar o crear la nueva categoría
-      let nuevaCatObj = doc.menu.find(c => c.categoria === nuevaCategoria);
-      if (!nuevaCatObj) {
-        nuevaCatObj = { categoria: nuevaCategoria, productos: [] };
-        doc.menu.push(nuevaCatObj);
-      }
-      nuevaCatObj.productos.push({ nombre: nuevoNombre, precio: Number(nuevoPrecio) });
+    if (index >= 0 && index < productosCat.length) {
+      const productoAEliminar = productosCat[index];
+      await Producto.findByIdAndDelete(productoAEliminar._id);
+      return res.json({ mensaje: "Producto eliminado correctamente" });
     } else {
-      // Editar en la misma categoría
-      catObj.productos[indexOriginal] = {
-        nombre: nuevoNombre,
-        precio: Number(nuevoPrecio)
-      };
+      return res.status(404).json({ error: "Producto no encontrado en esa posición" });
     }
-
-    doc.markModified('menu');
-    await doc.save();
-
-    return res.status(200).json({ mensaje: 'Producto actualizado con éxito' });
-  } catch (err) {
-    console.error("❌ Error en PUT /api/menu:", err.message);
-    return res.status(500).json({ error: 'Error al actualizar producto' });
+  } catch (error) {
+    res.status(500).json({ error: "Error al eliminar el producto" });
   }
 });
 
-// 4.5 Eliminar un producto del arreglo en MongoDB
-app.delete('/api/menu/:id', async (req, res) => {
+
+// ==========================================
+// 2. RUTAS DE PEDIDOS EN TIEMPO REAL (COCINA)
+// ==========================================
+
+// Enviar nuevo pedido desde la app/celular del cliente
+app.post('/api/pedidos', (req, res) => {
   try {
-    const { local, categoria, index } = req.query;
+    const { local, mesa, items, total } = req.body;
 
-    const doc = await Local.findOne({ $or: [{ id: local }, { local: local }] });
-    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
-
-    let catObj = doc.menu.find(c => c.categoria === categoria);
-    if (catObj && catObj.productos) {
-      catObj.productos.splice(Number(index), 1);
-
-      // Si la categoría se queda sin productos, se remueve la categoría
-      if (catObj.productos.length === 0) {
-        doc.menu = doc.menu.filter(c => c.categoria !== categoria);
-      }
-
-      doc.markModified('menu');
-      await doc.save();
+    if (!items || items.length === 0) {
+      return res.status(400).json({ error: "El pedido está vacío" });
     }
 
-    return res.status(200).json({ mensaje: 'Producto eliminado correctamente' });
-  } catch (err) {
-    console.error("❌ Error en DELETE /api/menu:", err.message);
-    return res.status(500).json({ error: 'Error al eliminar producto' });
+    const nuevoPedido = {
+      _id: Date.now().toString(),
+      local: local || 'mongo',
+      mesa: mesa || '1',
+      items: items || [],
+      total: total || 0,
+      hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    pedidosMemoria.push(nuevoPedido);
+    console.log(`📩 Pedido recibido - Mesa ${nuevoPedido.mesa} ($${nuevoPedido.total})`);
+
+    return res.status(200).json({ mensaje: 'Pedido recibido en cocina exitosamente', pedido: nuevoPedido });
+  } catch (error) {
+    return res.status(500).json({ error: "Error al procesar el pedido" });
   }
 });
 
-// Ruta de diagnóstico base
-app.get('/', (req, res) => {
-  res.send('🚀 API AppMenu funcionando con estructura MongoDB real.');
+// Obtener la lista de pedidos activos para el panel de Cocina
+app.get('/api/pedidos', (req, res) => {
+  const local = req.query.local || 'mongo';
+  const pedidosLocal = pedidosMemoria.filter(p => p.local === local);
+  return res.status(200).json(pedidosLocal);
 });
 
-const PORT = process.env.PORT || 10000;
+// Marcar un pedido como despachado/completado en Cocina
+app.delete('/api/pedidos/:id', (req, res) => {
+  const { id } = req.params;
+  pedidosMemoria = pedidosMemoria.filter(p => p._id !== id);
+  return res.status(200).json({ mensaje: 'Pedido despachado y removido de la cocina' });
+});
+
+
+// --- RUTA BASE DE PRUEBA ---
+app.get('/', (req, res) => {
+  res.send('🚀 Servidor del Menú Digital activo y funcionando correctamente.');
+});
+
+// --- INICIAR SERVIDOR ---
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor ejecutándose en el puerto ${PORT}`);
+  console.log(`🔥 Servidor corriendo en el puerto ${PORT}`);
 });
