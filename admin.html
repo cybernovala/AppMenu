@@ -506,7 +506,7 @@
     let productosPlanos = [];
     let categoriasSet = new Set();
     let carrito = [];
-    let catSeleccionadaCliente = 'TODOS';
+    let catSeleccionadaCliente = '';
     let qrSingleObj = null;
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -516,11 +516,9 @@
       
       // SI VIENE DESDE UN CÓDIGO QR ESCANEADO O ES MÓVIL CON PARÁMETRO CLIENTE:
       if (vistaModo === 'cliente') {
-        // Oculta header y pestañas de administración
         document.getElementById('admin-header').style.display = 'none';
         document.getElementById('admin-nav-tabs').style.display = 'none';
         
-        // Muestra únicamente la vista cliente
         cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
       }
 
@@ -540,7 +538,6 @@
       cargarDatosMenu();
     }
 
-    // Construye la URL agregando '?view=cliente' para forzar la pestaña del menú digital
     function construirUrlMesa(mesa) {
       const baseUrl = window.location.origin + window.location.pathname;
       return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
@@ -726,7 +723,11 @@
     ========================================== */
     function renderizarClienteCategorias() {
       const bar = document.getElementById('barra-categorias-cliente');
-      const cats = ['TODOS', ...Array.from(categoriasSet)];
+      const cats = Array.from(categoriasSet);
+
+      if (cats.length > 0 && (!catSeleccionadaCliente || !cats.includes(catSeleccionadaCliente))) {
+        catSeleccionadaCliente = cats[0];
+      }
 
       bar.innerHTML = cats.map(c => `
         <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c}')">${c}</div>
@@ -741,9 +742,7 @@
 
     function renderizarClienteProductos() {
       const cont = document.getElementById('lista-productos-cliente');
-      const filtrados = catSeleccionadaCliente === 'TODOS' 
-        ? productosPlanos 
-        : productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
+      const filtrados = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
 
       if (filtrados.length === 0) {
         cont.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay productos en esta categoría.</p>';
