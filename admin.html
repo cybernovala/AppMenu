@@ -364,18 +364,6 @@
       border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* BARRA RUT IDENTIFICACION */
-    .rut-bar {
-      background: rgba(0, 210, 255, 0.1);
-      border: 1px solid var(--neon-blue);
-      border-radius: 8px;
-      padding: 10px 15px;
-      margin-bottom: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
     /* METRICAS GARZON Y TABLAS */
     .stats-grid {
       display: grid;
@@ -459,7 +447,7 @@
       padding: 15px;
       border-radius: 8px;
       display: inline-block;
-      margin-top: 15px;
+      margin-top: 10px;
     }
 
     .qr-card-container {
@@ -579,33 +567,42 @@
 
     <!-- PESTAÑA 5: CONTROL DE GARZÓN & HISTORIAL -->
     <div id="tab-garzon" class="tab-content">
-      <div class="section-card">
-        <h3>📱 QR Exclusivo para Garzones (Pegar en Cocina/Barra)</h3>
+      <!-- SECCIÓN QR SIEMPRE VISIBLE -->
+      <div class="section-card" style="border-color: var(--neon-blue);">
+        <h3>🔲 QR Exclusivo para Garzones (Imprimir / Pegar en Cocina)</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-          El dueño puede descargar este QR e imprimirlo/pegarlo en el restaurant. El garzón solo debe escanearlo desde su celular para abrir directamente su panel de entregas.
+          Código permanentemente disponible. Al escanear este QR con el celular, se abrirá el panel de garzón para pedir el RUT y registrar las entregas.
         </p>
         <div class="qr-card-container" style="text-align: center;">
           <div class="qr-preview-box">
             <div id="qr-garzon-render"></div>
-            <p style="color: #000; font-weight: bold; margin-top: 8px; font-size: 13px;">ACCESO GARZÓN - COCINA</p>
+            <p style="color: #000; font-weight: bold; margin-top: 8px; font-size: 13px;">ACCESO GARZÓN - ENTREGAS</p>
           </div>
           <br>
-          <button class="btn btn-blue btn-sm" onclick="descargarQRGarzon()">📥 Descargar QR Garzón (PNG)</button>
+          <button class="btn btn-blue btn-sm" onclick="descargarQRGarzon()">📥 Descargar QR Garzón (PNG Imprimible)</button>
         </div>
       </div>
 
+      <!-- REGISTRO Y IDENTIFICACIÓN DE RUT -->
+      <div class="section-card">
+        <h3>🪪 Identificación del Garzón (Ingreso de RUT)</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
+          Ingresa o modifica el RUT del garzón activo en este dispositivo. Toda entrega quedará registrada a este RUT en `historials`.
+        </p>
+        <div class="form-inline">
+          <input type="text" id="input-rut-directo" placeholder="Ej: 12345678-9">
+          <button class="btn btn-blue" onclick="guardarRutDirecto()">💾 Guardar / Activar RUT</button>
+        </div>
+        <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">
+          RUT Activo en el sistema: <b style="color: var(--neon-blue);" id="lbl-rut-activo">Sin RUT registrado</b>
+        </div>
+      </div>
+
+      <!-- ENTREGAS PENDIENTES -->
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <h3>🤵 Pedidos Pendientes de Entrega (Vista Celular Garzón)</h3>
+          <h3>🤵 Pedidos Pendientes por Llevar a Mesa</h3>
           <button class="btn btn-secondary btn-sm" onclick="cargarPedidosGarzon()">🔄 Actualizar</button>
-        </div>
-
-        <div class="rut-bar" id="rut-garzon-info" style="margin-top: 10px;">
-          <div>
-            <span style="font-size: 12px; color: var(--text-muted);">Garzón Identificado:</span>
-            <div style="font-size: 15px; font-weight: bold; color: var(--neon-blue);" id="lbl-rut-activo">Sin RUT registrado</div>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="cambiarRutGarzon()">✏️ Cambiar RUT</button>
         </div>
 
         <div id="contenedor-pedidos-garzon" class="grid-pedidos">
@@ -613,6 +610,7 @@
         </div>
       </div>
 
+      <!-- HISTORIAL Y MÉTRICAS MONGO (`historials`) -->
       <div class="section-card">
         <h3>📊 Historial de Entregas (`historials`) & Métricas por RUT</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
@@ -693,14 +691,14 @@
     </div>
   </div>
 
-  <!-- MODAL PEDIR RUT GARZON -->
+  <!-- MODAL AUTOPROMPT PEDIR RUT SI ESTA VACIO AL ESCANEAR -->
   <div class="modal" id="modal-rut-garzon">
     <div class="modal-content">
       <h3>🤵 Registro de Garzón</h3>
-      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">Ingresa tu RUT para registrar tus entregas en el historial:</p>
-      <input type="text" id="input-rut-garzon" placeholder="Ej: 12345678-9">
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">Ingresa tu RUT para asociar tus entregas en el historial:</p>
+      <input type="text" id="input-rut-garzon-modal" placeholder="Ej: 12345678-9">
       <div style="margin-top: 15px;">
-        <button class="btn btn-blue" style="width: 100%;" onclick="guardarRutGarzon()">Continuar y Registrar RUT</button>
+        <button class="btn btn-blue" style="width: 100%;" onclick="guardarRutModal()">Guardar RUT y Continuar</button>
       </div>
     </div>
   </div>
@@ -727,6 +725,11 @@
       document.getElementById('txt-local-cliente').innerText = localId.toUpperCase();
       document.getElementById('txt-mesa-cliente').innerText = `MESA N° ${numeroMesa}`;
       
+      if (rutGarzonSesion) {
+        document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+        document.getElementById('input-rut-directo').value = rutGarzonSesion;
+      }
+
       if (vistaModo === 'cliente') {
         document.getElementById('admin-header').style.display = 'none';
         document.getElementById('admin-nav-tabs').style.display = 'none';
@@ -774,30 +777,36 @@
     }
 
     /* ==========================================
-       GESTIÓN Y VERIFICACIÓN DE RUT DEL GARZÓN
+       GESTIÓN DE RUT DEL GARZÓN
     ========================================== */
     function verificarRutGarzon() {
       if (!rutGarzonSesion) {
         document.getElementById('modal-rut-garzon').style.display = 'flex';
       } else {
         document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+        document.getElementById('input-rut-directo').value = rutGarzonSesion;
       }
     }
 
-    function guardarRutGarzon() {
-      const val = document.getElementById('input-rut-garzon').value.trim();
-      if (!val || val.length < 7) {
-        return alert("Ingresa un RUT válido.");
-      }
-      rutGarzonSesion = val.toUpperCase();
-      localStorage.setItem('rutGarzon', rutGarzonSesion);
-      document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+    function guardarRutModal() {
+      const val = document.getElementById('input-rut-garzon-modal').value.trim();
+      if (!val || val.length < 7) return alert("Ingresa un RUT válido.");
+      aplicarRut(val);
       document.getElementById('modal-rut-garzon').style.display = 'none';
     }
 
-    function cambiarRutGarzon() {
-      document.getElementById('input-rut-garzon').value = rutGarzonSesion;
-      document.getElementById('modal-rut-garzon').style.display = 'flex';
+    function guardarRutDirecto() {
+      const val = document.getElementById('input-rut-directo').value.trim();
+      if (!val || val.length < 7) return alert("Ingresa un RUT válido.");
+      aplicarRut(val);
+      alert("✅ RUT de garzón actualizado con éxito.");
+    }
+
+    function aplicarRut(rut) {
+      rutGarzonSesion = rut.toUpperCase();
+      localStorage.setItem('rutGarzon', rutGarzonSesion);
+      document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+      document.getElementById('input-rut-directo').value = rutGarzonSesion;
     }
 
     function construirUrlMesa(mesa) {
@@ -1202,8 +1211,8 @@
 
       new QRCode(container, {
         text: construirUrlGarzon(),
-        width: 220,
-        height: 220,
+        width: 200,
+        height: 200,
         colorDark: "#000000",
         colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.H
