@@ -11,8 +11,8 @@
     .card-kpi { border: none; border-radius: 12px; transition: transform 0.2s; }
     .card-kpi:hover { transform: translateY(-3px); }
     .kpi-icon { font-size: 2.2rem; opacity: 0.8; }
+    .table-custom { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .badge-garzon { background-color: #e3f2fd; color: #0d6efd; border: 1px solid #b6d4fe; }
-    .badge-producto { background-color: #f8f9fa; color: #212529; border: 1px solid #dee2e6; }
     @media print {
       .no-print { display: none !important; }
       body { background-color: white; }
@@ -36,42 +36,25 @@
 
   <div class="container-fluid px-4">
 
-    <!-- BARRA DE FILTROS AVANZADA Y INFORMES -->
+    <!-- BARRA DE FILTROS (Móvil & Escritorio) -->
     <div class="card shadow-sm border-0 mb-4 no-print">
       <div class="card-body bg-white rounded">
         <div class="row g-3 align-items-center">
-          
-          <!-- Filtro Tipo de Informe -->
           <div class="col-md-3">
-            <label class="form-label fw-semibold text-muted small"><i class="fa-solid fa-file-invoice-dollar me-1"></i>Tipo de Informe</label>
-            <select id="selectInforme" class="form-select fw-bold text-primary" onchange="aplicarFiltros()">
-              <option value="GENERAL" selected>📊 Resumen General Completo</option>
-              <option value="GARZONES">👤 Rendimiento por Garzón</option>
-              <option value="PRODUCTOS">🍔 Ranking de Productos Vendidos</option>
-              <option value="HORARIOS">⏰ Ventas por Rango Horario</option>
-            </select>
-          </div>
-
-          <!-- Filtro Garzón (RUT) -->
-          <div class="col-md-3">
-            <label class="form-label fw-semibold text-muted small"><i class="fa-solid fa-user-tag me-1"></i>Garzón (RUT)</label>
+            <label class="form-label fw-semibold text-muted small"><i class="fa-solid fa-user-tag me-1"></i>Filtrar por Garzón (RUT)</label>
             <select id="filtroRut" class="form-select" onchange="aplicarFiltros()">
               <option value="TODOS">-- Todos los Garzones --</option>
             </select>
           </div>
-
-          <!-- Filtro Rango de Fecha -->
           <div class="col-md-3">
             <label class="form-label fw-semibold text-muted small"><i class="fa-solid fa-calendar-day me-1"></i>Rango de Fecha</label>
             <select id="filtroFecha" class="form-select" onchange="aplicarFiltros()">
-              <option value="TODOS">Histórico Completo</option>
+              <option value="TODOS">Historico Completo</option>
               <option value="HOY" selected>Hoy</option>
               <option value="7DIAS">Últimos 7 Días</option>
               <option value="MES">Este Mes</option>
             </select>
           </div>
-
-          <!-- Botones de Acción -->
           <div class="col-md-3 d-flex align-items-end">
             <button class="btn btn-outline-primary w-100 me-2" onclick="cargarDatosHistorial()">
               <i class="fa-solid fa-rotate me-1"></i>Actualizar
@@ -80,7 +63,6 @@
               <i class="fa-solid fa-print me-1"></i>Imprimir
             </button>
           </div>
-
         </div>
       </div>
     </div>
@@ -133,20 +115,26 @@
       </div>
     </div>
 
-    <!-- SECCIÓN DE INFORME DINÁMICO -->
+    <!-- TABLA DE INFORME RESUMEN POR GARZÓN -->
     <div class="row mb-4">
       <div class="col-md-12">
         <div class="card border-0 shadow-sm">
-          <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center" id="tituloInforme">
-            <span><i class="fa-solid fa-chart-pie me-2 text-primary"></i>Resumen Consolidado</span>
+          <div class="card-header bg-white fw-bold py-3">
+            <i class="fa-solid fa-users-viewfinder me-2 text-primary"></i>Resumen de Rendimiento por Garzón
           </div>
           <div class="card-body p-0">
             <div class="table-responsive">
               <table class="table table-hover align-middle mb-0">
-                <thead class="table-light" id="encabezadoTablaInforme">
-                  <!-- Generado por JS -->
+                <thead class="table-light">
+                  <tr>
+                    <th>RUT Garzón</th>
+                    <th class="text-center">Mesas Atendidas</th>
+                    <th class="text-end">Monto Total Vendido</th>
+                    <th class="text-end">Ticket Promedio</th>
+                    <th class="text-center">Participación (%)</th>
+                  </tr>
                 </thead>
-                <tbody id="cuerpoTablaInforme">
+                <tbody id="tablaResumenGarzon">
                   <tr><td colspan="5" class="text-center py-3 text-muted">Cargando métricas...</td></tr>
                 </tbody>
               </table>
@@ -156,12 +144,12 @@
       </div>
     </div>
 
-    <!-- DETALLE COMPLETO DE HISTORIAL DE PEDIDOS -->
+    <!-- DETALLE DE HISTORIAL DE PEDIDOS -->
     <div class="row">
       <div class="col-md-12">
         <div class="card border-0 shadow-sm mb-5">
           <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-            <span><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Registro Detallado de Comandas</span>
+            <span><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Detalle de Pedidos Entregados</span>
             <span id="contadorRegistros" class="badge bg-secondary">0 Registros</span>
           </div>
           <div class="card-body p-0">
@@ -190,7 +178,7 @@
 
   <!-- SCRIPT LÓGICA Y CONEXIÓN -->
   <script>
-    const API_BASE = "https://appmenu-1.onrender.com/api";
+    const API_BASE = "https://appmenu-1.onrender.com/api"; // Tu backend activo
     let historialGlobal = [];
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -208,7 +196,7 @@
         aplicarFiltros();
       } catch (error) {
         console.error("Error al cargar datos:", error);
-        document.getElementById("cuerpoTablaInforme").innerHTML = `
+        document.getElementById("tablaHistorial").innerHTML = `
           <tr><td colspan="5" class="text-center text-danger py-3">Error al conectar con la base de datos MongoDB.</td></tr>
         `;
       }
@@ -218,6 +206,7 @@
       const selector = document.getElementById("filtroRut");
       const valorPrevio = selector.value;
       
+      // Obtener lista única de RUTs
       const rutsUnicos = [...new Set(datos.map(d => d.rutGarzon || 'Sin Rut'))].filter(Boolean);
       
       selector.innerHTML = `<option value="TODOS">-- Todos los Garzones (${rutsUnicos.length}) --</option>`;
@@ -233,11 +222,14 @@
     function aplicarFiltros() {
       const rutSeleccionado = document.getElementById("filtroRut").value;
       const fechaRango = document.getElementById("filtroFecha").value;
+
       const hoyStr = new Date().toISOString().split('T')[0];
 
       let datosFiltrados = historialGlobal.filter(item => {
+        // 1. Filtro por RUT
         const coincideRut = (rutSeleccionado === "TODOS") || (item.rutGarzon === rutSeleccionado);
         
+        // 2. Filtro por Fecha
         let coincideFecha = true;
         const fechaItem = item.fechaEntrega || (item.createdAt ? item.createdAt.split('T')[0] : null);
 
@@ -248,19 +240,18 @@
           hace7Dias.setDate(hace7Dias.getDate() - 7);
           coincideFecha = new Date(fechaItem) >= hace7Dias;
         } else if (fechaRango === "MES") {
-          const inicioMes = hoyStr.substring(0, 7);
+          const inicioMes = hoyStr.substring(0, 7); // YYYY-MM
           coincideFecha = fechaItem && fechaItem.startsWith(inicioMes);
         }
 
         return coincideRut && coincideFecha;
       });
 
-      renderizarKPIs(datosFiltrados);
-      renderizarInformeDinamico(datosFiltrados);
-      renderizarTablaDetallada(datosFiltrados);
+      renderizarPanel(datosFiltrados);
     }
 
-    function renderizarKPIs(datos) {
+    function renderizarPanel(datos) {
+      // 1. Actualizar KPIs
       const totalVentas = datos.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
       const totalPedidos = datos.length;
       const promedioMesa = totalPedidos > 0 ? Math.round(totalVentas / totalPedidos) : 0;
@@ -269,201 +260,64 @@
       document.getElementById("kpiTotalPedidos").innerText = totalPedidos;
       document.getElementById("kpiPromedioMesa").innerText = `$${promedioMesa.toLocaleString('es-CL')}`;
 
-      // Calcular Top Garzón
+      // 2. Procesar Rendimiento por Garzón
       const resumenGarzon = {};
       datos.forEach(item => {
         const rut = item.rutGarzon || 'Desconocido';
-        resumenGarzon[rut] = (resumenGarzon[rut] || 0) + (Number(item.total) || 0);
+        if (!resumenGarzon[rut]) {
+          resumenGarzon[rut] = { mesas: 0, total: 0 };
+        }
+        resumenGarzon[rut].mesas += 1;
+        resumenGarzon[rut].total += Number(item.total) || 0;
       });
 
+      // Calcular Top Garzón
       let topGarzon = "Sin datos";
       let maxVenta = -1;
-      Object.keys(resumenGarzon).forEach(rut => {
-        if (resumenGarzon[rut] > maxVenta) {
-          maxVenta = resumenGarzon[rut];
-          topGarzon = rut;
-        }
-      });
+      
+      const tablaResumenBody = document.getElementById("tablaResumenGarzon");
+      tablaResumenBody.innerHTML = "";
 
-      document.getElementById("kpiTopGarzon").innerText = topGarzon;
-    }
+      const keysGarzon = Object.keys(resumenGarzon);
 
-    function renderizarInformeDinamico(datos) {
-      const tipoInforme = document.getElementById("selectInforme").value;
-      const totalVentasGlobal = datos.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+      if (keysGarzon.length === 0) {
+        tablaResumenBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">No hay registros para los filtros seleccionados.</td></tr>`;
+      } else {
+        keysGarzon.forEach(rut => {
+          const g = resumenGarzon[rut];
+          if (g.total > maxVenta) {
+            maxVenta = g.total;
+            topGarzon = rut;
+          }
+          const participacion = totalVentas > 0 ? ((g.total / totalVentas) * 100).toFixed(1) : 0;
+          const ticketProm = g.mesas > 0 ? Math.round(g.total / g.mesas) : 0;
 
-      const encabezado = document.getElementById("encabezadoTablaInforme");
-      const cuerpo = document.getElementById("cuerpoTablaInforme");
-      const titulo = document.getElementById("tituloInforme");
-
-      encabezado.innerHTML = "";
-      cuerpo.innerHTML = "";
-
-      if (tipoInforme === "GENERAL" || tipoInforme === "GARZONES") {
-        titulo.innerHTML = `<span><i class="fa-solid fa-users-viewfinder me-2 text-primary"></i>Informe de Rendimiento por Garzón</span>`;
-        encabezado.innerHTML = `
-          <tr>
-            <th>RUT Garzón</th>
-            <th class="text-center">Mesas Atendidas</th>
-            <th class="text-end">Monto Total Vendido</th>
-            <th class="text-end">Ticket Promedio</th>
-            <th class="text-center">Participación (%)</th>
-          </tr>
-        `;
-
-        const resumen = {};
-        datos.forEach(item => {
-          const rut = item.rutGarzon || 'Desconocido';
-          if (!resumen[rut]) resumen[rut] = { mesas: 0, total: 0 };
-          resumen[rut].mesas += 1;
-          resumen[rut].total += Number(item.total) || 0;
-        });
-
-        const keys = Object.keys(resumen);
-        if (keys.length === 0) {
-          cuerpo.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">Sin datos.</td></tr>`;
-          return;
-        }
-
-        keys.forEach(rut => {
-          const g = resumen[rut];
-          const part = totalVentasGlobal > 0 ? ((g.total / totalVentasGlobal) * 100).toFixed(1) : 0;
-          const prom = g.mesas > 0 ? Math.round(g.total / g.mesas) : 0;
-
-          cuerpo.innerHTML += `
+          tablaResumenBody.innerHTML += `
             <tr>
               <td><span class="badge badge-garzon px-2 py-1"><i class="fa-solid fa-id-card me-1"></i>${rut}</span></td>
               <td class="text-center fw-bold">${g.mesas}</td>
               <td class="text-end fw-bold text-success">$${g.total.toLocaleString('es-CL')}</td>
-              <td class="text-end">$${prom.toLocaleString('es-CL')}</td>
+              <td class="text-end">$${ticketProm.toLocaleString('es-CL')}</td>
               <td class="text-center">
                 <div class="progress position-relative" style="height: 18px;">
-                  <div class="progress-bar bg-info" style="width: ${part}%"></div>
-                  <small class="justify-content-center d-flex position-absolute w-100 fw-bold text-dark">${part}%</small>
-                </div>
-              </td>
-            </tr>
-          `;
-        });
-
-      } else if (tipoInforme === "PRODUCTOS") {
-        titulo.innerHTML = `<span><i class="fa-solid fa-burger me-2 text-primary"></i>Informe Ranking de Productos más Vendidos</span>`;
-        encabezado.innerHTML = `
-          <tr>
-            <th>#</th>
-            <th>Producto</th>
-            <th class="text-center">Unidades Vendidas</th>
-            <th class="text-end">Total Recaudado ($)</th>
-          </tr>
-        `;
-
-        const productosMap = {};
-        datos.forEach(item => {
-          if (Array.isArray(item.items)) {
-            item.items.forEach(prod => {
-              const nombre = prod.nombre || 'Desconocido';
-              const cant = Number(prod.cant) || 1;
-              const precio = Number(prod.precio) || 0;
-
-              if (!productosMap[nombre]) productosMap[nombre] = { cantidad: 0, recaudado: 0 };
-              productosMap[nombre].cantidad += cant;
-              productosMap[nombre].recaudado += (cant * precio);
-            });
-          }
-        });
-
-        const listaOrdenada = Object.keys(productosMap).map(k => ({
-          nombre: k,
-          cantidad: productosMap[k].cantidad,
-          recaudado: productosMap[k].recaudado
-        })).sort((a, b) => b.cantidad - a.cantidad);
-
-        if (listaOrdenada.length === 0) {
-          cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">Sin productos registrados.</td></tr>`;
-          return;
-        }
-
-        listaOrdenada.forEach((p, index) => {
-          cuerpo.innerHTML += `
-            <tr>
-              <td class="fw-bold text-muted">${index + 1}</td>
-              <td><span class="badge badge-producto px-2 py-1"><i class="fa-solid fa-utensils me-1"></i>${p.nombre}</span></td>
-              <td class="text-center fw-bold">${p.cantidad} u.</td>
-              <td class="text-end fw-bold text-success">$${p.recaudado.toLocaleString('es-CL')}</td>
-            </tr>
-          `;
-        });
-
-      } else if (tipoInforme === "HORARIOS") {
-        titulo.innerHTML = `<span><i class="fa-solid fa-clock me-2 text-primary"></i>Informe Distribuido por Rango Horario</span>`;
-        encabezado.innerHTML = `
-          <tr>
-            <th>Bloque Horario</th>
-            <th class="text-center">Total Pedidos</th>
-            <th class="text-end">Monto Total Vendido</th>
-            <th class="text-center">Porcentaje del Día</th>
-          </tr>
-        `;
-
-        const bloques = {
-          "Mañana (08:00 - 12:00)": { pedidos: 0, total: 0 },
-          "Almuerzo (12:01 - 16:00)": { pedidos: 0, total: 0 },
-          "Tarde (16:01 - 20:00)": { pedidos: 0, total: 0 },
-          "Noche (20:01 - 23:59)": { pedidos: 0, total: 0 },
-          "Madrugada (00:00 - 07:59)": { pedidos: 0, total: 0 }
-        };
-
-        datos.forEach(item => {
-          const horaStr = item.horaEntrega || item.hora || '12:00:00';
-          const hora = parseInt(horaStr.split(':')[0], 10) || 12;
-          const monto = Number(item.total) || 0;
-
-          if (hora >= 8 && hora <= 12) {
-            bloques["Mañana (08:00 - 12:00)"].pedidos++;
-            bloques["Mañana (08:00 - 12:00)"].total += monto;
-          } else if (hora > 12 && hora <= 16) {
-            bloques["Almuerzo (12:01 - 16:00)"].pedidos++;
-            bloques["Almuerzo (12:01 - 16:00)"].total += monto;
-          } else if (hora > 16 && hora <= 20) {
-            bloques["Tarde (16:01 - 20:00)"].pedidos++;
-            bloques["Tarde (16:01 - 20:00)"].total += monto;
-          } else if (hora > 20) {
-            bloques["Noche (20:01 - 23:59)"].pedidos++;
-            bloques["Noche (20:01 - 23:59)"].total += monto;
-          } else {
-            bloques["Madrugada (00:00 - 07:59)"].pedidos++;
-            bloques["Madrugada (00:00 - 07:59)"].total += monto;
-          }
-        });
-
-        Object.keys(bloques).forEach(b => {
-          const bl = bloques[b];
-          const part = totalVentasGlobal > 0 ? ((bl.total / totalVentasGlobal) * 100).toFixed(1) : 0;
-
-          cuerpo.innerHTML += `
-            <tr>
-              <td class="fw-bold"><i class="fa-regular fa-clock me-1 text-muted"></i>${b}</td>
-              <td class="text-center fw-bold">${bl.pedidos}</td>
-              <td class="text-end fw-bold text-success">$${bl.total.toLocaleString('es-CL')}</td>
-              <td class="text-center">
-                <div class="progress position-relative" style="height: 18px;">
-                  <div class="progress-bar bg-warning text-dark" style="width: ${part}%"></div>
-                  <small class="justify-content-center d-flex position-absolute w-100 fw-bold text-dark">${part}%</small>
+                  <div class="progress-bar bg-info" style="width: ${participacion}%"></div>
+                  <small class="justify-content-center d-flex position-absolute w-100 fw-bold text-dark">${participacion}%</small>
                 </div>
               </td>
             </tr>
           `;
         });
       }
-    }
 
-    function renderizarTablaDetallada(datos) {
-      const tablaBody = document.getElementById("tablaHistorial");
+      document.getElementById("kpiTopGarzon").innerText = topGarzon;
+
+      // 3. Renderizar Tabla Detallada
+      const tablaHistorialBody = document.getElementById("tablaHistorial");
       document.getElementById("contadorRegistros").innerText = `${datos.length} Pedidos`;
-      tablaBody.innerHTML = "";
+      tablaHistorialBody.innerHTML = "";
 
       if (datos.length === 0) {
-        tablaBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">No hay pedidos registrados con los criterios seleccionados.</td></tr>`;
+        tablaHistorialBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">No hay pedidos registrados con los criterios seleccionados.</td></tr>`;
         return;
       }
 
@@ -475,7 +329,7 @@
         const fechaStr = item.fechaEntrega || 'Hoy';
         const horaStr = item.horaEntrega || item.hora || '--:--';
 
-        tablaBody.innerHTML += `
+        tablaHistorialBody.innerHTML += `
           <tr>
             <td class="fw-bold">Mesa ${item.mesa}</td>
             <td><small class="text-muted"><i class="fa-solid fa-user me-1"></i>${item.rutGarzon || 'N/A'}</small></td>
