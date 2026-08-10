@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - AppMenu</title>
+  <title>SuperAdmin - Control de Licencias</title>
   <style>
     :root {
       --bg-dark: #08080a;
       --card-bg: rgba(18, 18, 22, 0.95);
       --neon-orange: #ff5500;
       --neon-yellow: #ffea00;
+      --neon-red: #ff3333;
+      --neon-green: #00e676;
       --grad-neon: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
@@ -23,7 +25,7 @@
       padding: 20px;
     }
 
-    .container { max-width: 750px; margin: 0 auto; }
+    .container { max-width: 850px; margin: 0 auto; }
 
     .card {
       background: var(--card-bg);
@@ -49,12 +51,14 @@
 
     button {
       background: var(--grad-neon); border: none; color: #000;
-      padding: 12px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px;
+      padding: 10px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px;
       transition: opacity 0.2s;
     }
     button:hover { opacity: 0.9; }
 
     .btn-block { width: 100%; font-size: 15px; padding: 14px; }
+    .btn-danger { background: var(--neon-red); color: #fff; }
+    .btn-success { background: var(--neon-green); color: #000; }
 
     .result-box {
       display: none; background: #121218; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-top: 15px;
@@ -65,29 +69,37 @@
       justify-content: space-between;
       align-items: center;
       background: #14141a;
-      padding: 12px 15px;
+      padding: 15px;
       border-radius: 8px;
-      margin-bottom: 10px;
-      border-left: 4px solid var(--neon-orange);
+      margin-bottom: 12px;
+      border-left: 4px solid var(--neon-green);
     }
+
+    .local-row.blocked { border-left-color: var(--neon-red); opacity: 0.8; }
+    .local-row.warning { border-left-color: var(--neon-yellow); }
+
+    .status-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: bold;
+      display: inline-block;
+      margin-left: 6px;
+    }
+    .badge-active { background: rgba(0, 230, 118, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .badge-warning { background: rgba(255, 234, 0, 0.2); color: var(--neon-yellow); border: 1px solid var(--neon-yellow); }
+    .badge-blocked { background: rgba(255, 51, 51, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
 
     .venc-tag {
       font-size: 12px;
-      color: var(--neon-yellow);
+      color: var(--text-muted);
       margin-top: 4px;
     }
 
-    .btn-download {
-      background: #222;
-      color: var(--neon-yellow);
-      border: 1px solid var(--neon-yellow);
-      font-size: 12px;
-      padding: 8px 12px;
-      border-radius: 4px;
-    }
-    .btn-download:hover {
-      background: var(--neon-yellow);
-      color: #000;
+    .actions-cell {
+      display: flex;
+      gap: 8px;
     }
 
     .header-refresh {
@@ -109,7 +121,7 @@
       <label>Nombre Comercial del Restoran</label>
       <input type="text" id="nombre-local" placeholder="Ej: Sushi Valpo, Bar Central">
 
-      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Registrar en MongoDB y Generar Acceso</button>
+      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Registrar Cliente (30 Días de Licencia)</button>
 
       <div id="resultado" class="result-box">
         <h3 style="color:var(--neon-orange); margin-bottom:8px;">✅ Cliente Guardado Correctamente</h3>
@@ -121,13 +133,13 @@
       </div>
     </div>
 
-    <!-- LISTADO DE CLIENTES DE MONGO -->
+    <!-- LISTADO DE CLIENTES EN MONGO -->
     <div class="card">
       <div class="header-refresh">
-        <h2 style="margin:0;">📜 Clientes en MongoDB</h2>
+        <h2 style="margin:0;">📜 Clientes y Estado de Licencias</h2>
         <button style="padding: 6px 12px; font-size: 12px;" onclick="cargarLocales()">🔄 Actualizar Lista</button>
       </div>
-      <div id="lista-locales">Cargando datos desde la base de datos...</div>
+      <div id="lista-locales">Cargando datos desde MongoDB Atlas...</div>
     </div>
 
   </div>
@@ -154,10 +166,8 @@
       }
 
       const localId = formatearIdLocal(inputNombre);
-      
-      const fechaCreacion = new Date();
       const fechaVencimiento = new Date();
-      fechaVencimiento.setDate(fechaCreacion.getDate() + 30);
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
 
       try {
         const respuesta = await fetch(`${API_URL}/menu`, {
@@ -174,7 +184,15 @@
 
         if (!respuesta.ok) throw new Error('Error guardando en el servidor.');
 
-        localStorage.setItem(`venc_${localId}`, fechaVencimiento.getTime());
+        // Asegurar la inicialización de la licencia
+        await fetch(`${API_URL}/locales/${localId}/licencia`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activo: true,
+            fechaVencimiento: fechaVencimiento.toISOString()
+          })
+        });
 
         ultimoLocalCreado = {
           nombre: inputNombre,
@@ -198,61 +216,93 @@
       contenedor.innerHTML = '<p style="color:var(--text-muted)">Consultando MongoDB...</p>';
 
       try {
-        let clientes = [];
-
-        // 1. Probar Endpoint Principal (/api/locales)
         const resLocales = await fetch(`${API_URL}/locales`);
-        if (resLocales.ok) {
-          clientes = await resLocales.json();
-        }
+        if (!resLocales.ok) throw new Error("Error en servidor");
 
-        // 2. Respaldo: Si la API de locales falló o retornó vacío, buscar todos los platos y extraer los 'local'
+        const clientes = await resLocales.json();
+
         if (!Array.isArray(clientes) || clientes.length === 0) {
-          const resMenu = await fetch(`${API_URL}/menu`);
-          if (resMenu.ok) {
-            const platos = await resMenu.json();
-            clientes = [...new Set(platos.map(item => item.local).filter(Boolean))];
-          }
-        }
-
-        // Normalizar los resultados para obtener siempre IDs válidos
-        const clientesLimpios = clientes.map(item => {
-          if (typeof item === 'string') return item;
-          return item.local || item.id || item._id || null;
-        }).filter(item => item !== null && item !== 'default');
-
-        // Eliminar duplicados si la consulta trajo varios
-        const clientesUnicos = [...new Set(clientesLimpios)];
-
-        if (clientesUnicos.length === 0) {
-          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay clientes creados en MongoDB aún.</p>`;
+          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay clientes registrados en MongoDB aún.</p>`;
           return;
         }
 
-        contenedor.innerHTML = clientesUnicos.map(localId => {
-          const nombreMostrar = localId.replace(/-/g, ' ').toUpperCase();
+        const hoy = new Date();
+
+        contenedor.innerHTML = clientes.map(item => {
+          const localId = item.localId || item.id || item.local;
+          const nombreMostrar = (item.nombre || localId).replace(/-/g, ' ').toUpperCase();
+          const activo = item.activo !== false;
+          const fVenc = item.fechaVencimiento ? new Date(item.fechaVencimiento) : new Date();
           
-          const timestampGuardado = localStorage.getItem(`venc_${localId}`);
-          let fVenc = timestampGuardado ? new Date(parseInt(timestampGuardado)) : new Date();
-          if (!timestampGuardado) fVenc.setDate(fVenc.getDate() + 30);
+          const msDiferencia = fVenc - hoy;
+          const diasRestantes = Math.ceil(msDiferencia / (1000 * 60 * 60 * 24));
+
+          let badgeHtml = '<span class="status-badge badge-active">Activo</span>';
+          let rowClass = '';
+
+          if (!activo) {
+            badgeHtml = '<span class="status-badge badge-blocked">Bloqueado</span>';
+            rowClass = 'blocked';
+          } else if (diasRestantes <= 0) {
+            badgeHtml = '<span class="status-badge badge-blocked">Vencido</span>';
+            rowClass = 'blocked';
+          } else if (diasRestantes <= 3) {
+            badgeHtml = `<span class="status-badge badge-warning">Por vencer (${diasRestantes}d)</span>`;
+            rowClass = 'warning';
+          }
 
           const fechaFormateada = fVenc.toLocaleDateString('es-CL');
 
           return `
-            <div class="local-row">
+            <div class="local-row ${rowClass}">
               <div>
-                <strong>${nombreMostrar}</strong>
-                <div class="venc-tag">📅 Vencimiento: ${fechaFormateada}</div>
+                <strong>${nombreMostrar}</strong> ${badgeHtml}
+                <div class="venc-tag">📅 Vence: ${fechaFormateada} (${diasRestantes > 0 ? diasRestantes + ' días restantes' : 'Plazo expirado'})</div>
               </div>
-              <button class="btn-download" onclick="generarYDescargarHTML('${nombreMostrar}', '${localId}', '${fechaFormateada}')">
-                🌐 Descargar Lanzador (.html)
-              </button>
+              <div class="actions-cell">
+                <button class="btn-success" onclick="renovarLicencia('${localId}', 30)">+30 Días</button>
+                ${activo 
+                  ? `<button class="btn-danger" onclick="cambiarEstadoLicencia('${localId}', false)">Bloquear</button>`
+                  : `<button class="btn-success" onclick="cambiarEstadoLicencia('${localId}', true)">Habilitar</button>`
+                }
+                <button style="background:#222; color:var(--neon-yellow); border:1px solid var(--neon-yellow);" onclick="generarYDescargarHTML('${nombreMostrar}', '${localId}', '${fechaFormateada}')">🌐 Lanzador</button>
+              </div>
             </div>
           `;
         }).join('');
 
       } catch (err) {
-        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error conectando con la base de datos en Render.</p>`;
+        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error conectando con el servidor Render/MongoDB.</p>`;
+      }
+    }
+
+    async function cambiarEstadoLicencia(localId, nuevoEstado) {
+      try {
+        const res = await fetch(`${API_URL}/locales/${localId}/licencia`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activo: nuevoEstado })
+        });
+        if (res.ok) cargarLocales();
+        else alert('Error al actualizar el estado.');
+      } catch (e) {
+        alert('Error al comunicar con la base de datos.');
+      }
+    }
+
+    async function renovarLicencia(localId, dias) {
+      const nuevaFecha = new Date();
+      nuevaFecha.setDate(nuevaFecha.getDate() + dias);
+      try {
+        const res = await fetch(`${API_URL}/locales/${localId}/licencia`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activo: true, fechaVencimiento: nuevaFecha.toISOString() })
+        });
+        if (res.ok) cargarLocales();
+        else alert('Error al renovar la licencia.');
+      } catch (e) {
+        alert('Error al comunicar con la base de datos.');
       }
     }
 
@@ -272,35 +322,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Acceso - ${nombreLocal}</title>
   <style>
-    body {
-      background-color: #08080a;
-      color: #ffffff;
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      text-align: center;
-    }
-    .box {
-      background: #121216;
-      border: 1px solid #ff5500;
-      padding: 30px;
-      border-radius: 12px;
-      max-width: 400px;
-    }
+    body { background-color: #08080a; color: #ffffff; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
+    .box { background: #121216; border: 1px solid #ff5500; padding: 30px; border-radius: 12px; max-width: 400px; }
     h1 { color: #ffea00; font-size: 20px; margin-bottom: 10px; }
     p { font-size: 14px; color: #a0a0b0; margin-bottom: 20px; }
-    a {
-      display: inline-block;
-      background: linear-gradient(135deg, #ff5500, #ffea00);
-      color: #000;
-      text-decoration: none;
-      padding: 12px 20px;
-      font-weight: bold;
-      border-radius: 6px;
-    }
+    a { display: inline-block; background: linear-gradient(135deg, #ff5500, #ffea00); color: #000; text-decoration: none; padding: 12px 20px; font-weight: bold; border-radius: 6px; }
   </style>
 </head>
 <body>
