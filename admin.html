@@ -494,7 +494,7 @@
       </div>
 
       <div id="contenedor-categorias">
-        <p style="color: var(--text-muted); text-align: center;">Cargando menú de MongoDB...</p>
+        <p style="color: var(--text-muted); text-align: center;">Cargando menú...</p>
       </div>
     </div>
 
@@ -667,7 +667,7 @@
             </thead>
             <tbody id="tabla-historial-garzon">
               <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando historial de MongoDB...</td>
+                <td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando historial...</td>
               </tr>
             </tbody>
           </table>
@@ -787,7 +787,7 @@
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}`);
         if (res.ok) {
           const data = await res.json();
-          // Detecta adecuadamente el atributo enviado por la vista superadmin
+          // Detecta adecuadamente si el local está bloqueado desde superadmin
           if (data.bloqueado === true || data.bloqueado === 'true' || data.estado === 'bloqueado') {
             estaBloqueado = true;
           }
@@ -799,19 +799,26 @@
         console.warn("No se pudo verificar la licencia con el servidor.", err);
       }
 
-      // Si no existe registro explicito de fecha y no está bloqueado por el superadmin, calcula 30 días
-      if (!fechaVencimiento && !estaBloqueado) {
+      // Si el superadmin lo bloqueó
+      if (estaBloqueado) {
+        bannerEl.classList.add('blocked');
+        bannerEl.innerHTML = `🚫 Licencia bloqueada. Contactarse con su proveedor.`;
+        return;
+      }
+
+      // Si no existe registro explicito de fecha, calcula 30 días
+      if (!fechaVencimiento) {
         const hoy = new Date();
         fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
       }
 
       const ahora = new Date();
-      const diferenciaMs = fechaVencimiento ? (fechaVencimiento - ahora) : 0;
+      const diferenciaMs = fechaVencimiento - ahora;
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
-      if (estaBloqueado || diasRestantes <= 0) {
+      if (diasRestantes <= 0) {
         bannerEl.classList.add('blocked');
-        bannerEl.innerHTML = `🚫 Su licencia ha sido bloqueada. Contactarse con su proveedor.`;
+        bannerEl.innerHTML = `🚫 Licencia bloqueada. Contactarse con su proveedor.`;
       } else {
         bannerEl.classList.remove('blocked');
         bannerEl.innerHTML = `⚠️ Su licencia vence en <span id="lbl-dias-licencia" style="color: var(--neon-yellow); text-decoration: underline;">${diasRestantes}</span> días.`;
@@ -874,10 +881,10 @@
       return `${baseUrl}?local=${encodeURIComponent(localId)}&view=garzon`;
     }
 
-    /* CARGA DE MENÚ DESDE MONGODB */
+    /* CARGA DE MENÚ */
     async function cargarDatosMenu() {
       const contenedorAdmin = document.getElementById('contenedor-categorias');
-      contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
+      contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú...</p>';
 
       try {
         const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
@@ -1125,7 +1132,7 @@
       document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
     }
 
-    /* ENVIAR PEDIDO A MONGODB */
+    /* ENVIAR PEDIDO */
     async function enviarPedidoCocina() {
       if (carrito.length === 0) return alert("El carrito está vacío.");
 
@@ -1231,7 +1238,7 @@
         }).join('');
 
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al consultar pedidos en MongoDB.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al conectar con la base de datos.</p>';
       }
     }
 
@@ -1352,7 +1359,7 @@
           }).join('');
         }
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al consultar comandas de garzón.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al conectar con la base de datos.</p>';
       }
     }
 
@@ -1413,7 +1420,7 @@
           body: JSON.stringify(docHistorial)
         });
       } catch (e) {
-        console.error("Error al publicar en historials de Mongo:", e);
+        console.error("Error al publicar en historial:", e);
       }
 
       let historialLocalArr = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
@@ -1464,7 +1471,7 @@
           entregados = entregados.concat(arrayApi);
         }
       } catch (e) {
-        console.warn("API historials no disponible:", e);
+        console.warn("API historial no disponible:", e);
       }
 
       const localHist = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
