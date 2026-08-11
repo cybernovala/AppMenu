@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>----Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -772,7 +772,7 @@
       }, 8000);
     });
 
-    /* LÓGICA DE LICENCIA Y BLOQUEO CON MENSAJES MOSTRADOS JUNTOS */
+    /* LÓGICA ROBUSTA DE LICENCIA Y BLOQUEO CON MENSAJES MOSTRADOS JUNTOS */
     async function obtenerDiasLicencia() {
       const bannerContainer = document.getElementById('license-banner');
       const msgVencimiento = document.getElementById('msg-vencimiento');
@@ -785,20 +785,22 @@
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}`);
         if (res.ok) {
           const data = await res.json();
-          // Verifica estado de bloqueo del Superadmin (booleano o string)
-          if (data.bloqueado === true || data.bloqueado === 'true' || data.estado === 'bloqueado') {
+          
+          // Evaluación universal de bloqueo (admite booleanos, cadenas, 0/1 o palabras clave)
+          const b = data.bloqueado !== undefined ? data.bloqueado : data.estado;
+          if (b === true || b === 'true' || b === 1 || b === '1' || b === 'bloqueado' || b === 'blocked' || b === 'inactivo') {
             estaBloqueado = true;
           }
+          
           if (data.fechaVencimiento) {
             fechaVencimiento = new Date(data.fechaVencimiento);
           }
         }
       } catch (err) {
-        console.warn("No se pudo consultar el servidor de licencias.", err);
+        console.warn("Error al consultar el servidor de licencias.", err);
       }
 
-      // Si no existe fecha registrada aún, calcula 30 días base
-      if (!fechaVencimiento) {
+      if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
         const hoy = new Date();
         fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
       }
@@ -807,10 +809,10 @@
       const diferenciaMs = fechaVencimiento - ahora;
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
-      // 1. Primer Mensaje: Vencimiento de Días
+      // 1. Mensaje de Vencimiento en días
       msgVencimiento.innerHTML = `⚠️ Su licencia vence en <span style="color: var(--neon-yellow); text-decoration: underline;">${diasRestantes}</span> días.`;
 
-      // 2. Segundo Mensaje: Estado de Bloqueo
+      // 2. Mensaje de Bloqueo
       if (estaBloqueado || diasRestantes <= 0) {
         msgBloqueo.style.display = 'block';
         bannerContainer.classList.add('is-blocked');
