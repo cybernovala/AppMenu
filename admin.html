@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>--Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -792,10 +792,10 @@
         if (document.getElementById('tab-historial').classList.contains('active')) {
           cargarHistorialGarantizado();
         }
-      }, 5000); // Frecuencia de verificación en 5s para respuesta rápida al desbloquear
+      }, 5000); // Polling actualizado a 5 segundos
     });
 
-    /* FUNCION DE MANEJO DE DOS BANNERS INDEPENDIENTES CON DETECCION EN TIEMPO REAL */
+    /* FUNCION CORREGIDA CON DESACTIVACION DE CACHÉ Y DETECCION EN TIEMPO REAL */
     async function obtenerEstadoLicenciaYBloqueo() {
       const elNumDias = document.getElementById('num-dias-vencimiento');
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
@@ -805,20 +805,34 @@
       let estaBloqueado = false;
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&t=${Date.now()}`);
+        // Se agrega parámetro de marca de tiempo y No-Cache para evitar lecturas guardadas localmente por el navegador
+        const urlSinCache = `${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`;
+        const res = await fetch(urlSinCache, {
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+        });
+
         if (res.ok) {
           const data = await res.json();
           
-          // Detección estricta y dinámica de estado
-          const rawEstado = data.estado !== undefined ? data.estado : data.bloqueado;
-          const strEstado = String(rawEstado).toLowerCase().trim();
+          // Mapeo exhaustivo de variables de estado devueltas por la API
+          const valBloqueado = data.bloqueado;
+          const valEstado = data.estado;
+          const valActivo = data.activo;
+          const valHabilitado = data.habilitado;
+          const valIsBlocked = data.isBlocked;
 
-          if (strEstado === 'true' || strEstado === '1' || strEstado === 'bloqueado' || strEstado === 'blocked' || strEstado === 'inactivo' || strEstado === 'desactivado') {
+          if (
+            valBloqueado === true || valBloqueado === 'true' || valBloqueado === 1 || valBloqueado === '1' ||
+            valIsBlocked === true || valIsBlocked === 'true' ||
+            valEstado === 'bloqueado' || valEstado === 'blocked' || valEstado === 'inactivo' || valEstado === 'desactivado' || valEstado === 'disabled' ||
+            valActivo === false || valActivo === 'false' || valActivo === 0 || valActivo === '0' ||
+            valHabilitado === false || valHabilitado === 'false' || valHabilitado === 0 || valHabilitado === '0'
+          ) {
             estaBloqueado = true;
-          } else if (strEstado === 'false' || strEstado === '0' || strEstado === 'activo' || strEstado === 'habilitado' || strEstado === 'desbloqueado') {
+          } else {
             estaBloqueado = false;
           }
-          
+
           if (data.fechaVencimiento) {
             fechaVencimiento = new Date(data.fechaVencimiento);
           }
@@ -827,7 +841,6 @@
         console.warn("Error al consultar la API de licencias.", err);
       }
 
-      // Si no viene fecha, usar 30 días como valor predeterminado
       if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
         const hoy = new Date();
         fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
@@ -840,8 +853,8 @@
       // Actualización BANNER 1 (Vencimiento)
       elNumDias.innerText = diasRestantes;
 
-      // Actualización BANNER 2 (Bloqueado/Desbloqueado)
-      if (estaBloqueado || diasRestantes <= 0) {
+      // Actualización BANNER 2 (Detecta el estado de Superadmin en tiempo real)
+      if (estaBloqueado) {
         elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
         elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
       } else {
