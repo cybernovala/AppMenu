@@ -79,10 +79,10 @@
     }
 
     .banner-bloqueo.estado-bloqueado {
-      background: linear-gradient(135deg, rgba(255, 0, 34, 0.9), rgba(150, 0, 0, 0.95));
-      border: 2px solid #ff0033;
-      color: #ffffff;
-      box-shadow: 0 0 15px rgba(255, 0, 51, 0.6);
+      background: linear-gradient(135deg, rgba(255, 0, 34, 0.9), rgba(150, 0, 0, 0.95)) !important;
+      border: 2px solid #ff0033 !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 15px rgba(255, 0, 51, 0.6) !important;
     }
 
     .banner-bloqueo.estado-desbloqueado {
@@ -798,7 +798,10 @@
     function forzarBloqueoUI() {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
-      if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
+      if(elBannerBloqueo) {
+        elBannerBloqueo.classList.remove("estado-desbloqueado");
+        elBannerBloqueo.classList.add("estado-bloqueado");
+      }
       if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
     }
 
@@ -852,13 +855,16 @@
       const diferenciaMs = fechaVencimiento - ahora;
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
-      elNumDias.innerText = diasRestantes;
+      if (elNumDias) elNumDias.innerText = diasRestantes;
 
       if (estaBloqueado) {
         forzarBloqueoUI();
       } else {
-        elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
-        elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
+        if(elBannerBloqueo) {
+          elBannerBloqueo.classList.remove("estado-bloqueado");
+          elBannerBloqueo.classList.add("estado-desbloqueado");
+        }
+        if(elTxtBloqueo) elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
       }
     }
 
