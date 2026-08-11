@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración & Menú Digital</title>
+  <title>--Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -49,7 +49,7 @@
 
     .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
 
-    /* ESTILOS DE BANNERS SEPARADOS */
+    /* BANNERS SEPARADOS */
     .banner-container {
       display: flex;
       flex-direction: column;
@@ -79,10 +79,10 @@
     }
 
     .banner-bloqueo.estado-bloqueado {
-      background: linear-gradient(135deg, rgba(255, 0, 34, 0.9), rgba(150, 0, 0, 0.95)) !important;
-      border: 2px solid #ff0033 !important;
-      color: #ffffff !important;
-      box-shadow: 0 0 15px rgba(255, 0, 51, 0.6) !important;
+      background: linear-gradient(135deg, rgba(255, 0, 34, 0.9), rgba(150, 0, 0, 0.95));
+      border: 2px solid #ff0033;
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(255, 0, 51, 0.6);
     }
 
     .banner-bloqueo.estado-desbloqueado {
@@ -92,7 +92,6 @@
       box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
     }
 
-    /* HEADER Y TABS */
     .header-bar {
       background: rgba(18, 18, 24, 0.95);
       border: 1px solid var(--border-neon);
@@ -135,13 +134,9 @@
       flex: 1;
       text-align: center;
       min-width: 130px;
-      touch-action: manipulation;
     }
 
-    .tab-btn:hover {
-      color: #fff;
-      border-color: var(--neon-orange);
-    }
+    .tab-btn:hover { color: #fff; border-color: var(--neon-orange); }
 
     .tab-btn.active {
       background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
@@ -162,10 +157,7 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
-      transition: opacity 0.2s;
-      touch-action: manipulation;
     }
-    .btn:active { opacity: 0.8; }
     .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
     .btn-danger { background: #ff3344; color: #fff; }
     .btn-success { background: var(--neon-green); color: #000; }
@@ -273,12 +265,7 @@
       font-weight: bold;
     }
 
-    .categories-bar {
-      display: flex;
-      gap: 10px;
-      padding: 15px 0;
-      flex-wrap: wrap;
-    }
+    .categories-bar { display: flex; gap: 10px; padding: 15px 0; flex-wrap: wrap; }
 
     .cat-chip {
       background: var(--card-bg);
@@ -470,12 +457,10 @@
     
     <!-- CONTENEDOR DE DOS BANNERS INDEPENDIENTES -->
     <div class="banner-container" id="banner-wrapper">
-      <!-- BANNER 1: VENCIMIENTO DE LICENCIA -->
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vence en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
       </div>
 
-      <!-- BANNER 2: ESTADO DE BLOQUEO / DESBLOQUEADO -->
       <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
         <span id="txt-estado-bloqueo">✅ Sistema Activo y Desbloqueado</span>
       </div>
@@ -694,7 +679,7 @@
 
   </div>
 
-  <!-- MODAL DE EDICIÓN -->
+  <!-- MODALES -->
   <div class="modal" id="modal-editar">
     <div class="modal-content">
       <h3>✏️ Editar Producto</h3>
@@ -717,7 +702,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE CARRITO -->
   <div class="modal" id="modal-cart">
     <div class="modal-content">
       <h3 style="color: var(--neon-pink); margin-bottom: 15px;">📋 Revisa tu Orden</h3>
@@ -782,26 +766,16 @@
 
       setInterval(() => {
         obtenerEstadoLicenciaYBloqueo();
-        if (document.getElementById('tab-cocina').classList.contains('active')) {
-          cargarPedidosCocina();
-        }
-        if (document.getElementById('tab-garzon').classList.contains('active')) {
-          cargarPedidosGarzon();
-        }
-        if (document.getElementById('tab-historial').classList.contains('active')) {
-          cargarHistorialGarantizado();
-        }
+        if (document.getElementById('tab-cocina').classList.contains('active')) cargarPedidosCocina();
+        if (document.getElementById('tab-garzon').classList.contains('active')) cargarPedidosGarzon();
+        if (document.getElementById('tab-historial').classList.contains('active')) cargarHistorialGarantizado();
       }, 5000); 
     });
 
-    // Función Global que fuerza la interfaz a modo Bloqueado si el servidor corta las peticiones.
     function forzarBloqueoUI() {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
-      if(elBannerBloqueo) {
-        elBannerBloqueo.classList.remove("estado-desbloqueado");
-        elBannerBloqueo.classList.add("estado-bloqueado");
-      }
+      if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
       if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
     }
 
@@ -815,34 +789,18 @@
 
       try {
         const urlSinCache = `${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`;
-        const res = await fetch(urlSinCache, {
-          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
-        });
+        const res = await fetch(urlSinCache, { headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' } });
 
         if (res.ok) {
           const data = await res.json();
-          const valBloqueado = data.bloqueado;
-          const valEstado = data.estado;
-          const valActivo = data.activo;
-          const valHabilitado = data.habilitado;
-          const valIsBlocked = data.isBlocked;
-
-          if (
-            valBloqueado === true || valBloqueado === 'true' || valBloqueado === 1 || valBloqueado === '1' ||
-            valIsBlocked === true || valIsBlocked === 'true' ||
-            valEstado === 'bloqueado' || valEstado === 'blocked' || valEstado === 'inactivo' || valEstado === 'desactivado' || valEstado === 'disabled' ||
-            valActivo === false || valActivo === 'false' || valActivo === 0 || valActivo === '0' ||
-            valHabilitado === false || valHabilitado === 'false' || valHabilitado === 0 || valHabilitado === '0'
-          ) {
+          if (data.activo === false || data.bloqueado === true) {
             estaBloqueado = true;
           }
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         } else {
-          // Si el estatus HTTP no es ok (Ej. 403 Forbidden o 401 Unauthorized), asumimos cuenta desactivada
           estaBloqueado = true;
         }
       } catch (err) {
-        // Si hay error completo de red causado por un bloqueo de servidor, disparamos bloqueo UI
         estaBloqueado = true;
       }
 
@@ -852,19 +810,14 @@
       }
 
       const ahora = new Date();
-      const diferenciaMs = fechaVencimiento - ahora;
-      const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
-
-      if (elNumDias) elNumDias.innerText = diasRestantes;
+      const diasRestantes = Math.max(0, Math.ceil((fechaVencimiento - ahora) / (1000 * 60 * 60 * 24)));
+      elNumDias.innerText = diasRestantes;
 
       if (estaBloqueado) {
         forzarBloqueoUI();
       } else {
-        if(elBannerBloqueo) {
-          elBannerBloqueo.classList.remove("estado-bloqueado");
-          elBannerBloqueo.classList.add("estado-desbloqueado");
-        }
-        if(elTxtBloqueo) elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
+        elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
+        elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
       }
     }
 
@@ -908,13 +861,11 @@
     }
 
     function construirUrlMesa(mesa) {
-      const baseUrl = window.location.origin + window.location.pathname;
-      return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
+      return `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
     }
 
     function construirUrlGarzon() {
-      const baseUrl = window.location.origin + window.location.pathname;
-      return `${baseUrl}?local=${encodeURIComponent(localId)}&view=garzon`;
+      return `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localId)}&view=garzon`;
     }
 
     async function cargarDatosMenu() {
@@ -935,10 +886,7 @@
       if (!Array.isArray(productosPlanos)) productosPlanos = [];
 
       categoriasSet.clear();
-      productosPlanos.forEach(p => {
-        if (p.categoria) categoriasSet.add(p.categoria);
-      });
-
+      productosPlanos.forEach(p => { if (p.categoria) categoriasSet.add(p.categoria); });
       if (categoriasSet.size === 0) categoriasSet.add("General");
 
       renderizarAdminCategorias();
