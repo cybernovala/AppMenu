@@ -49,7 +49,7 @@
 
     .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
 
-    /* BANNER BÁSICO / CONTADOR DÍAS */
+    /* BANNER DE LICENCIA Y ESTADO UNIFICADO */
     .license-banner {
       background: linear-gradient(135deg, rgba(255, 0, 127, 0.2), rgba(255, 85, 0, 0.2));
       border: 1px solid var(--neon-pink);
@@ -61,28 +61,18 @@
       font-size: 14px;
       font-weight: bold;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
       box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+      transition: all 0.3s ease;
     }
 
-    /* SEGUNDO BANNER INDEPENDIENTE PARA BLOQUEO SUPERADMIN */
-    .blocked-banner {
-      background: linear-gradient(135deg, rgba(255, 0, 0, 0.9), rgba(150, 0, 0, 0.95));
+    .license-banner.is-blocked {
+      background: linear-gradient(135deg, rgba(255, 0, 0, 0.85), rgba(150, 0, 0, 0.9));
       border: 2px solid #ff0022;
-      color: #ffffff;
-      text-align: center;
-      padding: 14px 15px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      font-size: 16px;
-      font-weight: bold;
-      display: none; /* Se activa dinámicamente si está bloqueado */
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 0 20px rgba(255, 0, 34, 0.8);
+      box-shadow: 0 0 15px rgba(255, 0, 34, 0.7);
     }
 
     /* HEADER Y TABS */
@@ -106,7 +96,6 @@
       letter-spacing: 0.5px;
     }
 
-    /* PESTAÑAS FIT PC / MOBILE SIN SLIDER */
     .nav-tabs {
       display: flex;
       flex-wrap: wrap;
@@ -147,7 +136,6 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* BOTONES ACCESIBLES EN MÓVIL */
     .btn {
       background: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
       border: none;
@@ -167,7 +155,6 @@
     .btn-blue { background: linear-gradient(135deg, var(--neon-blue), #0077ff); color: #fff; }
     .btn-sm { padding: 8px 14px; font-size: 13px; }
 
-    /* SECCIONES Y FORMULARIOS */
     .section-card {
       background: var(--card-bg);
       border: 1px solid #222;
@@ -241,7 +228,6 @@
       flex-wrap: wrap;
     }
 
-    /* VISTA CLIENTE PREVIEW */
     .preview-header {
       background: rgba(8, 7, 13, 0.95);
       border-bottom: 2px solid var(--neon-pink);
@@ -337,7 +323,6 @@
       cursor: pointer;
     }
 
-    /* GRID COCINA Y GARZÓN */
     .grid-pedidos {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -384,7 +369,6 @@
       border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* METRICAS Y TABLAS */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -407,7 +391,6 @@
     th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
     th { background: #12121c; color: var(--neon-yellow); }
 
-    /* MODALES SOLO PARA EDICION Y CARRITO */
     .modal {
       display: none;
       position: fixed;
@@ -442,7 +425,6 @@
     .qty-controls { display: flex; gap: 10px; align-items: center; }
     .btn-qty { background: #222; border: 1px solid #444; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
 
-    /* LAYOUT EXCLUSIVO PESTAÑA GARZON EN PRIMERA VISTA */
     .garzon-top-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -469,14 +451,12 @@
 
   <div class="container">
     
-    <!-- BANNER 1: SEGUNDO BANNER EXCLUSIVO DE BLOQUEO DE SUPERADMIN -->
-    <div class="blocked-banner" id="banner-bloqueado">
-      <span>🚫 Licencia bloqueada. Contactarse con su proveedor.</span>
-    </div>
-
-    <!-- BANNER 2: BANNER CONTADOR DINÁMICO DE DÍAS -->
+    <!-- BANNER ÚNICO PARA AMBOS MENSAJES -->
     <div class="license-banner" id="license-banner">
-      <span>⚠️ Verificando estado de licencia...</span>
+      <div id="msg-vencimiento">⚠️ Su licencia vence en 30 días.</div>
+      <div id="msg-bloqueo" style="display: none; color: #ffffff; font-weight: bold; margin-top: 4px;">
+        🚫 Su licencia está bloqueada, contáctese con su proveedor.
+      </div>
     </div>
 
     <!-- HEADER GENERAL -->
@@ -764,13 +744,11 @@
 
       if (vistaModo === 'cliente') {
         document.getElementById('license-banner').style.display = 'none';
-        document.getElementById('banner-bloqueado').style.display = 'none';
         document.getElementById('admin-header').style.display = 'none';
         document.getElementById('admin-nav-tabs').style.display = 'none';
         cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
       } else if (vistaModo === 'garzon') {
         document.getElementById('license-banner').style.display = 'none';
-        document.getElementById('banner-bloqueado').style.display = 'none';
         document.getElementById('admin-header').style.display = 'none';
         document.getElementById('admin-nav-tabs').style.display = 'none';
         cambiarPestana('tab-garzon', document.getElementById('btn-tab-garzon'));
@@ -794,10 +772,11 @@
       }, 8000);
     });
 
-    /* CONTROL INDEPENDIENTE DE LICENCIA Y BLOQUEO CON DOS BANNERS */
+    /* LÓGICA DE LICENCIA Y BLOQUEO CON MENSAJES MOSTRADOS JUNTOS */
     async function obtenerDiasLicencia() {
-      const bannerContador = document.getElementById('license-banner');
-      const bannerBloqueado = document.getElementById('banner-bloqueado');
+      const bannerContainer = document.getElementById('license-banner');
+      const msgVencimiento = document.getElementById('msg-vencimiento');
+      const msgBloqueo = document.getElementById('msg-bloqueo');
 
       let fechaVencimiento = null;
       let estaBloqueado = false;
@@ -806,7 +785,7 @@
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}`);
         if (res.ok) {
           const data = await res.json();
-          // Detecta el flag explícito de bloqueo enviado desde Superadmin
+          // Verifica estado de bloqueo del Superadmin (booleano o string)
           if (data.bloqueado === true || data.bloqueado === 'true' || data.estado === 'bloqueado') {
             estaBloqueado = true;
           }
@@ -818,7 +797,7 @@
         console.warn("No se pudo consultar el servidor de licencias.", err);
       }
 
-      // Si no hay fecha registrada, calcula 30 días base
+      // Si no existe fecha registrada aún, calcula 30 días base
       if (!fechaVencimiento) {
         const hoy = new Date();
         fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
@@ -828,16 +807,16 @@
       const diferenciaMs = fechaVencimiento - ahora;
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
-      // LÓGICA DE VISIBILIDAD DE BANNERS:
+      // 1. Primer Mensaje: Vencimiento de Días
+      msgVencimiento.innerHTML = `⚠️ Su licencia vence en <span style="color: var(--neon-yellow); text-decoration: underline;">${diasRestantes}</span> días.`;
+
+      // 2. Segundo Mensaje: Estado de Bloqueo
       if (estaBloqueado || diasRestantes <= 0) {
-        // Muestra el banner rojo de bloqueo y oculta el de días
-        bannerBloqueado.style.display = 'flex';
-        bannerContador.style.display = 'none';
+        msgBloqueo.style.display = 'block';
+        bannerContainer.classList.add('is-blocked');
       } else {
-        // Muestra el banner de días normales y oculta el de bloqueo
-        bannerBloqueado.style.display = 'none';
-        bannerContador.style.display = 'flex';
-        bannerContador.innerHTML = `⚠️ Su licencia vence en <span style="color: var(--neon-yellow); text-decoration: underline;">${diasRestantes}</span> días.`;
+        msgBloqueo.style.display = 'none';
+        bannerContainer.classList.remove('is-blocked');
       }
     }
 
@@ -867,7 +846,6 @@
       generarQRGarzon();
     }
 
-    /* GESTIÓN DIRECTA DE RUT GARZÓN */
     function guardarRutAutogestion(val) {
       val = val.trim().toUpperCase();
       if (val.length >= 7) {
@@ -897,7 +875,6 @@
       return `${baseUrl}?local=${encodeURIComponent(localId)}&view=garzon`;
     }
 
-    /* CARGA DE MENÚ */
     async function cargarDatosMenu() {
       const contenedorAdmin = document.getElementById('contenedor-categorias');
       contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú...</p>';
@@ -927,7 +904,6 @@
       renderizarClienteProductos();
     }
 
-    /* ADMIN Y EDICIÓN */
     function renderizarAdminCategorias() {
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '';
@@ -1047,7 +1023,6 @@
       } catch (err) {}
     }
 
-    /* CLIENTE Y CARRITO */
     function renderizarClienteCategorias() {
       const bar = document.getElementById('barra-categorias-cliente');
       const cats = Array.from(categoriasSet);
@@ -1148,7 +1123,6 @@
       document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
     }
 
-    /* ENVIAR PEDIDO */
     async function enviarPedidoCocina() {
       if (carrito.length === 0) return alert("El carrito está vacío.");
 
@@ -1200,7 +1174,6 @@
       btnEnviar.innerText = "🚀 Enviar a Cocina";
     }
 
-    /* MONITOR DE COCINA */
     async function cargarPedidosCocina() {
       const contenedor = document.getElementById('contenedor-pedidos-cocina');
       if (!contenedor) return;
@@ -1269,7 +1242,6 @@
       cargarPedidosGarzon();
     }
 
-    /* CONTROL DE GARZÓN */
     function generarQRGarzon() {
       const container = document.getElementById('qr-garzon-render');
       if (!container) return;
@@ -1457,7 +1429,6 @@
       cargarHistorialGarantizado();
     }
 
-    /* HISTORIAL & MÉTRICAS */
     function cambiarFiltrosInforme() {
       const tipo = document.getElementById('select-tipo-informe').value;
       const inputRut = document.getElementById('filtro-informe-rut');
@@ -1659,7 +1630,6 @@
       cargarHistorialGarantizado();
     }
 
-    /* GENERACIÓN DE QR Y PDF MESAS */
     function generarQRUnico() {
       const numMesa = document.getElementById('qr-num-mesa').value || '1';
       const container = document.getElementById('qr-single-render');
