@@ -49,7 +49,7 @@
 
     .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
 
-    /* BANNER LICENCIA ALERTA / BLOQUEO */
+    /* BANNER BÁSICO / CONTADOR DÍAS */
     .license-banner {
       background: linear-gradient(135deg, rgba(255, 0, 127, 0.2), rgba(255, 85, 0, 0.2));
       border: 1px solid var(--neon-pink);
@@ -67,12 +67,22 @@
       box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
     }
 
-    .license-banner.blocked {
-      background: linear-gradient(135deg, rgba(255, 0, 0, 0.8), rgba(150, 0, 0, 0.9)) !important;
-      border: 2px solid #ff0022 !important;
-      color: #ffffff !important;
-      font-size: 16px !important;
-      box-shadow: 0 0 20px rgba(255, 0, 34, 0.8) !important;
+    /* SEGUNDO BANNER INDEPENDIENTE PARA BLOQUEO SUPERADMIN */
+    .blocked-banner {
+      background: linear-gradient(135deg, rgba(255, 0, 0, 0.9), rgba(150, 0, 0, 0.95));
+      border: 2px solid #ff0022;
+      color: #ffffff;
+      text-align: center;
+      padding: 14px 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 16px;
+      font-weight: bold;
+      display: none; /* Se activa dinámicamente si está bloqueado */
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 0 20px rgba(255, 0, 34, 0.8);
     }
 
     /* HEADER Y TABS */
@@ -459,7 +469,12 @@
 
   <div class="container">
     
-    <!-- BANNER DE LICENCIA CON CONTADOR DINÁMICO Y ESTADO DE BLOQUEO -->
+    <!-- BANNER 1: SEGUNDO BANNER EXCLUSIVO DE BLOQUEO DE SUPERADMIN -->
+    <div class="blocked-banner" id="banner-bloqueado">
+      <span>🚫 Licencia bloqueada. Contactarse con su proveedor.</span>
+    </div>
+
+    <!-- BANNER 2: BANNER CONTADOR DINÁMICO DE DÍAS -->
     <div class="license-banner" id="license-banner">
       <span>⚠️ Verificando estado de licencia...</span>
     </div>
@@ -749,11 +764,13 @@
 
       if (vistaModo === 'cliente') {
         document.getElementById('license-banner').style.display = 'none';
+        document.getElementById('banner-bloqueado').style.display = 'none';
         document.getElementById('admin-header').style.display = 'none';
         document.getElementById('admin-nav-tabs').style.display = 'none';
         cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
       } else if (vistaModo === 'garzon') {
         document.getElementById('license-banner').style.display = 'none';
+        document.getElementById('banner-bloqueado').style.display = 'none';
         document.getElementById('admin-header').style.display = 'none';
         document.getElementById('admin-nav-tabs').style.display = 'none';
         cambiarPestana('tab-garzon', document.getElementById('btn-tab-garzon'));
@@ -777,9 +794,11 @@
       }, 8000);
     });
 
-    /* GESTIÓN Y CÁLCULO DE LICENCIA CON VERIFICACIÓN DE BLOQUEO */
+    /* CONTROL INDEPENDIENTE DE LICENCIA Y BLOQUEO CON DOS BANNERS */
     async function obtenerDiasLicencia() {
-      const bannerEl = document.getElementById('license-banner');
+      const bannerContador = document.getElementById('license-banner');
+      const bannerBloqueado = document.getElementById('banner-bloqueado');
+
       let fechaVencimiento = null;
       let estaBloqueado = false;
 
@@ -787,7 +806,7 @@
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}`);
         if (res.ok) {
           const data = await res.json();
-          // Detecta adecuadamente si el local está bloqueado desde superadmin
+          // Detecta el flag explícito de bloqueo enviado desde Superadmin
           if (data.bloqueado === true || data.bloqueado === 'true' || data.estado === 'bloqueado') {
             estaBloqueado = true;
           }
@@ -796,17 +815,10 @@
           }
         }
       } catch (err) {
-        console.warn("No se pudo verificar la licencia con el servidor.", err);
+        console.warn("No se pudo consultar el servidor de licencias.", err);
       }
 
-      // Si el superadmin lo bloqueó
-      if (estaBloqueado) {
-        bannerEl.classList.add('blocked');
-        bannerEl.innerHTML = `🚫 Licencia bloqueada. Contactarse con su proveedor.`;
-        return;
-      }
-
-      // Si no existe registro explicito de fecha, calcula 30 días
+      // Si no hay fecha registrada, calcula 30 días base
       if (!fechaVencimiento) {
         const hoy = new Date();
         fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
@@ -816,12 +828,16 @@
       const diferenciaMs = fechaVencimiento - ahora;
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
-      if (diasRestantes <= 0) {
-        bannerEl.classList.add('blocked');
-        bannerEl.innerHTML = `🚫 Licencia bloqueada. Contactarse con su proveedor.`;
+      // LÓGICA DE VISIBILIDAD DE BANNERS:
+      if (estaBloqueado || diasRestantes <= 0) {
+        // Muestra el banner rojo de bloqueo y oculta el de días
+        bannerBloqueado.style.display = 'flex';
+        bannerContador.style.display = 'none';
       } else {
-        bannerEl.classList.remove('blocked');
-        bannerEl.innerHTML = `⚠️ Su licencia vence en <span id="lbl-dias-licencia" style="color: var(--neon-yellow); text-decoration: underline;">${diasRestantes}</span> días.`;
+        // Muestra el banner de días normales y oculta el de bloqueo
+        bannerBloqueado.style.display = 'none';
+        bannerContador.style.display = 'flex';
+        bannerContador.innerHTML = `⚠️ Su licencia vence en <span style="color: var(--neon-yellow); text-decoration: underline;">${diasRestantes}</span> días.`;
       }
     }
 
