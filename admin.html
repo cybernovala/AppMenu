@@ -472,7 +472,7 @@
 
       <!-- BANNER 2: ESTADO DE BLOQUEO / DESBLOQUEADO -->
       <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
-        <span id="txt-estado-bloqueo">✅ Sistema Activo y Desbloqueado</span>
+        <span id="txt-estado-bloqueo">Su cuenta esta habilitada.</span>
       </div>
     </div>
 
@@ -793,7 +793,7 @@
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
       if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
-      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
+      if(elTxtBloqueo) elTxtBloqueo.innerText = "Su cuenta ha sido bloqueada.";
     }
 
     async function obtenerEstadoLicenciaYBloqueo() {
@@ -838,7 +838,7 @@
         forzarBloqueoUI();
       } else {
         elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
-        elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
+        elTxtBloqueo.innerText = "Su cuenta esta habilitada.";
       }
     }
 
