@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración & Menú Digital</title>
+  <title>--Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -757,7 +757,6 @@
       document.getElementById('txt-local-cliente').innerText = localId.toUpperCase();
       document.getElementById('txt-mesa-cliente').innerText = `MESA N° ${numeroMesa}`;
       
-      // Control de banners e información
       obtenerEstadoLicenciaYBloqueo();
 
       if (rutGarzonSesion) {
@@ -792,10 +791,17 @@
         if (document.getElementById('tab-historial').classList.contains('active')) {
           cargarHistorialGarantizado();
         }
-      }, 5000); // Polling actualizado a 5 segundos
+      }, 5000); 
     });
 
-    /* FUNCION CORREGIDA CON DESACTIVACION DE CACHÉ Y DETECCION EN TIEMPO REAL */
+    // Función Global que fuerza la interfaz a modo Bloqueado si el servidor corta las peticiones.
+    function forzarBloqueoUI() {
+      const elBannerBloqueo = document.getElementById('banner-bloqueo');
+      const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
+      if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
+      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
+    }
+
     async function obtenerEstadoLicenciaYBloqueo() {
       const elNumDias = document.getElementById('num-dias-vencimiento');
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
@@ -805,7 +811,6 @@
       let estaBloqueado = false;
 
       try {
-        // Se agrega parámetro de marca de tiempo y No-Cache para evitar lecturas guardadas localmente por el navegador
         const urlSinCache = `${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`;
         const res = await fetch(urlSinCache, {
           headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
@@ -813,8 +818,6 @@
 
         if (res.ok) {
           const data = await res.json();
-          
-          // Mapeo exhaustivo de variables de estado devueltas por la API
           const valBloqueado = data.bloqueado;
           const valEstado = data.estado;
           const valActivo = data.activo;
@@ -829,16 +832,15 @@
             valHabilitado === false || valHabilitado === 'false' || valHabilitado === 0 || valHabilitado === '0'
           ) {
             estaBloqueado = true;
-          } else {
-            estaBloqueado = false;
           }
-
-          if (data.fechaVencimiento) {
-            fechaVencimiento = new Date(data.fechaVencimiento);
-          }
+          if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
+        } else {
+          // Si el estatus HTTP no es ok (Ej. 403 Forbidden o 401 Unauthorized), asumimos cuenta desactivada
+          estaBloqueado = true;
         }
       } catch (err) {
-        console.warn("Error al consultar la API de licencias.", err);
+        // Si hay error completo de red causado por un bloqueo de servidor, disparamos bloqueo UI
+        estaBloqueado = true;
       }
 
       if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
@@ -850,13 +852,10 @@
       const diferenciaMs = fechaVencimiento - ahora;
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
-      // Actualización BANNER 1 (Vencimiento)
       elNumDias.innerText = diasRestantes;
 
-      // Actualización BANNER 2 (Detecta el estado de Superadmin en tiempo real)
       if (estaBloqueado) {
-        elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
-        elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
+        forzarBloqueoUI();
       } else {
         elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
         elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
@@ -870,14 +869,9 @@
       document.getElementById(tabId).classList.add('active');
       if (element) element.classList.add('active');
 
-      if (tabId === 'tab-cocina') {
-        cargarPedidosCocina();
-      } else if (tabId === 'tab-garzon') {
-        generarQRGarzon();
-        cargarPedidosGarzon();
-      } else if (tabId === 'tab-historial') {
-        cargarHistorialGarantizado();
-      }
+      if (tabId === 'tab-cocina') cargarPedidosCocina();
+      else if (tabId === 'tab-garzon') { generarQRGarzon(); cargarPedidosGarzon(); }
+      else if (tabId === 'tab-historial') cargarHistorialGarantizado();
     }
 
     function recargarTodo() {
@@ -901,7 +895,6 @@
     function guardarRutDirecto() {
       const val = document.getElementById('input-rut-directo').value.trim();
       if (!val || val.length < 7) return alert("Por favor ingresa un RUT válido.");
-      
       rutGarzonSesion = val.toUpperCase();
       localStorage.setItem('rutGarzon', rutGarzonSesion);
       document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
@@ -924,11 +917,13 @@
 
       try {
         const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
-        if (respuesta.ok) {
-          productosPlanos = await respuesta.json();
-        }
+        if (!respuesta.ok) throw new Error(`Status ${respuesta.status}`);
+        
+        productosPlanos = await respuesta.json();
       } catch (err) {
-        console.error("Error al cargar menú:", err);
+        contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador o error de conexión.</p>';
+        forzarBloqueoUI();
+        return;
       }
 
       if (!Array.isArray(productosPlanos)) productosPlanos = [];
@@ -938,9 +933,7 @@
         if (p.categoria) categoriasSet.add(p.categoria);
       });
 
-      if (categoriasSet.size === 0) {
-        categoriasSet.add("General");
-      }
+      if (categoriasSet.size === 0) categoriasSet.add("General");
 
       renderizarAdminCategorias();
       renderizarClienteCategorias();
@@ -953,7 +946,6 @@
 
       categoriasSet.forEach(catNombre => {
         const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
-
         const catCard = document.createElement('div');
         catCard.className = 'category-card';
 
@@ -962,7 +954,6 @@
             <span class="category-name">📂 ${catNombre}</span>
             <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
           </div>
-
           <div class="product-list">
             ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>' : ''}
             ${productosCat.map((prod, subIndex) => `
@@ -978,14 +969,12 @@
               </div>
             `).join('')}
           </div>
-
           <div class="add-product-box">
             <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
             <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
             <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
           </div>
         `;
-
         contenedor.appendChild(catCard);
       });
     }
@@ -1007,7 +996,6 @@
       const precio = parseFloat(inputPrecio.value);
 
       if (!nombre || isNaN(precio)) return alert("Ingresa un nombre y precio válido.");
-
       try {
         const res = await fetch(`${BACKEND_URL}/api/menu`, {
           method: 'POST',
@@ -1021,9 +1009,7 @@
     async function eliminarProducto(categoria, index) {
       if (!confirm("¿Deseas eliminar este producto?")) return;
       try {
-        await fetch(`${BACKEND_URL}/api/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, {
-          method: 'DELETE'
-        });
+        await fetch(`${BACKEND_URL}/api/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, { method: 'DELETE' });
         cargarDatosMenu();
       } catch (err) {}
     }
@@ -1052,14 +1038,7 @@
         await fetch(`${BACKEND_URL}/api/menu/edit`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            local: localId,
-            categoriaOriginal: catOrig,
-            indexOriginal: Number(indexOrig),
-            nuevoNombre,
-            nuevoPrecio,
-            nuevaCategoria
-          })
+          body: JSON.stringify({ local: localId, categoriaOriginal: catOrig, indexOriginal: Number(indexOrig), nuevoNombre, nuevoPrecio, nuevaCategoria })
         });
         cerrarModalEdicion();
         cargarDatosMenu();
@@ -1108,13 +1087,9 @@
       if (categoria && !nombre.toLowerCase().startsWith(categoria.toLowerCase())) {
         nombreCompleto = `${categoria} - ${nombre}`;
       }
-
       const idx = carrito.findIndex(i => i.nombre === nombreCompleto);
-      if (idx > -1) {
-        carrito[idx].cantidad++;
-      } else {
-        carrito.push({ nombre: nombreCompleto, precio, cantidad: 1 });
-      }
+      if (idx > -1) carrito[idx].cantidad++;
+      else carrito.push({ nombre: nombreCompleto, precio, cantidad: 1 });
       actualizarBarraCarrito();
     }
 
@@ -1131,7 +1106,6 @@
     function actualizarBarraCarrito() {
       const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
       const count = carrito.reduce((sum, item) => sum + item.cantidad, 0);
-
       document.getElementById('txt-total-bar').innerText = `$${total.toLocaleString('es-CL')}`;
       document.getElementById('txt-count-bar').innerText = count;
     }
@@ -1168,21 +1142,15 @@
 
     async function enviarPedidoCocina() {
       if (carrito.length === 0) return alert("El carrito está vacío.");
-
       const btnEnviar = document.getElementById('btn-enviar-cocina');
       btnEnviar.disabled = true;
       btnEnviar.innerText = "Procesando...";
 
       const totalCalculado = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-
       const documentoMongoPedido = {
         local: String(localId),
         mesa: String(numeroMesa),
-        items: carrito.map(item => ({
-          nombre: String(item.nombre),
-          precio: Number(item.precio),
-          cantidad: Number(item.cantidad)
-        })),
+        items: carrito.map(item => ({ nombre: String(item.nombre), precio: Number(item.precio), cantidad: Number(item.cantidad) })),
         total: Number(totalCalculado),
         estado: 'pendiente',
         fecha: new Date().toISOString()
@@ -1191,10 +1159,7 @@
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(documentoMongoPedido)
         });
 
@@ -1206,11 +1171,11 @@
           cargarPedidosCocina();
           cargarPedidosGarzon();
         } else {
-          const textErr = await res.text();
-          alert(`⚠️ El servidor respondió con error (${res.status}):\n${textErr}`);
+          alert(`⚠️ Su cuenta podría estar inactiva o hubo un error (${res.status}).`);
         }
       } catch (e) {
-        alert(`⚠️ Error de conexión al backend:\n${e.message}`);
+        alert(`⚠️ Error de conexión al backend. La cuenta podría estar desactivada.`);
+        forzarBloqueoUI();
       }
 
       btnEnviar.disabled = false;
@@ -1231,7 +1196,6 @@
         if (localId && localId !== 'default') {
           pedidos = pedidos.filter(p => !p.local || String(p.local).toLowerCase() === localId.toLowerCase());
         }
-
         const pendientes = pedidos.filter(p => p.estado !== 'entregado');
 
         if (pendientes.length === 0) {
@@ -1268,19 +1232,15 @@
             </div>
           `;
         }).join('');
-
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al conectar con la base de datos.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
+        forzarBloqueoUI();
       }
     }
 
     async function despacharPedido(idPedido) {
       if (!confirm("¿Marcar este pedido como preparado?")) return;
-
-      try {
-        await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' });
-      } catch (e) {}
-
+      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' }); } catch (e) {}
       cargarPedidosCocina();
       cargarPedidosGarzon();
     }
@@ -1289,53 +1249,33 @@
       const container = document.getElementById('qr-garzon-render');
       if (!container) return;
       container.innerHTML = '';
-
-      new QRCode(container, {
-        text: construirUrlGarzon(),
-        width: 180,
-        height: 180,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
+      new QRCode(container, { text: construirUrlGarzon(), width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
     }
 
     function descargarQRGarzon() {
       generarQRGarzon();
-
       setTimeout(() => {
         const qrCanvas = document.querySelector('#qr-garzon-render canvas');
         const qrImg = document.querySelector('#qr-garzon-render img');
-
         const canvasFinal = document.createElement('canvas');
         const size = 591;
-        canvasFinal.width = size;
-        canvasFinal.height = size;
-
+        canvasFinal.width = size; canvasFinal.height = size;
         const ctx = canvasFinal.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
 
-        if (qrCanvas) {
-          ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
-        } else if (qrImg) {
-          ctx.drawImage(qrImg, (size - 420) / 2, 40, 420, 420);
-        } else {
-          return alert("Error al capturar QR. Intenta nuevamente.");
-        }
+        if (qrCanvas) ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
+        else if (qrImg) ctx.drawImage(qrImg, (size - 420) / 2, 40, 420, 420);
+        else return alert("Error al capturar QR. Intenta nuevamente.");
 
         ctx.fillStyle = '#000000';
-        ctx.font = 'bold 32px sans-serif';
-        ctx.textAlign = 'center';
+        ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
         ctx.fillText(localId.toUpperCase(), size / 2, 500);
-
         ctx.font = 'bold 36px sans-serif';
         ctx.fillText(`ACCESO GARZÓN - ENTREGAS`, size / 2, 550);
 
         const link = document.createElement('a');
         link.download = `QR_Garzon_${localId}.png`;
-        link.href = canvasFinal.toDataURL('image/png');
-        link.click();
+        link.href = canvasFinal.toDataURL('image/png'); link.click();
       }, 100);
     }
 
@@ -1345,11 +1285,11 @@
 
       try {
         const resPedidos = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
+        if (!resPedidos.ok) throw new Error(`Status ${resPedidos.status}`);
+
         let pedidos = [];
-        if (resPedidos.ok) {
-          const datos = await resPedidos.json();
-          pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
-        }
+        const datos = await resPedidos.json();
+        pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
 
         if (localId && localId !== 'default') {
           pedidos = pedidos.filter(p => !p.local || String(p.local).toLowerCase() === localId.toLowerCase());
@@ -1390,7 +1330,8 @@
           }).join('');
         }
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al conectar con la base de datos.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
+        forzarBloqueoUI();
       }
     }
 
@@ -1408,12 +1349,7 @@
         }
       }
 
-      const pedidoObj = cachePedidos.find(p => (p._id || p.id || '') == idPedido) || {
-        local: localId,
-        mesa: '1',
-        total: 0,
-        items: []
-      };
+      const pedidoObj = cachePedidos.find(p => (p._id || p.id || '') == idPedido) || { local: localId, mesa: '1', total: 0, items: [] };
 
       const ahora = new Date();
       const anio = ahora.getFullYear();
@@ -1424,52 +1360,33 @@
       let horas = ahora.getHours();
       const minutos = String(ahora.getMinutes()).padStart(2, '0');
       const ampm = horas >= 12 ? 'p. m.' : 'a. m.';
-      horas = horas % 12;
-      horas = horas ? horas : 12; 
+      horas = horas % 12; horas = horas ? horas : 12; 
       const horaFormatoMongo = `${String(horas).padStart(2, '0')}:${minutos} ${ampm}`;
 
       const docHistorial = {
-        id: String(Date.now()),
-        local: String(localId),
-        mesa: String(pedidoObj.mesa || '1'),
-        items: pedidoObj.items || [],
-        total: Number(pedidoObj.total || 0),
-        estado: 'pendiente',
-        hora: pedidoObj.hora || horaFormatoMongo,
-        rutGarzon: String(rutGarzonSesion),
-        horaEntrega: horaFormatoMongo,
-        fechaEntrega: fechaFormatoMongo
+        id: String(Date.now()), local: String(localId), mesa: String(pedidoObj.mesa || '1'),
+        items: pedidoObj.items || [], total: Number(pedidoObj.total || 0), estado: 'pendiente',
+        hora: pedidoObj.hora || horaFormatoMongo, rutGarzon: String(rutGarzonSesion),
+        horaEntrega: horaFormatoMongo, fechaEntrega: fechaFormatoMongo
       };
 
       try {
         await fetch(`${BACKEND_URL}/api/historials`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(docHistorial)
         });
-      } catch (e) {
-        console.error("Error al publicar en historial:", e);
-      }
+      } catch (e) { console.error("Error al publicar en historial:", e); }
 
       let historialLocalArr = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
       historialLocalArr.unshift(docHistorial);
       localStorage.setItem(`historial_${localId}`, JSON.stringify(historialLocalArr));
 
-      try {
-        await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, {
-          method: 'DELETE'
-        });
-      } catch (err) {}
+      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' }); } catch (err) {}
 
       const cardEl = document.getElementById(`card-garzon-${idPedido}`);
       if (cardEl) cardEl.remove();
 
-      cargarPedidosGarzon();
-      cargarPedidosCocina();
-      cargarHistorialGarantizado();
+      cargarPedidosGarzon(); cargarPedidosCocina(); cargarHistorialGarantizado();
     }
 
     function cambiarFiltrosInforme() {
@@ -1478,21 +1395,14 @@
       const inputDesde = document.getElementById('filtro-informe-desde');
       const inputHasta = document.getElementById('filtro-informe-hasta');
 
-      inputRut.style.display = 'none';
-      inputDesde.style.display = 'none';
-      inputHasta.style.display = 'none';
+      inputRut.style.display = 'none'; inputDesde.style.display = 'none'; inputHasta.style.display = 'none';
 
-      if (tipo === 'rut') {
-        inputRut.style.display = 'inline-block';
-      } else if (tipo === 'fechas') {
-        inputDesde.style.display = 'inline-block';
-        inputHasta.style.display = 'inline-block';
-      }
+      if (tipo === 'rut') inputRut.style.display = 'inline-block';
+      else if (tipo === 'fechas') { inputDesde.style.display = 'inline-block'; inputHasta.style.display = 'inline-block'; }
     }
 
     async function cargarHistorialGarantizado() {
       let entregados = [];
-
       try {
         const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
         if (resHistorial.ok) {
@@ -1500,9 +1410,7 @@
           const arrayApi = Array.isArray(apiHist) ? apiHist : (apiHist.historial || apiHist.data || []);
           entregados = entregados.concat(arrayApi);
         }
-      } catch (e) {
-        console.warn("API historial no disponible:", e);
-      }
+      } catch (e) { console.warn("API historial no disponible:", e); }
 
       const localHist = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
       if (Array.isArray(localHist)) entregados = entregados.concat(localHist);
@@ -1512,8 +1420,7 @@
         if (resPedidos.ok) {
           const apiPed = await resPedidos.json();
           const arrayPed = Array.isArray(apiPed) ? apiPed : (apiPed.pedidos || apiPed.data || []);
-          const soloEntregados = arrayPed.filter(p => p.estado === 'entregado');
-          entregados = entregados.concat(soloEntregados);
+          entregados = entregados.concat(arrayPed.filter(p => p.estado === 'entregado'));
         }
       } catch (e) {}
 
@@ -1542,36 +1449,18 @@
       let filtrados = [...historialGlobal];
 
       if (tipo === 'rut' && rutBuscado) {
-        filtrados = filtrados.filter(p => {
-          const r = (p.rutGarzon || p.garzon || p.rut || '').toUpperCase();
-          return r.includes(rutBuscado);
-        });
+        filtrados = filtrados.filter(p => { const r = (p.rutGarzon || p.garzon || p.rut || '').toUpperCase(); return r.includes(rutBuscado); });
       } else if (tipo === 'fechas') {
-        if (fechaDesde) {
-          filtrados = filtrados.filter(p => {
-            const f = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : '');
-            return f >= fechaDesde;
-          });
-        }
-        if (fechaHasta) {
-          filtrados = filtrados.filter(p => {
-            const f = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : '');
-            return f <= fechaHasta;
-          });
-        }
+        if (fechaDesde) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f >= fechaDesde; });
+        if (fechaHasta) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f <= fechaHasta; });
       }
-
       renderizarTablaYMetricas(filtrados);
     }
 
     function renderizarTablaYMetricas(lista) {
       const tablaHistorial = document.getElementById('tabla-historial-garzon');
       let totalMonto = 0;
-
-      lista.forEach(p => {
-        totalMonto += Number(p.total || 0);
-      });
-
+      lista.forEach(p => { totalMonto += Number(p.total || 0); });
       const promedio = lista.length > 0 ? Math.round(totalMonto / lista.length) : 0;
 
       document.getElementById('lbl-stat-entregados').innerText = lista.length;
@@ -1587,9 +1476,7 @@
           const horaMostrar = p.horaEntrega || p.hora || 'S/H';
 
           let itemsTexto = 'Atención en Mesa';
-          if (Array.isArray(p.items) && p.items.length > 0) {
-            itemsTexto = p.items.map(i => `${i.cantidad || 1}x ${i.nombre || 'Producto'}`).join(', ');
-          }
+          if (Array.isArray(p.items) && p.items.length > 0) itemsTexto = p.items.map(i => `${i.cantidad || 1}x ${i.nombre || 'Producto'}`).join(', ');
 
           return `
             <tr>
@@ -1613,33 +1500,24 @@
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(16);
       doc.text(`INFORME DE ENTREGAS & MÉTRICAS - ${localId.toUpperCase()}`, 14, 20);
 
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10); doc.setFont("helvetica", "normal");
       doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-CL')} ${new Date().toLocaleTimeString('es-CL')}`, 14, 28);
       doc.text(`Tipo de Informe: ${tipo.toUpperCase()}`, 14, 34);
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(12);
       doc.text("RESUMEN DE MÉTRICAS", 14, 46);
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
       doc.text(`• Total Pedidos Atendidos: ${totalPedidos}`, 14, 54);
       doc.text(`• Monto Total Recaudado: ${totalMonto}`, 14, 60);
       doc.text(`• Venta Promedio por Comanda: ${promedio}`, 14, 66);
 
-      doc.setLineWidth(0.5);
-      doc.line(14, 72, 196, 72);
-
-      doc.setFont("helvetica", "bold");
-      doc.text("Mesa   RUT Garzón      Fecha        Hora      Total", 14, 80);
-      doc.setLineWidth(0.2);
-      doc.line(14, 82, 196, 82);
+      doc.setLineWidth(0.5); doc.line(14, 72, 196, 72);
+      doc.setFont("helvetica", "bold"); doc.text("Mesa   RUT Garzón      Fecha        Hora      Total", 14, 80);
+      doc.setLineWidth(0.2); doc.line(14, 82, 196, 82);
 
       const filas = document.querySelectorAll('#tabla-historial-garzon tr');
       let y = 90;
@@ -1649,21 +1527,14 @@
         const cols = f.querySelectorAll('td');
         if (cols.length >= 6) {
           const mesa = cols[0].innerText.replace('Mesa ', '');
-          const rut = cols[1].innerText;
-          const fecha = cols[2].innerText;
-          const hora = cols[3].innerText.replace('⏰ ', '');
-          const total = cols[5].innerText;
+          const rut = cols[1].innerText; const fecha = cols[2].innerText;
+          const hora = cols[3].innerText.replace('⏰ ', ''); const total = cols[5].innerText;
 
-          if (y > 270) {
-            doc.addPage();
-            y = 20;
-          }
-
+          if (y > 270) { doc.addPage(); y = 20; }
           doc.text(`${mesa.padEnd(6)} ${rut.padEnd(15)} ${fecha.padEnd(12)} ${hora.padEnd(9)} ${total}`, 14, y);
           y += 7;
         }
       });
-
       doc.save(`Informe_${tipo}_${localId}.pdf`);
     }
 
@@ -1677,16 +1548,7 @@
       const numMesa = document.getElementById('qr-num-mesa').value || '1';
       const container = document.getElementById('qr-single-render');
       container.innerHTML = '';
-
-      new QRCode(container, {
-        text: construirUrlMesa(numMesa),
-        width: 220,
-        height: 220,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
-
+      new QRCode(container, { text: construirUrlMesa(numMesa), width: 220, height: 220, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
       document.getElementById('lbl-qr-single-mesa').innerText = `${localId.toUpperCase()} - MESA ${numMesa}`;
     }
 
@@ -1696,34 +1558,23 @@
       if (!qrCanvas) return alert("Genera el código QR primero.");
 
       const canvasFinal = document.createElement('canvas');
-      const size = 591;
-      canvasFinal.width = size;
-      canvasFinal.height = size;
+      const size = 591; canvasFinal.width = size; canvasFinal.height = size;
 
       const ctx = canvasFinal.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, size, size);
-
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
       ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
 
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 32px sans-serif';
-      ctx.textAlign = 'center';
+      ctx.fillStyle = '#000000'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText(localId.toUpperCase(), size / 2, 500);
+      ctx.font = 'bold 38px sans-serif'; ctx.fillText(`MESA N° ${numMesa}`, size / 2, 550);
 
-      ctx.font = 'bold 38px sans-serif';
-      ctx.fillText(`MESA N° ${numMesa}`, size / 2, 550);
-
-      const link = document.createElement('a');
-      link.download = `QR_Mesa_${numMesa}_${localId}.png`;
-      link.href = canvasFinal.toDataURL('image/png');
-      link.click();
+      const link = document.createElement('a'); link.download = `QR_Mesa_${numMesa}_${localId}.png`;
+      link.href = canvasFinal.toDataURL('image/png'); link.click();
     }
 
     async function generarPDFMesas() {
       const desde = parseInt(document.getElementById('qr-rango-desde').value);
       const hasta = parseInt(document.getElementById('qr-rango-hasta').value);
-
       if (isNaN(desde) || isNaN(hasta) || desde > hasta) return alert("Rango no válido.");
 
       const { jsPDF } = window.jspdf;
@@ -1732,40 +1583,23 @@
       let count = 0;
       for (let m = desde; m <= hasta; m++) {
         if (count > 0 && count % 12 === 0) doc.addPage();
+        const idx = count % 12; const col = idx % 3; const row = Math.floor(idx / 3);
+        const x = 1.8 + col * 6.2; const y = 2.0 + row * 6.2;
 
-        const idx = count % 12;
-        const col = idx % 3;
-        const row = Math.floor(idx / 3);
-
-        const x = 1.8 + col * 6.2;
-        const y = 2.0 + row * 6.2;
-
-        const tempDiv = document.getElementById('qr-hidden-temp');
-        tempDiv.innerHTML = '';
-        
-        new QRCode(tempDiv, {
-          text: construirUrlMesa(m),
-          width: 200, height: 200,
-          colorDark: "#000000", colorLight: "#ffffff"
-        });
+        const tempDiv = document.getElementById('qr-hidden-temp'); tempDiv.innerHTML = '';
+        new QRCode(tempDiv, { text: construirUrlMesa(m), width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff" });
 
         await new Promise(r => setTimeout(r, 50));
-
         const imgData = tempDiv.querySelector('canvas').toDataURL('image/png');
 
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(x, y, 5, 5);
+        doc.setDrawColor(200, 200, 200); doc.rect(x, y, 5, 5);
         doc.addImage(imgData, 'PNG', x + 0.6, y + 0.3, 3.8, 3.8);
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(8);
         doc.text(localId.toUpperCase(), x + 2.5, y + 4.3, { align: 'center' });
-        doc.setFontSize(9);
-        doc.text(`MESA N° ${m}`, x + 2.5, y + 4.7, { align: 'center' });
-
+        doc.setFontSize(9); doc.text(`MESA N° ${m}`, x + 2.5, y + 4.7, { align: 'center' });
         count++;
       }
-
       doc.save(`Planilla_QR_${localId}.pdf`);
     }
   </script>
