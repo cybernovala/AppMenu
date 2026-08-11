@@ -3,351 +3,133 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - Control de Licencias</title>
+  <title>Panel Superadmin - Control Global de Restaurantes</title>
   <style>
     :root {
-      --bg-dark: #08080a;
-      --card-bg: rgba(18, 18, 22, 0.95);
-      --neon-orange: #ff5500;
-      --neon-yellow: #ffea00;
-      --neon-red: #ff3333;
-      --neon-green: #00e676;
-      --grad-neon: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
-      --text-main: #ffffff;
-      --text-muted: #a0a0b0;
+      --bg-dark: #0a0a12;
+      --card-bg: #141422;
+      --accent: #ff007f;
+      --green: #00ff66;
+      --red: #ff3344;
+      --text: #ffffff;
+      --text-muted: #8a8a9e;
     }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-
-    body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
-      padding: 20px;
-    }
-
-    .container { max-width: 850px; margin: 0 auto; }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid rgba(255, 85, 0, 0.3);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 25px;
-    }
-
-    h1, h2 {
-      font-size: 18px;
-      color: var(--neon-yellow);
-      margin-bottom: 15px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-    input {
-      width: 100%; padding: 12px; background: #14141a; border: 1px solid #333;
-      color: #fff; border-radius: 6px; font-size: 15px; margin-bottom: 15px;
-    }
-
-    button {
-      background: var(--grad-neon); border: none; color: #000;
-      padding: 10px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px;
-      transition: opacity 0.2s;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text); padding: 20px; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h1 { color: var(--accent); margin-bottom: 20px; font-size: 24px; text-transform: uppercase; text-align: center; }
+    
+    .card { background: var(--card-bg); border: 1px solid #28283d; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .form-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    input { flex: 1; padding: 12px; background: #1c1c2e; border: 1px solid #333; color: #fff; border-radius: 6px; min-width: 200px; }
+    button { padding: 12px 20px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
     button:hover { opacity: 0.9; }
 
-    .btn-block { width: 100%; font-size: 15px; padding: 14px; }
-    .btn-danger { background: var(--neon-red); color: #fff; }
-    .btn-success { background: var(--neon-green); color: #000; }
-
-    .result-box {
-      display: none; background: #121218; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-top: 15px;
-    }
-
-    .local-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #14141a;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      border-left: 4px solid var(--neon-green);
-    }
-
-    .local-row.blocked { border-left-color: var(--neon-red); opacity: 0.8; }
-    .local-row.warning { border-left-color: var(--neon-yellow); }
-
-    .status-badge {
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      font-weight: bold;
-      display: inline-block;
-      margin-left: 6px;
-    }
-    .badge-active { background: rgba(0, 230, 118, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
-    .badge-warning { background: rgba(255, 234, 0, 0.2); color: var(--neon-yellow); border: 1px solid var(--neon-yellow); }
-    .badge-blocked { background: rgba(255, 51, 51, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
-
-    .venc-tag {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    .actions-cell {
-      display: flex;
-      gap: 8px;
-    }
-
-    .header-refresh {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 14px; text-align: left; border-bottom: 1px solid #222; }
+    th { background: #10101a; color: var(--accent); font-size: 14px; }
+    
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+    .badge-act { background: rgba(0, 255, 102, 0.2); color: var(--green); border: 1px solid var(--green); }
+    .badge-des { background: rgba(255, 51, 68, 0.2); color: var(--red); border: 1px solid var(--red); }
+    
+    .btn-toggle { padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; border: none; }
+    .btn-desactivar { background: var(--red); color: #fff; }
+    .btn-activar { background: var(--green); color: #000; }
   </style>
 </head>
 <body>
 
   <div class="container">
-    
-    <!-- REGISTRO DE CLIENTES -->
+    <h1>🛡️ Panel Superadministrador</h1>
+
     <div class="card">
-      <h1>⚡ Registrar Nuevo Cliente / Restoran</h1>
-      
-      <label>Nombre Comercial del Restoran</label>
-      <input type="text" id="nombre-local" placeholder="Ej: Sushi Valpo, Bar Central">
-
-      <button class="btn-block" onclick="registrarNuevoLocal()">🚀 Registrar Cliente (30 Días de Licencia)</button>
-
-      <div id="resultado" class="result-box">
-        <h3 style="color:var(--neon-orange); margin-bottom:8px;">✅ Cliente Guardado Correctamente</h3>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" id="info-vencimiento"></p>
-        
-        <button class="btn-block" style="background: #00e676; color: #000;" onclick="descargarScriptActual()">
-          🌐 Descargar Archivo Lanzador (.html)
-        </button>
+      <h3>➕ Registrar / Habilitar Nuevo Restaurante</h3>
+      <div class="form-row" style="margin-top: 15px;">
+        <input type="text" id="input-local-nuevo" placeholder="Nombre único del local (ej: restaurante1)">
+        <button onclick="crearOActivarLocal()">Registrar / Habilitar</button>
       </div>
     </div>
 
-    <!-- LISTADO DE CLIENTES EN MONGO -->
     <div class="card">
-      <div class="header-refresh">
-        <h2 style="margin:0;">📜 Clientes y Estado de Licencias</h2>
-        <button style="padding: 6px 12px; font-size: 12px;" onclick="cargarLocales()">🔄 Actualizar Lista</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3>🏬 Lista de Restaurantes en Sistema</h3>
+        <button style="background: #222; border: 1px solid #444;" onclick="cargarLocales()">🔄 Actualizar</button>
       </div>
-      <div id="lista-locales">Cargando datos desde MongoDB Atlas...</div>
-    </div>
 
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre del Local</th>
+            <th>Estado Mongo</th>
+            <th>Fecha Registro</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-locales">
+          <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Cargando restaurantes...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script>
-    const API_URL = "https://appmenu-tavr.onrender.com/api";
-    const GITHUB_PAGES_URL = "https://cybernovala.github.io/AppMenu";
+    const BACKEND_URL = 'https://appmenu-tavr.onrender.com';
 
-    let ultimoLocalCreado = null;
-
-    document.addEventListener("DOMContentLoaded", () => {
-      cargarLocales();
-    });
-
-    function formatearIdLocal(texto) {
-      return texto.toLowerCase().trim().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
-    }
-
-    async function registrarNuevoLocal() {
-      const inputNombre = document.getElementById('nombre-local').value.trim();
-      if (!inputNombre) {
-        alert('Ingresa el nombre del cliente o restoran.');
-        return;
-      }
-
-      const localId = formatearIdLocal(inputNombre);
-      const fechaVencimiento = new Date();
-      fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
-
-      try {
-        const respuesta = await fetch(`${API_URL}/menu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            local: localId,
-            categoria: 'General',
-            nombre: 'Producto Inicial',
-            precio: 1000,
-            fechaVencimiento: fechaVencimiento.toISOString()
-          })
-        });
-
-        if (!respuesta.ok) throw new Error('Error guardando en el servidor.');
-
-        // Asegurar la inicialización de la licencia
-        await fetch(`${API_URL}/locales/${localId}/licencia`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            activo: true,
-            fechaVencimiento: fechaVencimiento.toISOString()
-          })
-        });
-
-        ultimoLocalCreado = {
-          nombre: inputNombre,
-          id: localId,
-          vencimiento: fechaVencimiento.toLocaleDateString('es-CL')
-        };
-
-        document.getElementById('info-vencimiento').innerText = `Vencimiento programado: ${fechaVencimiento.toLocaleDateString('es-CL')}`;
-        document.getElementById('resultado').style.display = 'block';
-        document.getElementById('nombre-local').value = '';
-
-        cargarLocales();
-
-      } catch (err) {
-        alert('Error al comunicar con la base de datos en MongoDB.');
-      }
-    }
+    document.addEventListener("DOMContentLoaded", cargarLocales);
 
     async function cargarLocales() {
-      const contenedor = document.getElementById('lista-locales');
-      contenedor.innerHTML = '<p style="color:var(--text-muted)">Consultando MongoDB...</p>';
-
+      const tbody = document.getElementById('tabla-locales');
       try {
-        const resLocales = await fetch(`${API_URL}/locales`);
-        if (!resLocales.ok) throw new Error("Error en servidor");
+        const res = await fetch(`${BACKEND_URL}/api/superadmin/locales?_t=${Date.now()}`);
+        if (!res.ok) throw new Error("Error obteniendo locales");
+        const locales = await res.json();
 
-        const clientes = await resLocales.json();
-
-        if (!Array.isArray(clientes) || clientes.length === 0) {
-          contenedor.innerHTML = `<p style="color:var(--text-muted)">No hay clientes registrados en MongoDB aún.</p>`;
+        if (locales.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No hay restaurantes registrados.</td></tr>';
           return;
         }
 
-        const hoy = new Date();
-
-        contenedor.innerHTML = clientes.map(item => {
-          const localId = item.localId || item.id || item.local;
-          const nombreMostrar = (item.nombre || localId).replace(/-/g, ' ').toUpperCase();
-          const activo = item.activo !== false;
-          const fVenc = item.fechaVencimiento ? new Date(item.fechaVencimiento) : new Date();
-          
-          const msDiferencia = fVenc - hoy;
-          const diasRestantes = Math.ceil(msDiferencia / (1000 * 60 * 60 * 24));
-
-          let badgeHtml = '<span class="status-badge badge-active">Activo</span>';
-          let rowClass = '';
-
-          if (!activo) {
-            badgeHtml = '<span class="status-badge badge-blocked">Bloqueado</span>';
-            rowClass = 'blocked';
-          } else if (diasRestantes <= 0) {
-            badgeHtml = '<span class="status-badge badge-blocked">Vencido</span>';
-            rowClass = 'blocked';
-          } else if (diasRestantes <= 3) {
-            badgeHtml = `<span class="status-badge badge-warning">Por vencer (${diasRestantes}d)</span>`;
-            rowClass = 'warning';
-          }
-
-          const fechaFormateada = fVenc.toLocaleDateString('es-CL');
-
+        tbody.innerHTML = locales.map(l => {
+          const estaActivo = l.activo !== false;
           return `
-            <div class="local-row ${rowClass}">
-              <div>
-                <strong>${nombreMostrar}</strong> ${badgeHtml}
-                <div class="venc-tag">📅 Vence: ${fechaFormateada} (${diasRestantes > 0 ? diasRestantes + ' días restantes' : 'Plazo expirado'})</div>
-              </div>
-              <div class="actions-cell">
-                <button class="btn-success" onclick="renovarLicencia('${localId}', 30)">+30 Días</button>
-                ${activo 
-                  ? `<button class="btn-danger" onclick="cambiarEstadoLicencia('${localId}', false)">Bloquear</button>`
-                  : `<button class="btn-success" onclick="cambiarEstadoLicencia('${localId}', true)">Habilitar</button>`
-                }
-                <button style="background:#222; color:var(--neon-yellow); border:1px solid var(--neon-yellow);" onclick="generarYDescargarHTML('${nombreMostrar}', '${localId}', '${fechaFormateada}')">🌐 Lanzador</button>
-              </div>
-            </div>
+            <tr>
+              <td><b>${l.nombre.toUpperCase()}</b></td>
+              <td><span class="badge ${estaActivo ? 'badge-act' : 'badge-des'}">${estaActivo ? 'ACTIVO' : 'DESACTIVADO'}</span></td>
+              <td>${new Date(l.createdAt || Date.now()).toLocaleDateString('es-CL')}</td>
+              <td>
+                <button class="btn-toggle ${estaActivo ? 'btn-desactivar' : 'btn-activar'}" onclick="toggleEstado('${l.nombre}', ${!estaActivo})">
+                  ${estaActivo ? '🚫 Desactivar' : '✅ Activar'}
+                </button>
+              </td>
+            </tr>
           `;
         }).join('');
-
       } catch (err) {
-        contenedor.innerHTML = `<p style="color:var(--text-muted)">Error conectando con el servidor Render/MongoDB.</p>`;
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--red);">Error al conectar con la base de datos.</td></tr>';
       }
     }
 
-    async function cambiarEstadoLicencia(localId, nuevoEstado) {
+    async function toggleEstado(localNombre, nuevoEstado) {
       try {
-        const res = await fetch(`${API_URL}/locales/${localId}/licencia`, {
-          method: 'PATCH',
+        const res = await fetch(`${BACKEND_URL}/api/superadmin/locales/toggle`, {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ activo: nuevoEstado })
+          body: JSON.stringify({ local: localNombre, activo: nuevoEstado })
         });
         if (res.ok) cargarLocales();
-        else alert('Error al actualizar el estado.');
-      } catch (e) {
-        alert('Error al comunicar con la base de datos.');
+      } catch (err) {
+        alert("Error al cambiar el estado del restaurante.");
       }
     }
 
-    async function renovarLicencia(localId, dias) {
-      const nuevaFecha = new Date();
-      nuevaFecha.setDate(nuevaFecha.getDate() + dias);
-      try {
-        const res = await fetch(`${API_URL}/locales/${localId}/licencia`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ activo: true, fechaVencimiento: nuevaFecha.toISOString() })
-        });
-        if (res.ok) cargarLocales();
-        else alert('Error al renovar la licencia.');
-      } catch (e) {
-        alert('Error al comunicar con la base de datos.');
-      }
-    }
+    async function crearOActivarLocal() {
+      const input = document.getElementById('input-local-nuevo');
+      const nombre = input.value.trim().toLowerCase();
+      if (!nombre) return alert("Ingresa un nombre válido.");
 
-    function descargarScriptActual() {
-      if (ultimoLocalCreado) {
-        generarYDescargarHTML(ultimoLocalCreado.nombre, ultimoLocalCreado.id, ultimoLocalCreado.vencimiento);
-      }
-    }
-
-    function generarYDescargarHTML(nombreLocal, localId, fechaVenc) {
-      const urlAdminAbsoluta = `${GITHUB_PAGES_URL}/admin.html?local=${localId}`;
-
-      const contenidoHTML = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Acceso - ${nombreLocal}</title>
-  <style>
-    body { background-color: #08080a; color: #ffffff; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
-    .box { background: #121216; border: 1px solid #ff5500; padding: 30px; border-radius: 12px; max-width: 400px; }
-    h1 { color: #ffea00; font-size: 20px; margin-bottom: 10px; }
-    p { font-size: 14px; color: #a0a0b0; margin-bottom: 20px; }
-    a { display: inline-block; background: linear-gradient(135deg, #ff5500, #ffea00); color: #000; text-decoration: none; padding: 12px 20px; font-weight: bold; border-radius: 6px; }
-  </style>
-</head>
-<body>
-  <div class="box">
-    <h1>${nombreLocal}</h1>
-    <p>Redirigiendo a tu Panel de Administración...</p>
-    <a href="${urlAdminAbsoluta}">Ingresar al Panel</a>
-  </div>
-  <script>
-    window.location.href = "${urlAdminAbsoluta}";
-  <\/script>
-</body>
-</html>`;
-
-      const blob = new Blob([contenidoHTML], { type: 'text/html;charset=utf-8' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `Acceso_${localId}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      await toggleEstado(nombre, true);
+      input.value = '';
     }
   </script>
 </body>
