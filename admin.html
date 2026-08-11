@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>--Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -49,7 +49,6 @@
 
     .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
 
-    /* BANNERS SEPARADOS */
     .banner-container {
       display: flex;
       flex-direction: column;
@@ -134,6 +133,7 @@
       flex: 1;
       text-align: center;
       min-width: 130px;
+      touch-action: manipulation;
     }
 
     .tab-btn:hover { color: #fff; border-color: var(--neon-orange); }
@@ -157,7 +157,10 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
+      transition: opacity 0.2s;
+      touch-action: manipulation;
     }
+    .btn:active { opacity: 0.8; }
     .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
     .btn-danger { background: #ff3344; color: #fff; }
     .btn-success { background: var(--neon-green); color: #000; }
@@ -265,7 +268,12 @@
       font-weight: bold;
     }
 
-    .categories-bar { display: flex; gap: 10px; padding: 15px 0; flex-wrap: wrap; }
+    .categories-bar {
+      display: flex;
+      gap: 10px;
+      padding: 15px 0;
+      flex-wrap: wrap;
+    }
 
     .cat-chip {
       background: var(--card-bg);
@@ -457,10 +465,12 @@
     
     <!-- CONTENEDOR DE DOS BANNERS INDEPENDIENTES -->
     <div class="banner-container" id="banner-wrapper">
+      <!-- BANNER 1: VENCIMIENTO DE LICENCIA -->
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vence en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
       </div>
 
+      <!-- BANNER 2: ESTADO DE BLOQUEO / DESBLOQUEADO -->
       <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
         <span id="txt-estado-bloqueo">✅ Sistema Activo y Desbloqueado</span>
       </div>
@@ -679,7 +689,7 @@
 
   </div>
 
-  <!-- MODALES -->
+  <!-- MODAL DE EDICIÓN -->
   <div class="modal" id="modal-editar">
     <div class="modal-content">
       <h3>✏️ Editar Producto</h3>
@@ -702,6 +712,7 @@
     </div>
   </div>
 
+  <!-- MODAL DE CARRITO -->
   <div class="modal" id="modal-cart">
     <div class="modal-content">
       <h3 style="color: var(--neon-pink); margin-bottom: 15px;">📋 Revisa tu Orden</h3>
@@ -766,9 +777,15 @@
 
       setInterval(() => {
         obtenerEstadoLicenciaYBloqueo();
-        if (document.getElementById('tab-cocina').classList.contains('active')) cargarPedidosCocina();
-        if (document.getElementById('tab-garzon').classList.contains('active')) cargarPedidosGarzon();
-        if (document.getElementById('tab-historial').classList.contains('active')) cargarHistorialGarantizado();
+        if (document.getElementById('tab-cocina').classList.contains('active')) {
+          cargarPedidosCocina();
+        }
+        if (document.getElementById('tab-garzon').classList.contains('active')) {
+          cargarPedidosGarzon();
+        }
+        if (document.getElementById('tab-historial').classList.contains('active')) {
+          cargarHistorialGarantizado();
+        }
       }, 5000); 
     });
 
@@ -789,7 +806,9 @@
 
       try {
         const urlSinCache = `${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`;
-        const res = await fetch(urlSinCache, { headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' } });
+        const res = await fetch(urlSinCache, {
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+        });
 
         if (res.ok) {
           const data = await res.json();
@@ -810,7 +829,9 @@
       }
 
       const ahora = new Date();
-      const diasRestantes = Math.max(0, Math.ceil((fechaVencimiento - ahora) / (1000 * 60 * 60 * 24)));
+      const diferenciaMs = fechaVencimiento - ahora;
+      const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
+
       elNumDias.innerText = diasRestantes;
 
       if (estaBloqueado) {
@@ -861,11 +882,13 @@
     }
 
     function construirUrlMesa(mesa) {
-      return `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
+      const baseUrl = window.location.origin + window.location.pathname;
+      return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
     }
 
     function construirUrlGarzon() {
-      return `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localId)}&view=garzon`;
+      const baseUrl = window.location.origin + window.location.pathname;
+      return `${baseUrl}?local=${encodeURIComponent(localId)}&view=garzon`;
     }
 
     async function cargarDatosMenu() {
@@ -886,7 +909,10 @@
       if (!Array.isArray(productosPlanos)) productosPlanos = [];
 
       categoriasSet.clear();
-      productosPlanos.forEach(p => { if (p.categoria) categoriasSet.add(p.categoria); });
+      productosPlanos.forEach(p => {
+        if (p.categoria) categoriasSet.add(p.categoria);
+      });
+
       if (categoriasSet.size === 0) categoriasSet.add("General");
 
       renderizarAdminCategorias();
