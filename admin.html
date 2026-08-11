@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>--Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -751,6 +751,7 @@
     let rutGarzonSesion = localStorage.getItem('rutGarzon') || '12022962-1';
     let cachePedidos = [];
     let historialGlobal = [];
+    let estadoBloqueoGlobal = false;
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
@@ -792,38 +793,70 @@
         if (document.getElementById('tab-historial').classList.contains('active')) {
           cargarHistorialGarantizado();
         }
-      }, 8000);
+      }, 5000);
     });
 
-    /* FUNCION DE MANEJO DE DOS BANNERS INDEPENDIENTES */
-    async function obtenerEstadoLicenciaYBloqueo() {
-      const elNumDias = document.getElementById('num-dias-vencimiento');
+    /* RECONOCIMIENTO DINÁMICO DE ESTADO SUPERADMIN */
+    function aplicarUIBloqueo(bloqueado, mensajeExtra = '') {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
 
+      estadoBloqueoGlobal = bloqueado;
+
+      if (bloqueado) {
+        elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
+        elTxtBloqueo.innerHTML = mensajeExtra || "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
+      } else {
+        elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
+        elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
+      }
+    }
+
+    async function obtenerEstadoLicenciaYBloqueo() {
+      const elNumDias = document.getElementById('num-dias-vencimiento');
       let fechaVencimiento = null;
       let estaBloqueado = false;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}`);
-        if (res.ok) {
+        
+        if (!res.ok) {
+          // Si el backend responde con error de acceso o restricción, se considera bloqueado desde Superadmin
+          estaBloqueado = true;
+        } else {
           const data = await res.json();
           
-          // Detección de bloqueo universal
-          const b = data.bloqueado !== undefined ? data.bloqueado : data.estado;
-          if (b === true || b === 'true' || b === 1 || b === '1' || b === 'bloqueado' || b === 'blocked' || b === 'inactivo') {
-            estaBloqueado = true;
-          }
+          // Detección universal del switch Superadmin
+          const valBloqueo = data.bloqueado !== undefined ? data.bloqueado : (data.estado !== undefined ? data.estado : data.activo);
           
+          if (
+            valBloqueo === true || 
+            valBloqueo === 'true' || 
+            valBloqueo === 1 || 
+            valBloqueo === '1' || 
+            valBloqueo === 'bloqueado' || 
+            valBloqueo === 'blocked' || 
+            valBloqueo === 'inactivo' ||
+            valBloqueo === false ||
+            valBloqueo === 'false'
+          ) {
+            if (valBloqueo === false || valBloqueo === 'false') {
+              // Si 'activo' viene en false
+              estaBloqueado = true;
+            } else if (valBloqueo !== 'activo' && valBloqueo !== 'desbloqueado' && valBloqueo !== false) {
+              estaBloqueado = true;
+            }
+          }
+
           if (data.fechaVencimiento) {
             fechaVencimiento = new Date(data.fechaVencimiento);
           }
         }
       } catch (err) {
-        console.warn("Error al consultar la API de licencias.", err);
+        // Ante fallos de conexión o apagado por Superadmin
+        estaBloqueado = true;
       }
 
-      // Si no viene fecha, usar 30 días como valor predeterminado
       if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
         const hoy = new Date();
         fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
@@ -833,16 +866,12 @@
       const diferenciaMs = fechaVencimiento - ahora;
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
-      // Actualización BANNER 1 (Vencimiento)
       elNumDias.innerText = diasRestantes;
 
-      // Actualización BANNER 2 (Bloqueado/Desbloqueado)
-      if (estaBloqueado || diasRestantes <= 0) {
-        elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
-        elTxtBloqueo.innerHTML = "🚫 Su licencia está bloqueada o vencida. Contáctese con su proveedor.";
+      if (diasRestantes <= 0) {
+        aplicarUIBloqueo(true, "🚫 Su licencia ha expirado. Por favor renovar con su proveedor.");
       } else {
-        elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
-        elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
+        aplicarUIBloqueo(estaBloqueado);
       }
     }
 
@@ -909,6 +938,8 @@
         const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
         if (respuesta.ok) {
           productosPlanos = await respuesta.json();
+        } else {
+          aplicarUIBloqueo(true);
         }
       } catch (err) {
         console.error("Error al cargar menú:", err);
@@ -1206,8 +1237,19 @@
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
         
+        if (!res.ok) {
+          // Detecta el estado desactivado enviado por Superadmin
+          aplicarUIBloqueo(true);
+          contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Acceso Desactivado por el Superadministrador.</p>';
+          return;
+        }
+        
+        // Si la conexión es exitosa y responde bien, reactiva el banner si no hay expiración
+        if (res.ok && !estadoBloqueoGlobal) {
+          aplicarUIBloqueo(false);
+        }
+
         const datos = await res.json();
         let pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
 
@@ -1253,7 +1295,9 @@
         }).join('');
 
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al conectar con la base de datos.</p>';
+        // Vinculación explícita con el estado de bloqueo
+        aplicarUIBloqueo(true);
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Conexión restringida: Cuenta Bloqueada o Desactivada en Superadmin.</p>';
       }
     }
 
@@ -1332,6 +1376,8 @@
         if (resPedidos.ok) {
           const datos = await resPedidos.json();
           pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
+        } else {
+          aplicarUIBloqueo(true);
         }
 
         if (localId && localId !== 'default') {
