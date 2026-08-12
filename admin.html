@@ -730,10 +730,7 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    // Detección dinámica de URL backend (Servidor Render o Local)
-    const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://localhost:3000'
-      : window.location.origin;
+    const BACKEND_URL = window.location.origin.includes('localhost') ? 'http://localhost:3000' : window.location.origin;
 
     const params = new URLSearchParams(window.location.search);
     const localId = (params.get('local') || 'mongo').toLowerCase().trim();
@@ -794,7 +791,7 @@
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
       if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
-      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Administrador.";
+      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
     }
 
     async function obtenerEstadoLicenciaYBloqueo() {
@@ -889,7 +886,7 @@
 
     async function cargarDatosMenu() {
       const contenedorAdmin = document.getElementById('contenedor-categorias');
-      contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú en MongoDB...</p>';
+      contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú...</p>';
 
       try {
         const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
@@ -898,37 +895,18 @@
           throw new Error("Licencia desactivada o bloqueada");
         }
         
-        const data = await respuesta.json();
-        
-        // Adaptación de respuesta (Estructura anidada por categorías o lista plana)
-        productosPlanos = [];
-        if (data && Array.isArray(data.menu)) {
-          data.menu.forEach(cat => {
-            if (Array.isArray(cat.productos)) {
-              cat.productos.forEach(prod => {
-                productosPlanos.push({
-                  categoria: cat.categoria,
-                  nombre: prod.nombre,
-                  precio: prod.precio
-                });
-              });
-            }
-          });
-        } else if (Array.isArray(data)) {
-          productosPlanos = data;
-        }
-
+        productosPlanos = await respuesta.json();
       } catch (err) {
-        contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador o error de conexión con MongoDB.</p>';
+        contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador o error de conexión.</p>';
         return;
       }
+
+      if (!Array.isArray(productosPlanos)) productosPlanos = [];
 
       categoriasSet.clear();
       productosPlanos.forEach(p => {
         if (p.categoria) categoriasSet.add(p.categoria);
       });
-
-      if (categoriasSet.size === 0) categoriasSet.add("General");
 
       renderizarAdminCategorias();
       renderizarClienteCategorias();
@@ -939,6 +917,11 @@
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '';
 
+      if (categoriasSet.size === 0) {
+        contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay categorías creadas aún. Agrega una arriba.</p>';
+        return;
+      }
+
       categoriasSet.forEach(catNombre => {
         const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
         const catCard = document.createElement('div');
@@ -947,10 +930,7 @@
         catCard.innerHTML = `
           <div class="category-header">
             <span class="category-name">📂 ${catNombre}</span>
-            <div style="display:flex; gap:10px; align-items:center;">
-              <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
-              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Cat.</button>
-            </div>
+            <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
           </div>
           <div class="product-list">
             ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>' : ''}
@@ -977,33 +957,14 @@
       });
     }
 
-    async function crearCategoria() {
+    function crearCategoria() {
       const inputCat = document.getElementById('nueva-categoria');
       const nombreCat = inputCat.value.trim();
       if (!nombreCat) return alert("Ingresa un nombre para la categoría.");
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/menu/categoria`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, categoria: nombreCat })
-        });
-        if (res.ok) {
-          inputCat.value = '';
-          cargarDatosMenu();
-        } else {
-          const errData = await res.json();
-          alert(errData.error || "Error al crear la categoría");
-        }
-      } catch (err) { alert("Error de red al crear categoría."); }
-    }
-
-    async function eliminarCategoria(categoria) {
-      if (!confirm(`¿Deseas eliminar la categoría "${categoria}" y todos sus productos?`)) return;
-      try {
-        await fetch(`${BACKEND_URL}/api/menu/categoria?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}`, { method: 'DELETE' });
-        cargarDatosMenu();
-      } catch (err) {}
+      categoriasSet.add(nombreCat);
+      inputCat.value = '';
+      renderizarAdminCategorias();
+      renderizarClienteCategorias();
     }
 
     async function agregarProducto(categoria) {
@@ -1181,7 +1142,7 @@
         });
 
         if (res.ok || res.status === 201) {
-          alert("✅ ¡Pedido recibido! Registrado con éxito en MongoDB.");
+          alert("✅ ¡Pedido recibido! Registrado con éxito.");
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalCarrito();
@@ -1192,7 +1153,7 @@
           if (res.status === 403) forzarBloqueoUI();
         }
       } catch (e) {
-        alert(`⚠️ Error de conexión al servidor backend.`);
+        alert(`⚠️ Error de conexión al backend.`);
       }
 
       btnEnviar.disabled = false;
@@ -1254,7 +1215,7 @@
 
     async function despacharPedido(idPedido) {
       if (!confirm("¿Marcar este pedido como preparado?")) return;
-      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (e) {}
+      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' }); } catch (e) {}
       cargarPedidosCocina();
       cargarPedidosGarzon();
     }
@@ -1397,7 +1358,7 @@
       historialLocalArr.unshift(docHistorial);
       localStorage.setItem(`historial_${localId}`, JSON.stringify(historialLocalArr));
 
-      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (err) {}
+      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' }); } catch (err) {}
 
       const cardEl = document.getElementById(`card-garzon-${idPedido}`);
       if (cardEl) cardEl.remove();
