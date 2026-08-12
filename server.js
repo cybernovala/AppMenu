@@ -79,24 +79,12 @@ const verificarLicencia = async (req, res, next) => {
       return res.status(404).json({ error: 'Local no registrado en base de datos.' });
     }
 
-    // 1. Validar si está inactivo/bloqueado en MongoDB
+    // Validar estado de activación en MongoDB
     if (doc.activo === false) {
       return res.status(403).json({ 
         error: 'LICENCIA_BLOQUEADA', 
         mensaje: 'El restaurante se encuentra desactivado por el administrador.' 
       });
-    }
-
-    // 2. Validar si la licencia ha expirado por fecha
-    if (doc.fechaVencimiento) {
-      const hoy = new Date();
-      const vencimiento = new Date(doc.fechaVencimiento);
-      if (vencimiento < hoy) {
-        return res.status(403).json({ 
-          error: 'LICENCIA_VENCIDA', 
-          mensaje: 'La licencia de uso de este restaurante ha expirado.' 
-        });
-      }
     }
 
     next();
@@ -121,16 +109,12 @@ app.get('/api/licencia', async (req, res) => {
       return res.status(404).json({ error: 'Local no encontrado' });
     }
 
-    const hoy = new Date();
-    const venc = doc.fechaVencimiento ? new Date(doc.fechaVencimiento) : null;
-    const expirado = venc ? venc < hoy : false;
-    const estaActivo = doc.activo !== false && !expirado;
+    const estaActivo = doc.activo !== false;
 
     return res.status(200).json({
       local: doc.local || doc.id,
       nombre: doc.nombre || doc.local || doc.id,
       activo: estaActivo,
-      bloqueado: !estaActivo,
       fechaVencimiento: doc.fechaVencimiento
     });
   } catch (err) {
@@ -398,9 +382,6 @@ app.delete('/api/pedidos/:id', async (req, res) => {
 app.post('/api/historials', verificarLicencia, async (req, res) => {
   try {
     const data = req.body;
-    const ahora = new Date();
-    const fechaActual = ahora.toISOString().split('T')[0];
-    const horaActual = ahora.toLocaleTimeString('es-CL', { hour12: false });
 
     const nuevoRegistro = new Historial({
       id: data.id || String(Date.now()),
@@ -408,18 +389,18 @@ app.post('/api/historials', verificarLicencia, async (req, res) => {
       mesa: String(data.mesa || '1'),
       items: data.items || [],
       total: Number(data.total) || 0,
-      estado: data.estado || 'entregado',
-      hora: data.hora || horaActual,
-      rutGarzon: data.rutGarzon || '12022962-1',
-      horaEntrega: data.horaEntrega || horaActual,
-      fechaEntrega: data.fechaEntrega || fechaActual
+      estado: 'entregado',
+      hora: data.hora,
+      rutGarzon: data.rutGarzon,
+      horaEntrega: data.horaEntrega,
+      fechaEntrega: data.fechaEntrega
     });
 
-    const guardado = await nuevoRegistro.save();
-    return res.status(201).json({ mensaje: 'Entrega guardada exitosamente', id: guardado._id });
+    await nuevoRegistro.save();
+    return res.status(201).json({ mensaje: 'Historial guardado exitosamente' });
   } catch (err) {
     console.error("❌ Error en POST /api/historials:", err.message);
-    return res.status(500).json({ error: 'Error interno al guardar historial' });
+    return res.status(500).json({ error: 'Error al registrar historial' });
   }
 });
 
@@ -427,23 +408,18 @@ app.get('/api/historials', verificarLicencia, async (req, res) => {
   try {
     const { local } = req.query;
     let query = {};
-    if (local && local !== 'default' && local !== 'all') {
-      query.local = local.toLowerCase().trim();
-    }
+    if (local) query.local = local.toLowerCase().trim();
 
-    const registros = await Historial.find(query).sort({ createdAt: -1 }).lean();
-    return res.status(200).json(registros);
+    const historial = await Historial.find(query).sort({ createdAt: -1 }).lean();
+    return res.status(200).json(historial);
   } catch (err) {
     console.error("❌ Error en GET /api/historials:", err.message);
     return res.status(500).json([]);
   }
 });
 
-app.get('/', (req, res) => {
-  res.send('🚀 API AppMenu funcionando con gestión de licencias en MongoDB.');
-});
-
-const PORT = process.env.PORT || 10000;
+// Puertos de inicialización
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor ejecutándose en el puerto ${PORT}`);
+  console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
 });
