@@ -369,40 +369,45 @@
         if (!res.ok) throw new Error("No se pudo obtener la información de la licencia");
         
         const data = await res.json();
+        const nombreLocal = data.nombre || localId;
 
         const htmlContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Licencia Oficial - ${data.nombre || localId}</title>
+  <title>Acceso Admin - ${nombreLocal}</title>
 </head>
-<body>
+<body style="background:#08080a; color:#fff; font-family:sans-serif; text-align:center; padding-top:50px;">
+  <h2>Verificando licencia para ${nombreLocal}...</h2>
   <script>
     window.LICENCIA_CONFIG = ${JSON.stringify(data, null, 2)};
+    
+    // Guardar información del local activo en el navegador
     localStorage.setItem('licencia_local_activa', JSON.stringify(window.LICENCIA_CONFIG));
+    localStorage.setItem('local_activo_id', '${localId}');
 
-    function validarLicencia() {
+    function validarYAcceder() {
       const hoy = new Date().toISOString().split('T')[0];
       const lic = window.LICENCIA_CONFIG;
 
       if (lic.activo === false) {
         alert('⛔ LICENCIA BLOQUEADA: El restaurante se encuentra desactivado.');
-        return false;
+        return;
       }
 
       if (lic.fechaVencimiento) {
         const fVenc = new Date(lic.fechaVencimiento).toISOString().split('T')[0];
         if (hoy > fVenc) {
           alert('⚠️ LICENCIA VENCIDA: Expiró el ' + fVenc);
-          return false;
+          return;
         }
       }
 
-      console.log('✅ Licencia válida para ' + lic.nombre);
-      return true;
+      // Redirigir directamente al panel admin en GitHub Pages pasando el local en la URL
+      window.location.href = 'https://cybernovala.github.io/AppMenu/admin.html?local=' + encodeURIComponent('${localId}');
     }
 
-    validarLicencia();
+    validarYAcceder();
   <\/script>
 </body>
 </html>`;
@@ -411,7 +416,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `licencia_${localId}.html`;
+        a.download = `acceso_${localId}.html`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
