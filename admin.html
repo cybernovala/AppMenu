@@ -69,6 +69,7 @@
     }
 
     .banner-bloqueo {
+      display: none;
       text-align: center;
       padding: 12px 15px;
       border-radius: 8px;
@@ -78,17 +79,11 @@
     }
 
     .banner-bloqueo.estado-bloqueado {
+      display: block;
       background: linear-gradient(135deg, rgba(255, 0, 34, 0.9), rgba(150, 0, 0, 0.95));
       border: 2px solid #ff0033;
       color: #ffffff;
       box-shadow: 0 0 15px rgba(255, 0, 51, 0.6);
-    }
-
-    .banner-bloqueo.estado-desbloqueado {
-      background: linear-gradient(135deg, rgba(0, 255, 102, 0.2), rgba(0, 150, 50, 0.25));
-      border: 1px solid var(--neon-green);
-      color: #ffffff;
-      box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
     }
 
     .header-bar {
@@ -463,16 +458,16 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE DOS BANNERS INDEPENDIENTES -->
+    <!-- CONTENEDOR DE BANNERS -->
     <div class="banner-container" id="banner-wrapper">
       <!-- BANNER 1: VENCIMIENTO DE LICENCIA -->
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vence en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
       </div>
 
-      <!-- BANNER 2: ESTADO DE BLOQUEO / DESBLOQUEADO -->
-      <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
-        <span id="txt-estado-bloqueo">✅ Sistema Activo y Desbloqueado</span>
+      <!-- BANNER 2: SOLO APARECE SI ESTÁ DESACTIVADO/BLOQUEADO -->
+      <div class="banner-bloqueo" id="banner-bloqueo">
+        <span id="txt-estado-bloqueo"></span>
       </div>
     </div>
 
@@ -792,15 +787,23 @@
     function forzarBloqueoUI() {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
-      if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
-      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
+      if (elBannerBloqueo) {
+        elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
+        elBannerBloqueo.style.display = "block";
+      }
+      if (elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
+    }
+
+    function ocultarBloqueoUI() {
+      const elBannerBloqueo = document.getElementById('banner-bloqueo');
+      if (elBannerBloqueo) {
+        elBannerBloqueo.className = "banner-bloqueo";
+        elBannerBloqueo.style.display = "none";
+      }
     }
 
     async function obtenerEstadoLicenciaYBloqueo() {
       const elNumDias = document.getElementById('num-dias-vencimiento');
-      const elBannerBloqueo = document.getElementById('banner-bloqueo');
-      const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
-
       let fechaVencimiento = null;
       let estaBloqueado = false;
 
@@ -816,8 +819,6 @@
 
         if (res.ok) {
           const data = await res.json();
-          
-          // Evaluar explícitamente todos los campos posibles devueltos por el backend
           if (data.activo === false || data.bloqueado === true || data.estado === 'bloqueado' || data.estado === 'desactivado') {
             estaBloqueado = true;
           } else if (data.activo === true || data.bloqueado === false || data.estado === 'activo') {
@@ -846,8 +847,7 @@
       if (estaBloqueado) {
         forzarBloqueoUI();
       } else {
-        if (elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
-        if (elTxtBloqueo) elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
+        ocultarBloqueoUI();
       }
     }
 
