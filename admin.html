@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración & Menú Digital</title>
+  <title>+++Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -730,11 +730,11 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    // Usa automáticamente la misma URL donde corre el frontend si está alojado dinámicamente
     const BACKEND_URL = window.location.origin.includes('localhost') ? 'http://localhost:3000' : window.location.origin;
 
     const params = new URLSearchParams(window.location.search);
-    const localId = (params.get('local') || 'mongo').toLowerCase().trim();
+    const localIdParam = params.get('local');
+    const localId = (localIdParam && localIdParam.trim() !== '') ? localIdParam.trim() : 'restaurante';
     const numeroMesa = params.get('mesa') || '1';
     const vistaModo = params.get('view');
 
@@ -795,10 +795,15 @@
       if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
     }
 
-    async function obtenerEstadoLicenciaYBloqueo() {
-      const elNumDias = document.getElementById('num-dias-vencimiento');
+    function restablecerActivoUI() {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
+      if (elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
+      if (elTxtBloqueo) elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
+    }
+
+    async function obtenerEstadoLicenciaYBloqueo() {
+      const elNumDias = document.getElementById('num-dias-vencimiento');
 
       let fechaVencimiento = null;
       let estaBloqueado = false;
@@ -808,13 +813,17 @@
 
         if (res.ok) {
           const data = await res.json();
-          estaBloqueado = (data.activo === false);
+          if (data.activo === false || data.activo === "false") {
+            estaBloqueado = true;
+          } else if (data.activo === true || data.activo === "true") {
+            estaBloqueado = false;
+          }
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
-        } else if (res.status === 403 || res.status === 404) {
+        } else if (res.status === 403 || res.status === 401) {
           estaBloqueado = true;
         }
       } catch (err) {
-        estaBloqueado = true;
+        console.warn("No se pudo verificar el estado de la licencia de manera directa:", err);
       }
 
       if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
@@ -831,8 +840,7 @@
       if (estaBloqueado) {
         forzarBloqueoUI();
       } else {
-        if (elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
-        if (elTxtBloqueo) elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
+        restablecerActivoUI();
       }
     }
 
@@ -891,14 +899,19 @@
 
       try {
         const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
-        if (respuesta.status === 403 || respuesta.status === 404) {
+        if (respuesta.status === 403) {
           forzarBloqueoUI();
           throw new Error("Licencia desactivada o bloqueada");
         }
         
-        productosPlanos = await respuesta.json();
+        if (respuesta.ok) {
+          productosPlanos = await respuesta.json();
+          restablecerActivoUI();
+        } else {
+          productosPlanos = [];
+        }
       } catch (err) {
-        contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador o error de conexión.</p>';
+        contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">⚠️ Error al comunicarse con el backend.</p>';
         return;
       }
 
@@ -1147,7 +1160,7 @@
           cargarPedidosCocina();
           cargarPedidosGarzon();
         } else {
-          alert(`⚠️ Su cuenta podría estar inactiva o hubo un error (${res.status}).`);
+          alert(`⚠️ Error al enviar pedido (${res.status}).`);
           if (res.status === 403) forzarBloqueoUI();
         }
       } catch (e) {
@@ -1170,7 +1183,7 @@
         }
         
         const pedidos = await res.json();
-        const pendientes = pedidos.filter(p => p.estado !== 'entregado');
+        const pendientes = Array.isArray(pedidos) ? pedidos.filter(p => p.estado !== 'entregado') : [];
 
         if (pendientes.length === 0) {
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comandas activas en la cocina.</p>';
@@ -1207,7 +1220,7 @@
           `;
         }).join('');
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
+        contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay conexion o la consulta está cargando.</p>';
       }
     }
 
@@ -1264,7 +1277,7 @@
         }
 
         const pedidos = await resPedidos.json();
-        cachePedidos = pedidos.filter(p => p.estado !== 'entregado');
+        cachePedidos = Array.isArray(pedidos) ? pedidos.filter(p => p.estado !== 'entregado') : [];
 
         if (cachePedidos.length === 0) {
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">🎉 No hay pedidos pendientes por llevar a mesa.</p>';
@@ -1299,7 +1312,7 @@
           }).join('');
         }
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
+        contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos en cola.</p>';
       }
     }
 
