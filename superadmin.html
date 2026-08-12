@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>---SuperAdmin - Control de Licencias y Restaurantes</title>
+  <title>SuperAdmin - Control de Licencias y Restaurantes</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -25,7 +25,7 @@
       padding: 20px;
     }
 
-    .container { max-width: 900px; margin: 0 auto; }
+    .container { max-width: 950px; margin: 0 auto; }
 
     .card {
       background: var(--card-bg);
@@ -81,6 +81,7 @@
 
     .btn-danger { background: var(--neon-red); color: #fff; }
     .btn-success { background: var(--neon-green); color: #000; }
+    .btn-download { background: var(--neon-blue); color: #000; }
 
     .local-card {
       background: #121218;
@@ -178,7 +179,10 @@
                   Estado: <span class="badge ${estaActivo ? 'badge-active' : 'badge-disabled'}">${estaActivo ? 'ACTIVO' : 'BLOQUEADO'}</span>
                 </span>
               </div>
-              <div style="display: flex; gap: 8px;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-download" onclick="descargarAccesoHTML('${l.localId}', '${l.nombre}')">
+                  📥 Descargar Acceso HTML
+                </button>
                 <button class="btn ${estaActivo ? 'btn-danger' : 'btn-success'}" onclick="cambiarEstadoLicencia('${l.localId}', ${!estaActivo})">
                   ${estaActivo ? '🚫 Bloquear' : '✅ Desbloquear'}
                 </button>
@@ -235,6 +239,73 @@
       } catch (err) {
         alert("❌ Error al procesar cambio de licencia.");
       }
+    }
+
+    function descargarAccesoHTML(localId, nombreLocal) {
+      const urlPanelAdmin = `https://appmenu-tavr.onrender.com/admin?local=${encodeURIComponent(localId)}`;
+      
+      const contenidoHTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso Admin - ${nombreLocal}</title>
+  <style>
+    body {
+      background-color: #08080a;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      background: #121218;
+      border: 1px solid #ff5500;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 400px;
+      box-shadow: 0 0 20px rgba(255, 85, 0, 0.2);
+    }
+    h1 { color: #ffea00; font-size: 20px; margin-bottom: 10px; }
+    p { color: #a0a0b0; font-size: 14px; margin-bottom: 20px; }
+    a {
+      display: inline-block;
+      background: linear-gradient(135deg, #ff5500, #ffea00);
+      color: #000;
+      text-decoration: none;
+      font-weight: bold;
+      padding: 12px 24px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Acceso al Panel Admin</h1>
+    <p>Restaurante: <b>${nombreLocal}</b></p>
+    <a href="${urlPanelAdmin}" target="_blank">🚀 Entrar al Panel de Administración</a>
+  </div>
+  <script>
+    setTimeout(() => {
+      window.location.href = "${urlPanelAdmin}";
+    }, 1500);
+  <\/script>
+</body>
+</html>`;
+
+      const blob = new Blob([contenidoHTML], { type: 'text/html' });
+      const urlBlob = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlBlob;
+      a.download = `Acceso_Admin_${localId}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(urlBlob);
     }
   </script>
 </body>
