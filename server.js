@@ -115,6 +115,7 @@ app.get('/api/licencia', async (req, res) => {
       local: doc.local || doc.id,
       nombre: doc.nombre || doc.local || doc.id,
       activo: estaActivo,
+      fechaCreacion: doc.fechaCreacion,
       fechaVencimiento: doc.fechaVencimiento
     });
   } catch (err) {
@@ -134,6 +135,7 @@ app.get('/api/locales', async (req, res) => {
       localId: (d.local || d.id || '').toLowerCase().trim(),
       nombre: d.nombre || d.local || d.id,
       activo: d.activo !== false,
+      fechaCreacion: d.fechaCreacion,
       fechaVencimiento: d.fechaVencimiento
     })).filter(d => d.localId !== '');
 
@@ -141,6 +143,53 @@ app.get('/api/locales', async (req, res) => {
   } catch (err) {
     console.error("❌ Error en GET /api/locales:", err.message);
     return res.status(500).json([]);
+  }
+});
+
+// Crear o registrar un nuevo restaurante (SuperAdmin)
+app.post('/api/locales', async (req, res) => {
+  try {
+    const { nombre, password } = req.body;
+
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre del restaurante es obligatorio' });
+    }
+
+    const localSlug = nombre.toLowerCase().trim().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+
+    // Verificar si ya existe
+    let doc = await Local.findOne({ $or: [{ id: localSlug }, { local: localSlug }] });
+    if (doc) {
+      return res.status(400).json({ error: 'El local ya se encuentra registrado' });
+    }
+
+    const ahora = new Date();
+    const fechaVencimiento = new Date(ahora.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+    doc = new Local({
+      id: localSlug,
+      local: localSlug,
+      nombre: nombre,
+      password: password || '123456',
+      activo: true,
+      fechaCreacion: ahora.toISOString(),
+      fechaVencimiento: fechaVencimiento,
+      menu: []
+    });
+
+    await doc.save();
+
+    return res.status(201).json({
+      mensaje: 'Restaurante creado con éxito',
+      local: doc.local,
+      nombre: doc.nombre,
+      activo: doc.activo,
+      fechaCreacion: doc.fechaCreacion,
+      fechaVencimiento: doc.fechaVencimiento
+    });
+  } catch (err) {
+    console.error("❌ Error en POST /api/locales:", err.message);
+    return res.status(500).json({ error: 'Error al crear el restaurante' });
   }
 });
 
