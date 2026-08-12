@@ -730,12 +730,13 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
+    // Configuración dinámicas de servidor Backend
     const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:3000'
-      : window.location.origin;
+      : 'https://appmenu-tavr.onrender.com';
 
     const params = new URLSearchParams(window.location.search);
-    const localId = (params.get('local') || 'resto_bar_mongo').toLowerCase().trim();
+    const localId = (params.get('local') || '1').toLowerCase().trim();
     const numeroMesa = params.get('mesa') || '1';
     const vistaModo = params.get('view');
 
@@ -809,7 +810,8 @@
 
         if (res.ok) {
           const data = await res.json();
-          estaBloqueado = (data.activo === false || data.bloqueado === true);
+          if (data.nombre) document.getElementById('lbl-local-nombre').innerText = data.nombre.toUpperCase();
+          estaBloqueado = (data.activo === false);
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         } else if (res.status === 403) {
           estaBloqueado = true;
@@ -906,38 +908,22 @@
 
         const data = await respuesta.json();
         
-        productosPlanos = [];
-        categoriasSet.clear();
-
-        if (data && Array.isArray(data.menu)) {
-          data.menu.forEach(cat => {
-            if (cat.categoria) categoriasSet.add(cat.categoria);
-            if (Array.isArray(cat.productos)) {
-              cat.productos.forEach(prod => {
-                productosPlanos.push({
-                  categoria: cat.categoria,
-                  nombre: prod.nombre,
-                  precio: prod.precio
-                });
-              });
-            }
-          });
-        } else if (data && Array.isArray(data.productosPlanos)) {
-          productosPlanos = data.productosPlanos;
-          productosPlanos.forEach(p => { if (p.categoria) categoriasSet.add(p.categoria); });
-        }
+        productosPlanos = Array.isArray(data) ? data : [];
 
       } catch (err) {
         console.warn("Advertencia de carga de menú:", err);
         if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
           contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
         } else {
-          contenedorAdmin.innerHTML = '<p style="color: var(--neon-yellow); text-align: center;">⚠️ No se pudo obtener el menú del servidor. Revisa tu conexión o vuelve a intentar.</p>';
+          contenedorAdmin.innerHTML = '<p style="color: var(--neon-yellow); text-align: center;">⚠️ No se pudo obtener el menú del servidor. Revisa tu conexión.</p>';
         }
         return;
       }
 
-      if (categoriasSet.size === 0) categoriasSet.add("General");
+      categoriasSet.clear();
+      productosPlanos.forEach(p => {
+        if (p.categoria) categoriasSet.add(p.categoria);
+      });
 
       renderizarAdminCategorias();
       renderizarClienteCategorias();
@@ -948,19 +934,22 @@
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '';
 
+      if (categoriasSet.size === 0) {
+        contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay categorías registradas. ¡Crea la primera categoría arriba!</p>';
+        return;
+      }
+
       categoriasSet.forEach(catNombre => {
         const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
         const catCard = document.createElement('div');
         catCard.className = 'category-card';
-
-        const catEscapada = catNombre.replace(/'/g, "\\'");
 
         catCard.innerHTML = `
           <div class="category-header">
             <span class="category-name">📂 ${catNombre}</span>
             <div style="display:flex; gap:10px; align-items:center;">
               <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
-              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catEscapada}')">🗑️ Eliminar Cat.</button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Cat.</button>
             </div>
           </div>
           <div class="product-list">
@@ -972,8 +961,8 @@
                   <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
                 </div>
                 <div class="product-actions">
-                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catEscapada}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
-                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catEscapada}', ${subIndex})">🗑️ Eliminar</button>
+                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
+                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${subIndex})">🗑️ Eliminar</button>
                 </div>
               </div>
             `).join('')}
@@ -981,7 +970,7 @@
           <div class="add-product-box">
             <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
             <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
-            <button class="btn btn-sm" onclick="agregarProducto('${catEscapada}')">+ Guardar Producto</button>
+            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
           </div>
         `;
         contenedor.appendChild(catCard);
@@ -1001,6 +990,7 @@
         });
         if (res.ok) {
           inputCat.value = '';
+          categoriasSet.add(nombreCat);
           cargarDatosMenu();
         } else {
           const errData = await res.json();
@@ -1020,8 +1010,6 @@
     async function agregarProducto(categoria) {
       const inputNombre = document.getElementById(`nuevo-nombre-${categoria}`);
       const inputPrecio = document.getElementById(`nuevo-precio-${categoria}`);
-      if (!inputNombre || !inputPrecio) return;
-
       const nombre = inputNombre.value.trim();
       const precio = parseFloat(inputPrecio.value);
 
@@ -1082,7 +1070,7 @@
         catSeleccionadaCliente = cats[0];
       }
       bar.innerHTML = cats.map(c => `
-        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c.replace(/'/g, "\\'")}')">${c}</div>
+        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c}')">${c}</div>
       `).join('');
     }
 
