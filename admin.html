@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>+++Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -69,13 +69,13 @@
     }
 
     .banner-bloqueo {
-      display: none;
       text-align: center;
       padding: 12px 15px;
       border-radius: 8px;
       font-size: 14px;
       font-weight: bold;
       transition: all 0.3s ease;
+      display: none; /* Se oculta por defecto */
     }
 
     .banner-bloqueo.estado-bloqueado {
@@ -465,9 +465,9 @@
         ⚠️ Su licencia vence en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
       </div>
 
-      <!-- BANNER 2: SOLO APARECE SI ESTÁ DESACTIVADO/BLOQUEADO -->
+      <!-- BANNER 2: ESTADO DE BLOQUEO / CUENTA INACTIVA -->
       <div class="banner-bloqueo" id="banner-bloqueo">
-        <span id="txt-estado-bloqueo"></span>
+        <span id="txt-estado-bloqueo">🚫 Cuenta inactiva o bloqueada. Contacte a soporte.</span>
       </div>
     </div>
 
@@ -786,26 +786,19 @@
 
     function forzarBloqueoUI() {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
-      const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
+      const elBannerLicencia = document.getElementById('banner-vencimiento');
+      
+      if (elBannerLicencia) elBannerLicencia.style.display = 'none';
       if (elBannerBloqueo) {
         elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
         elBannerBloqueo.style.display = "block";
-      }
-      if (elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
-    }
-
-    function ocultarBloqueoUI() {
-      const elBannerBloqueo = document.getElementById('banner-bloqueo');
-      if (elBannerBloqueo) {
-        elBannerBloqueo.className = "banner-bloqueo";
-        elBannerBloqueo.style.display = "none";
       }
     }
 
     async function obtenerEstadoLicenciaYBloqueo() {
       const elNumDias = document.getElementById('num-dias-vencimiento');
-      let fechaVencimiento = null;
-      let estaBloqueado = false;
+      const elBannerBloqueo = document.getElementById('banner-bloqueo');
+      const elBannerLicencia = document.getElementById('banner-vencimiento');
 
       try {
         const urlSinCache = `${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`;
@@ -819,35 +812,37 @@
 
         if (res.ok) {
           const data = await res.json();
-          if (data.activo === false || data.bloqueado === true || data.estado === 'bloqueado' || data.estado === 'desactivado') {
-            estaBloqueado = true;
-          } else if (data.activo === true || data.bloqueado === false || data.estado === 'activo') {
-            estaBloqueado = false;
-          }
           
-          if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
-        } else if (res.status === 401 || res.status === 403 || res.status === 404) {
-          estaBloqueado = true;
+          // Específicamente evaluamos si 'activo' es true o false desde la BD Mongo
+          if (data.activo === true) {
+            // ACTIVO: Ocultamos banner de bloqueo y mostramos banner de vencimiento
+            if (elBannerBloqueo) elBannerBloqueo.style.display = "none";
+            if (elBannerLicencia) elBannerLicencia.style.display = "block";
+
+            // Cálculo de días restantes de licencia
+            let fechaVencimiento = data.fechaVencimiento ? new Date(data.fechaVencimiento) : null;
+            if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
+              const hoy = new Date();
+              fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
+            }
+
+            const ahora = new Date();
+            const diferenciaMs = fechaVencimiento - ahora;
+            const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
+
+            if (elNumDias) elNumDias.innerText = diasRestantes;
+
+          } else {
+            // INACTIVO (activo: false)
+            forzarBloqueoUI();
+          }
+        } else {
+          // Error en respuesta HTTP de la API
+          forzarBloqueoUI();
         }
       } catch (err) {
-        estaBloqueado = true;
-      }
-
-      if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
-        const hoy = new Date();
-        fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
-      }
-
-      const ahora = new Date();
-      const diferenciaMs = fechaVencimiento - ahora;
-      const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
-
-      if (elNumDias) elNumDias.innerText = diasRestantes;
-
-      if (estaBloqueado) {
+        // Error de red / Backend caído
         forzarBloqueoUI();
-      } else {
-        ocultarBloqueoUI();
       }
     }
 
