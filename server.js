@@ -24,10 +24,10 @@ mongoose.connect(MONGO_URI)
 // --- 3. ESQUEMAS Y MODELOS ---
 
 const LocalSchema = new mongoose.Schema({
-  id: String,
-  local: String,
-  nombre: String,
-  password: String,
+  local: { type: String, required: true, unique: true },
+  nombre: { type: String, required: true },
+  rut: { type: String, default: '' },
+  password: { type: String, default: '123' },
   activo: { type: Boolean, default: true },
   fechaCreacion: { type: String, default: () => new Date().toISOString() },
   fechaVencimiento: { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
@@ -69,7 +69,7 @@ const verificarLicencia = async (req, res, next) => {
 
     if (!localQuery) return next();
 
-    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] }).lean();
+    const doc = await Local.findOne({ $or: [{ local: localQuery }, { id: localQuery }] }).lean();
 
     if (!doc) {
       return res.status(404).json({ error: 'Local no registrado en base de datos.' });
@@ -96,7 +96,7 @@ app.get('/api/licencia', async (req, res) => {
     const localQuery = (req.query.local || '').toLowerCase().trim();
     if (!localQuery) return res.status(400).json({ error: 'Debe especificar el local' });
 
-    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] }).lean();
+    const doc = await Local.findOne({ $or: [{ local: localQuery }, { id: localQuery }] }).lean();
 
     if (!doc) {
       return res.status(404).json({ error: 'Local no encontrado' });
@@ -105,8 +105,9 @@ app.get('/api/licencia', async (req, res) => {
     const estaActivo = doc.activo !== false;
 
     return res.status(200).json({
-      local: doc.local || doc.id,
-      nombre: doc.nombre || doc.local || doc.id,
+      local: doc.local,
+      nombre: doc.nombre || doc.local,
+      rut: doc.rut || '',
       activo: estaActivo,
       fechaCreacion: doc.fechaCreacion,
       fechaVencimiento: doc.fechaVencimiento
@@ -125,7 +126,8 @@ app.get('/api/locales', async (req, res) => {
     const locales = docs.map(d => ({
       _id: d._id,
       localId: (d.local || d.id || '').toLowerCase().trim(),
-      nombre: d.nombre || d.local || d.id,
+      nombre: d.nombre || d.local,
+      rut: d.rut || '',
       activo: d.activo !== false,
       fechaCreacion: d.fechaCreacion,
       fechaVencimiento: d.fechaVencimiento
@@ -140,27 +142,27 @@ app.get('/api/locales', async (req, res) => {
 
 app.post('/api/locales', async (req, res) => {
   try {
-    const { nombre, password } = req.body;
+    const { nombre, rut, password } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ error: 'El nombre del restaurante es obligatorio' });
     }
 
-    const localSlug = nombre.toLowerCase().trim().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+    const localSlug = (rut ? rut.toLowerCase().trim().replace(/[^a-z0-9]/g, '') : nombre.toLowerCase().trim().replace(/[^a-z0-9]/g, '_'));
 
-    let doc = await Local.findOne({ $or: [{ id: localSlug }, { local: localSlug }] });
+    let doc = await Local.findOne({ $or: [{ local: localSlug }, { id: localSlug }] });
     if (doc) {
-      return res.status(400).json({ error: 'El local ya se encuentra registrado' });
+      return res.status(400).json({ error: 'El local o RUT ya se encuentra registrado' });
     }
 
     const ahora = new Date();
     const fechaVencimiento = new Date(ahora.getTime() + (30 * 24 * 60 * 60 * 1000));
 
     doc = new Local({
-      id: localSlug,
       local: localSlug,
       nombre: nombre,
-      password: password || '123456',
+      rut: rut || '',
+      password: password || '123',
       activo: true,
       fechaCreacion: ahora.toISOString(),
       fechaVencimiento: fechaVencimiento,
@@ -173,6 +175,7 @@ app.post('/api/locales', async (req, res) => {
       mensaje: 'Restaurante creado con éxito',
       local: doc.local,
       nombre: doc.nombre,
+      rut: doc.rut,
       activo: doc.activo,
       fechaCreacion: doc.fechaCreacion,
       fechaVencimiento: doc.fechaVencimiento
@@ -193,14 +196,16 @@ app.patch('/api/locales/:id/licencia', async (req, res) => {
     if (fechaVencimiento) updateFields.fechaVencimiento = new Date(fechaVencimiento);
 
     const doc = await Local.findOneAndUpdate(
-      { $or: [{ id: localQuery }, { local: localQuery }] },
+      { $or: [{ local: localQuery }, { id: localQuery }] },
       { $set: updateFields },
-      { new: true, upsert: true }
+      { new: true }
     );
+
+    if (!doc) return res.status(404).json({ error: 'Local no encontrado' });
 
     return res.status(200).json({
       mensaje: 'Estado del local actualizado en MongoDB con éxito',
-      localId: doc.local || doc.id,
+      localId: doc.local,
       activo: doc.activo,
       fechaVencimiento: doc.fechaVencimiento
     });
@@ -210,7 +215,7 @@ app.patch('/api/locales/:id/licencia', async (req, res) => {
   }
 });
 
-// --- 6. RUTAS DEL MENÚ (RETORNA PRODUCTOS PLANOS Y PERMITE CREAR/EDITAR) ---
+// --- 6. RUTAS DEL MENÚ ---
 
 app.get('/api/menu', verificarLicencia, async (req, res) => {
   try {
@@ -218,7 +223,7 @@ app.get('/api/menu', verificarLicencia, async (req, res) => {
     if (!local) return res.status(200).json([]);
 
     const localQuery = local.toLowerCase().trim();
-    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] }).lean();
+    const doc = await Local.findOne({ $or: [{ local: localQuery }, { id: localQuery }] }).lean();
 
     if (!doc || !doc.menu) return res.status(200).json([]);
 
@@ -237,10 +242,60 @@ app.get('/api/menu', verificarLicencia, async (req, res) => {
       });
     }
 
-    return res.status(200).json(productosPlanos);
+    return res.status(200).json({ menu: doc.menu, productosPlanos });
   } catch (err) {
     console.error("❌ Error en GET /api/menu:", err.message);
     return res.status(500).json([]);
+  }
+});
+
+app.post('/api/menu/categoria', verificarLicencia, async (req, res) => {
+  try {
+    const { local, categoria } = req.body;
+    if (!local || !categoria) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios' });
+    }
+
+    const localQuery = local.toLowerCase().trim();
+    let doc = await Local.findOne({ $or: [{ local: localQuery }, { id: localQuery }] });
+
+    if (!doc) return res.status(404).json({ error: 'Local no encontrado' });
+    if (!Array.isArray(doc.menu)) doc.menu = [];
+
+    const existeCat = doc.menu.some(c => c.categoria.toLowerCase() === categoria.toLowerCase().trim());
+    if (existeCat) {
+      return res.status(400).json({ error: 'La categoría ya existe' });
+    }
+
+    doc.menu.push({ categoria: categoria.trim(), productos: [] });
+    doc.markModified('menu');
+    await doc.save();
+
+    return res.status(201).json({ mensaje: 'Categoría creada con éxito' });
+  } catch (err) {
+    console.error("❌ Error en POST /api/menu/categoria:", err.message);
+    return res.status(500).json({ error: 'Error al crear la categoría' });
+  }
+});
+
+app.delete('/api/menu/categoria', verificarLicencia, async (req, res) => {
+  try {
+    const { local, categoria } = req.query;
+    if (!local || !categoria) return res.status(400).json({ error: 'Faltan parámetros' });
+
+    const localQuery = local.toLowerCase().trim();
+    let doc = await Local.findOne({ $or: [{ local: localQuery }, { id: localQuery }] });
+
+    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
+
+    doc.menu = doc.menu.filter(c => c.categoria !== categoria);
+    doc.markModified('menu');
+    await doc.save();
+
+    return res.status(200).json({ mensaje: 'Categoría eliminada' });
+  } catch (err) {
+    console.error("❌ Error en DELETE /api/menu/categoria:", err.message);
+    return res.status(500).json({ error: 'Error al eliminar categoría' });
   }
 });
 
@@ -252,7 +307,7 @@ app.post('/api/menu', verificarLicencia, async (req, res) => {
     }
 
     const localQuery = local.toLowerCase().trim();
-    let doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
+    let doc = await Local.findOne({ $or: [{ local: localQuery }, { id: localQuery }] });
 
     if (!doc) return res.status(404).json({ error: 'Local no encontrado' });
     if (!Array.isArray(doc.menu)) doc.menu = [];
@@ -285,7 +340,7 @@ app.put('/api/menu/edit', verificarLicencia, async (req, res) => {
     const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaCategoria } = req.body;
 
     const localQuery = local.toLowerCase().trim();
-    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
+    const doc = await Local.findOne({ $or: [{ local: localQuery }, { id: localQuery }] });
     if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
 
     let catObj = doc.menu.find(c => c.categoria === categoriaOriginal);
@@ -326,7 +381,7 @@ app.delete('/api/menu/del', verificarLicencia, async (req, res) => {
     const { local, categoria, index } = req.query;
 
     const localQuery = (local || '').toLowerCase().trim();
-    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
+    const doc = await Local.findOne({ $or: [{ local: localQuery }, { id: localQuery }] });
     if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
 
     let catObj = doc.menu.find(c => c.categoria === categoria);
