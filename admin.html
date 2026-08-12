@@ -504,7 +504,7 @@
       </div>
 
       <div id="contenedor-categorias">
-        <p style="color: var(--text-muted); text-align: center;">Cargando menú desde la base de datos...</p>
+        <p style="color: var(--text-muted); text-align: center;">Cargando menú...</p>
       </div>
     </div>
 
@@ -730,8 +730,8 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    // DETECCIÓN DE BACKEND (Localhost o Render/Servidor externo)
-    const BACKEND_URL = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1'))
+    // Detección dinámica de URL backend (Servidor Render o Local)
+    const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:3000'
       : window.location.origin;
 
@@ -740,7 +740,8 @@
     const numeroMesa = params.get('mesa') || '1';
     const vistaModo = params.get('view');
 
-    let menuEstructurado = [];
+    let productosPlanos = [];
+    let categoriasSet = new Set();
     let carrito = [];
     let catSeleccionadaCliente = '';
     let rutGarzonSesion = localStorage.getItem('rutGarzon') || '12022962-1';
@@ -793,7 +794,7 @@
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
       if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
-      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta se encuentra desactivada o la conexión con el servidor falló.";
+      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Administrador.";
     }
 
     async function obtenerEstadoLicenciaYBloqueo() {
@@ -815,8 +816,7 @@
           estaBloqueado = true;
         }
       } catch (err) {
-        // En caso de corte de red, mantenemos acceso local para edición previa
-        estaBloqueado = false;
+        estaBloqueado = true;
       }
 
       if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
@@ -889,20 +889,46 @@
 
     async function cargarDatosMenu() {
       const contenedorAdmin = document.getElementById('contenedor-categorias');
+      contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú en MongoDB...</p>';
 
       try {
         const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
-        
-        if (respuesta.ok) {
-          const data = await respuesta.json();
-          menuEstructurado = Array.isArray(data.menu) ? data.menu : [];
-        } else if (respuesta.status === 403) {
+        if (respuesta.status === 403 || respuesta.status === 404) {
           forzarBloqueoUI();
-          return;
+          throw new Error("Licencia desactivada o bloqueada");
         }
+        
+        const data = await respuesta.json();
+        
+        // Adaptación de respuesta (Estructura anidada por categorías o lista plana)
+        productosPlanos = [];
+        if (data && Array.isArray(data.menu)) {
+          data.menu.forEach(cat => {
+            if (Array.isArray(cat.productos)) {
+              cat.productos.forEach(prod => {
+                productosPlanos.push({
+                  categoria: cat.categoria,
+                  nombre: prod.nombre,
+                  precio: prod.precio
+                });
+              });
+            }
+          });
+        } else if (Array.isArray(data)) {
+          productosPlanos = data;
+        }
+
       } catch (err) {
-        console.warn("Conexión backend fallida. Se continuará con memoria local si existe.");
+        contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador o error de conexión con MongoDB.</p>';
+        return;
       }
+
+      categoriasSet.clear();
+      productosPlanos.forEach(p => {
+        if (p.categoria) categoriasSet.add(p.categoria);
+      });
+
+      if (categoriasSet.size === 0) categoriasSet.add("General");
 
       renderizarAdminCategorias();
       renderizarClienteCategorias();
@@ -913,27 +939,21 @@
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '';
 
-      if (menuEstructurado.length === 0) {
-        contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Aún no has creado categorías. Crea tu primera categoría arriba.</p>';
-        return;
-      }
-
-      menuEstructurado.forEach(catObj => {
-        const catNombre = catObj.categoria;
-        const productosCat = Array.isArray(catObj.productos) ? catObj.productos : [];
+      categoriasSet.forEach(catNombre => {
+        const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
         const catCard = document.createElement('div');
         catCard.className = 'category-card';
 
         catCard.innerHTML = `
           <div class="category-header">
-            <div>
-              <span class="category-name">📂 ${catNombre}</span>
-              <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">(${productosCat.length} producto/s)</span>
+            <span class="category-name">📂 ${catNombre}</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
+              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Cat.</button>
             </div>
-            <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre.replace(/'/g, "\\'")}')">🗑️ Eliminar Categoría</button>
           </div>
           <div class="product-list">
-            ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos creados en esta categoría. Agrega uno a continuación.</p>' : ''}
+            ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>' : ''}
             ${productosCat.map((prod, subIndex) => `
               <div class="product-item">
                 <div class="product-info">
@@ -941,8 +961,8 @@
                   <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
                 </div>
                 <div class="product-actions">
-                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre.replace(/'/g, "\\'")}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
-                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre.replace(/'/g, "\\'")}', ${subIndex})">🗑️ Eliminar</button>
+                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
+                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${subIndex})">🗑️ Eliminar</button>
                 </div>
               </div>
             `).join('')}
@@ -950,7 +970,7 @@
           <div class="add-product-box">
             <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
             <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
-            <button class="btn btn-sm" onclick="agregarProducto('${catNombre.replace(/'/g, "\\'")}')">+ Guardar Producto</button>
+            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
           </div>
         `;
         contenedor.appendChild(catCard);
@@ -968,35 +988,22 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ local: localId, categoria: nombreCat })
         });
-
         if (res.ok) {
           inputCat.value = '';
           cargarDatosMenu();
         } else {
-          const data = await res.json();
-          alert(`⚠️ ${data.error || 'Error al crear la categoría.'}`);
+          const errData = await res.json();
+          alert(errData.error || "Error al crear la categoría");
         }
-      } catch (err) {
-        alert("Error de conexión al backend.");
-      }
+      } catch (err) { alert("Error de red al crear categoría."); }
     }
 
     async function eliminarCategoria(categoria) {
       if (!confirm(`¿Deseas eliminar la categoría "${categoria}" y todos sus productos?`)) return;
-
       try {
-        const res = await fetch(`${BACKEND_URL}/api/menu/categoria?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}`, {
-          method: 'DELETE'
-        });
-
-        if (res.ok) {
-          cargarDatosMenu();
-        } else {
-          alert("Error al eliminar la categoría.");
-        }
-      } catch (err) {
-        alert("Error de conexión al backend.");
-      }
+        await fetch(`${BACKEND_URL}/api/menu/categoria?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}`, { method: 'DELETE' });
+        cargarDatosMenu();
+      } catch (err) {}
     }
 
     async function agregarProducto(categoria) {
@@ -1005,30 +1012,21 @@
       const nombre = inputNombre.value.trim();
       const precio = parseFloat(inputPrecio.value);
 
-      if (!nombre || isNaN(precio)) return alert("Ingresa un nombre y un precio válido.");
-
+      if (!nombre || isNaN(precio)) return alert("Ingresa un nombre y precio válido.");
       try {
         const res = await fetch(`${BACKEND_URL}/api/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ local: localId, categoria, nombre, precio })
         });
-
-        if (res.ok) {
-          cargarDatosMenu();
-        } else {
-          alert("Error al agregar el producto.");
-        }
+        if (res.ok) cargarDatosMenu();
       } catch (err) {}
     }
 
     async function eliminarProducto(categoria, index) {
       if (!confirm("¿Deseas eliminar este producto?")) return;
-
       try {
-        await fetch(`${BACKEND_URL}/api/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, {
-          method: 'DELETE'
-        });
+        await fetch(`${BACKEND_URL}/api/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, { method: 'DELETE' });
         cargarDatosMenu();
       } catch (err) {}
     }
@@ -1053,20 +1051,11 @@
       const nuevoPrecio = parseFloat(document.getElementById('edit-precio').value);
       const nuevaCategoria = document.getElementById('edit-categoria').value.trim();
 
-      if (!nuevoNombre || isNaN(nuevoPrecio)) return alert("Por favor ingresa un nombre y un precio válidos.");
-
       try {
         await fetch(`${BACKEND_URL}/api/menu/edit`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            local: localId,
-            categoriaOriginal: catOrig,
-            indexOriginal: Number(indexOrig),
-            nuevoNombre,
-            nuevoPrecio,
-            nuevaCategoria
-          })
+          body: JSON.stringify({ local: localId, categoriaOriginal: catOrig, indexOriginal: Number(indexOrig), nuevoNombre, nuevoPrecio, nuevaCategoria })
         });
         cerrarModalEdicion();
         cargarDatosMenu();
@@ -1075,14 +1064,12 @@
 
     function renderizarClienteCategorias() {
       const bar = document.getElementById('barra-categorias-cliente');
-      const categoriasNombres = menuEstructurado.map(c => c.categoria);
-
-      if (categoriasNombres.length > 0 && (!catSeleccionadaCliente || !categoriasNombres.includes(catSeleccionadaCliente))) {
-        catSeleccionadaCliente = categoriasNombres[0];
+      const cats = Array.from(categoriasSet);
+      if (cats.length > 0 && (!catSeleccionadaCliente || !cats.includes(catSeleccionadaCliente))) {
+        catSeleccionadaCliente = cats[0];
       }
-
-      bar.innerHTML = categoriasNombres.map(c => `
-        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c.replace(/'/g, "\\'")}')">${c}</div>
+      bar.innerHTML = cats.map(c => `
+        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c}')">${c}</div>
       `).join('');
     }
 
@@ -1094,20 +1081,20 @@
 
     function renderizarClienteProductos() {
       const cont = document.getElementById('lista-productos-cliente');
-      const catObj = menuEstructurado.find(c => c.categoria === catSeleccionadaCliente);
+      const filtrados = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
 
-      if (!catObj || !Array.isArray(catObj.productos) || catObj.productos.length === 0) {
-        cont.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay productos disponibles en esta categoría.</p>';
+      if (filtrados.length === 0) {
+        cont.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay productos en esta categoría.</p>';
         return;
       }
 
-      cont.innerHTML = catObj.productos.map(p => `
+      cont.innerHTML = filtrados.map(p => `
         <div class="product-card-client">
           <div>
             <div style="font-weight: bold; color: #fff; font-size: 15px;">${p.nombre}</div>
             <div style="color: var(--neon-yellow); font-weight: bold; font-size: 14px; margin-top: 3px;">$${(p.precio || 0).toLocaleString('es-CL')}</div>
           </div>
-          <button class="btn-add" onclick="agregarAlCarrito('${(catObj.categoria || '').replace(/'/g, "\\'")}', '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})">+ Agregar</button>
+          <button class="btn-add" onclick="agregarAlCarrito('${(p.categoria || '').replace(/'/g, "\\'")}', '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})">+ Agregar</button>
         </div>
       `).join('');
     }
@@ -1194,17 +1181,18 @@
         });
 
         if (res.ok || res.status === 201) {
-          alert("✅ ¡Pedido recibido! Registrado con éxito.");
+          alert("✅ ¡Pedido recibido! Registrado con éxito en MongoDB.");
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalCarrito();
           cargarPedidosCocina();
           cargarPedidosGarzon();
         } else {
-          alert(`⚠️ No se pudo procesar la comanda (${res.status}).`);
+          alert(`⚠️ Su cuenta podría estar inactiva o hubo un error (${res.status}).`);
+          if (res.status === 403) forzarBloqueoUI();
         }
       } catch (e) {
-        alert(`⚠️ Error de conexión al backend.`);
+        alert(`⚠️ Error de conexión al servidor backend.`);
       }
 
       btnEnviar.disabled = false;
@@ -1217,8 +1205,11 @@
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
-        if (!res.ok) throw new Error("Fallo API");
-
+        if (res.status === 403) {
+          forzarBloqueoUI();
+          throw new Error("Cuenta desactivada");
+        }
+        
         const pedidos = await res.json();
         const pendientes = pedidos.filter(p => p.estado !== 'entregado');
 
@@ -1257,13 +1248,13 @@
           `;
         }).join('');
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Sin conexión temporal con comandas.</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
       }
     }
 
     async function despacharPedido(idPedido) {
       if (!confirm("¿Marcar este pedido como preparado?")) return;
-      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' }); } catch (e) {}
+      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (e) {}
       cargarPedidosCocina();
       cargarPedidosGarzon();
     }
@@ -1308,7 +1299,10 @@
 
       try {
         const resPedidos = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
-        if (!resPedidos.ok) throw new Error("Fallo API");
+        if (resPedidos.status === 403) {
+          forzarBloqueoUI();
+          throw new Error("Cuenta desactivada");
+        }
 
         const pedidos = await resPedidos.json();
         cachePedidos = pedidos.filter(p => p.estado !== 'entregado');
@@ -1346,7 +1340,7 @@
           }).join('');
         }
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Esperando reconexión...</p>';
+        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
       }
     }
 
@@ -1403,7 +1397,7 @@
       historialLocalArr.unshift(docHistorial);
       localStorage.setItem(`historial_${localId}`, JSON.stringify(historialLocalArr));
 
-      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' }); } catch (err) {}
+      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (err) {}
 
       const cardEl = document.getElementById(`card-garzon-${idPedido}`);
       if (cardEl) cardEl.remove();
