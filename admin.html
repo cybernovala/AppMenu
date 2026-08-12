@@ -565,11 +565,16 @@
     <div id="tab-cocina" class="tab-content">
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <h3>🚀 Comandas y Pedidos en Tiempo Real</h3>
+          <div>
+            <h3>🍳 Pedidos en Preparación</h3>
+            <p style="color: var(--neon-yellow); font-size: 13px; margin-top: 4px;">
+              Ubicar o poner el pedido de la mesa cuando esté listo y avisar al garzón repartidor.
+            </p>
+          </div>
           <button class="btn btn-secondary btn-sm" onclick="cargarPedidosCocina()">🔄 Actualizar Pedidos</button>
         </div>
 
-        <div id="contenedor-pedidos-cocina" class="grid-pedidos">
+        <div id="contenedor-pedidos-cocina" class="grid-pedidos" style="margin-top: 20px;">
           <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando pedidos de la cocina...</p>
         </div>
       </div>
@@ -1222,7 +1227,6 @@
         }
 
         contenedor.innerHTML = pendientes.map((p) => {
-          const idPedido = p._id;
           const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
           const itemsList = Array.isArray(p.items) ? p.items : [];
 
@@ -1245,7 +1249,7 @@
               </div>
               <div class="card-pedido-footer">
                 <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
-                <button class="btn btn-success btn-sm" onclick="despacharPedido('${idPedido}')">✓ Listo en Cocina</button>
+                <span style="font-size: 12px; color: var(--neon-orange); font-weight: bold;">👨‍🍳 En Preparación</span>
               </div>
             </div>
           `;
@@ -1257,13 +1261,6 @@
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Sin comunicación momentánea con el servidor de pedidos.</p>';
         }
       }
-    }
-
-    async function despacharPedido(idPedido) {
-      if (!confirm("¿Marcar este pedido como preparado?")) return;
-      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (e) {}
-      cargarPedidosCocina();
-      cargarPedidosGarzon();
     }
 
     function generarQRGarzon() {
