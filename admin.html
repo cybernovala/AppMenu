@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración & Menú Digital</title>
+  <title>--Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -730,7 +730,6 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    // Configuración dinámicas de servidor Backend
     const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:3000'
       : 'https://appmenu-tavr.onrender.com';
@@ -740,8 +739,8 @@
     const numeroMesa = params.get('mesa') || '1';
     const vistaModo = params.get('view');
 
+    let menuEstructurado = [];
     let productosPlanos = [];
-    let categoriasSet = new Set();
     let carrito = [];
     let catSeleccionadaCliente = '';
     let rutGarzonSesion = localStorage.getItem('rutGarzon') || '12022962-1';
@@ -895,7 +894,7 @@
       contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú en la base de datos...</p>';
 
       try {
-        const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
+        const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}&modo=estructurado`);
         
         if (respuesta.status === 403) {
           forzarBloqueoUI();
@@ -907,8 +906,21 @@
         }
 
         const data = await respuesta.json();
-        
-        productosPlanos = Array.isArray(data) ? data : [];
+        menuEstructurado = Array.isArray(data) ? data : [];
+
+        // Generar lista plana para la vista del cliente
+        productosPlanos = [];
+        menuEstructurado.forEach(c => {
+          if (c.productos && Array.isArray(c.productos)) {
+            c.productos.forEach(p => {
+              productosPlanos.push({
+                categoria: c.categoria,
+                nombre: p.nombre,
+                precio: p.precio
+              });
+            });
+          }
+        });
 
       } catch (err) {
         console.warn("Advertencia de carga de menú:", err);
@@ -920,11 +932,6 @@
         return;
       }
 
-      categoriasSet.clear();
-      productosPlanos.forEach(p => {
-        if (p.categoria) categoriasSet.add(p.categoria);
-      });
-
       renderizarAdminCategorias();
       renderizarClienteCategorias();
       renderizarClienteProductos();
@@ -934,13 +941,14 @@
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '';
 
-      if (categoriasSet.size === 0) {
+      if (menuEstructurado.length === 0) {
         contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay categorías registradas. ¡Crea la primera categoría arriba!</p>';
         return;
       }
 
-      categoriasSet.forEach(catNombre => {
-        const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
+      menuEstructurado.forEach((catObj) => {
+        const catNombre = catObj.categoria;
+        const productosCat = catObj.productos || [];
         const catCard = document.createElement('div');
         catCard.className = 'category-card';
 
@@ -949,7 +957,7 @@
             <span class="category-name">📂 ${catNombre}</span>
             <div style="display:flex; gap:10px; align-items:center;">
               <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
-              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Cat.</button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre.replace(/'/g, "\\'")}')">🗑️ Eliminar Cat.</button>
             </div>
           </div>
           <div class="product-list">
@@ -961,16 +969,16 @@
                   <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
                 </div>
                 <div class="product-actions">
-                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
-                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${subIndex})">🗑️ Eliminar</button>
+                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre.replace(/'/g, "\\'")}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
+                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre.replace(/'/g, "\\'")}', ${subIndex})">🗑️ Eliminar</button>
                 </div>
               </div>
             `).join('')}
           </div>
           <div class="add-product-box">
-            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
-            <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
-            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
+            <input type="text" id="nuevo-nombre-${catNombre.replace(/[^a-zA-Z0-9]/g, '_')}" placeholder="Nombre del producto" style="flex:2;">
+            <input type="number" id="nuevo-precio-${catNombre.replace(/[^a-zA-Z0-9]/g, '_')}" placeholder="Precio ($)" style="flex:1;">
+            <button class="btn btn-sm" onclick="agregarProducto('${catNombre.replace(/'/g, "\\'")}')">+ Guardar Producto</button>
           </div>
         `;
         contenedor.appendChild(catCard);
@@ -990,7 +998,6 @@
         });
         if (res.ok) {
           inputCat.value = '';
-          categoriasSet.add(nombreCat);
           cargarDatosMenu();
         } else {
           const errData = await res.json();
@@ -1008,8 +1015,12 @@
     }
 
     async function agregarProducto(categoria) {
-      const inputNombre = document.getElementById(`nuevo-nombre-${categoria}`);
-      const inputPrecio = document.getElementById(`nuevo-precio-${categoria}`);
+      const catSanitized = categoria.replace(/[^a-zA-Z0-9]/g, '_');
+      const inputNombre = document.getElementById(`nuevo-nombre-${catSanitized}`);
+      const inputPrecio = document.getElementById(`nuevo-precio-${catSanitized}`);
+      
+      if (!inputNombre || !inputPrecio) return alert("Error en el formulario.");
+      
       const nombre = inputNombre.value.trim();
       const precio = parseFloat(inputPrecio.value);
 
@@ -1065,12 +1076,12 @@
 
     function renderizarClienteCategorias() {
       const bar = document.getElementById('barra-categorias-cliente');
-      const cats = Array.from(categoriasSet);
+      const cats = menuEstructurado.map(c => c.categoria);
       if (cats.length > 0 && (!catSeleccionadaCliente || !cats.includes(catSeleccionadaCliente))) {
         catSeleccionadaCliente = cats[0];
       }
       bar.innerHTML = cats.map(c => `
-        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c}')">${c}</div>
+        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c.replace(/'/g, "\\'")}')">${c}</div>
       `).join('');
     }
 
