@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>--Panel de Administración & Menú Digital</title>
 
-  <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -485,12 +484,13 @@
 
     <!-- BARRA DE PESTAÑAS -->
     <div class="nav-tabs" id="admin-nav-tabs">
-      <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
+      <button class="tab-btn active" id="btn-tab-admin" onclick="intentarCambiarPestana('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 QR Mesas</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
       <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
-      <button class="tab-btn" id="btn-tab-historial" onclick="cambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
+      <button class="tab-btn" id="btn-tab-historial" onclick="intentarCambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
+      <button class="tab-btn" id="btn-tab-alta" onclick="cambiarPestana('tab-alta', this)">📝 Darse de Alta</button>
     </div>
 
     <!-- PESTAÑA 1: GESTIÓN DE MENÚ -->
@@ -689,6 +689,53 @@
       </div>
     </div>
 
+    <!-- PESTAÑA 7: DARSE DE ALTA -->
+    <div id="tab-alta" class="tab-content">
+      <div class="section-card" style="max-width: 500px; margin: 0 auto;">
+        <h3>📝 Registro y Alta del Local</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+          Ingresa los datos del local para registrarlo formalmente en el sistema.
+        </p>
+        <form id="form-alta-admin" onsubmit="registrarAltaAdmin(event)">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <label style="display:block; font-size:12px; color:var(--text-muted);">Nombre del Local</label>
+              <input type="text" id="alta-nombre" style="width: 100%;" required placeholder="Ej: Mi Restaurante">
+            </div>
+            <div>
+              <label style="display:block; font-size:12px; color:var(--text-muted);">RUT</label>
+              <input type="text" id="alta-rut" style="width: 100%;" required placeholder="Ej: 76.123.456-7">
+            </div>
+            <div>
+              <label style="display:block; font-size:12px; color:var(--text-muted);">Correo de recuperación</label>
+              <input type="email" id="alta-correo" style="width: 100%;" required placeholder="contacto@local.com">
+            </div>
+            <div>
+              <label style="display:block; font-size:12px; color:var(--text-muted);">Contraseña de Acceso</label>
+              <input type="password" id="alta-password" style="width: 100%;" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn btn-success" style="margin-top: 10px;">💾 Registrar e Iniciar Sesión</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL DE CONTRASEÑA -->
+  <div class="modal" id="modal-auth">
+    <div class="modal-content">
+      <h3>🔒 Acceso Restringido</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+        Este local requiere contraseña para acceder a la gestión del menú e historial.
+      </p>
+      <label>Ingresa tu contraseña:</label>
+      <input type="password" id="input-auth-pass" placeholder="••••••••" style="width:100%; margin-bottom:15px;">
+      <div style="display: flex; gap: 10px;">
+        <button class="btn" style="flex:1;" onclick="validarPassword()">Ingresar</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalAuth()">Cancelar</button>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL DE EDICIÓN -->
@@ -734,7 +781,6 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    // Configuración dinámicas de servidor Backend
     const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:3000'
       : 'https://appmenu-tavr.onrender.com';
@@ -751,6 +797,11 @@
     let rutGarzonSesion = localStorage.getItem('rutGarzon') || '12022962-1';
     let cachePedidos = [];
     let historialGlobal = [];
+
+    let estaAutenticado = false;
+    let tienePasswordRegistrado = false;
+    let pestanaPendiente = null;
+    let elementoPendiente = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
@@ -816,6 +867,7 @@
           const data = await res.json();
           if (data.nombre) document.getElementById('lbl-local-nombre').innerText = data.nombre.toUpperCase();
           estaBloqueado = (data.activo === false);
+          tienePasswordRegistrado = Boolean(data.tienePassword);
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         } else if (res.status === 403) {
           estaBloqueado = true;
@@ -845,6 +897,46 @@
       }
     }
 
+    function intentarCambiarPestana(tabId, element) {
+      if (tienePasswordRegistrado && !estaAutenticado) {
+        pestanaPendiente = tabId;
+        elementoPendiente = element;
+        document.getElementById('modal-auth').style.display = 'flex';
+        return;
+      }
+      cambiarPestana(tabId, element);
+    }
+
+    async function validarPassword() {
+      const pass = document.getElementById('input-auth-pass').value.trim();
+      if (!pass) return alert("Ingresa una contraseña");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, password: pass })
+        });
+
+        if (res.ok) {
+          estaAutenticado = true;
+          cerrarModalAuth();
+          if (pestanaPendiente) {
+            cambiarPestana(pestanaPendiente, elementoPendiente);
+          }
+        } else {
+          alert("❌ Contraseña incorrecta");
+        }
+      } catch (err) {
+        alert("Error de validación.");
+      }
+    }
+
+    function cerrarModalAuth() {
+      document.getElementById('modal-auth').style.display = 'none';
+      document.getElementById('input-auth-pass').value = '';
+    }
+
     function cambiarPestana(tabId, element) {
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -855,6 +947,32 @@
       if (tabId === 'tab-cocina') cargarPedidosCocina();
       else if (tabId === 'tab-garzon') { generarQRGarzon(); cargarPedidosGarzon(); }
       else if (tabId === 'tab-historial') cargarHistorialGarantizado();
+    }
+
+    async function registrarAltaAdmin(e) {
+      e.preventDefault();
+      const nombre = document.getElementById('alta-nombre').value.trim();
+      const rut = document.getElementById('alta-rut').value.trim();
+      const correo = document.getElementById('alta-correo').value.trim();
+      const password = document.getElementById('alta-password').value.trim();
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/alta-demo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, rut, correo, password })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert("✅ ¡Alta realizada correctamente!");
+          window.location.href = `admin.html?local=${data.local}`;
+        } else {
+          alert(`⚠️ ${data.error || 'Error al registrar local'}`);
+        }
+      } catch (err) {
+        alert("Error de conexión al dar de alta.");
+      }
     }
 
     function recargarTodo() {
@@ -915,7 +1033,6 @@
         productosPlanos = Array.isArray(data) ? data : [];
 
       } catch (err) {
-        console.warn("Advertencia de carga de menú:", err);
         if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
           contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
         } else {
@@ -1399,9 +1516,8 @@
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(docHistorial)
         });
-      } catch (e) { console.error("Error al publicar en historial:", e); }
+      } catch (e) {}
 
-      // Eliminar copia guardada local para prevenir duplicaciones de caché
       localStorage.removeItem(`historial_${localId}`);
 
       try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (err) {}
@@ -1432,9 +1548,8 @@
           const apiHist = await resHistorial.json();
           entregados = Array.isArray(apiHist) ? apiHist : [];
         }
-      } catch (e) { console.warn("API historial no disponible:", e); }
+      } catch (e) {}
 
-      // Desduplicación estricta usando ID de base de datos / campos clave
       const mapaUnico = new Map();
       entregados.forEach(p => {
         const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.horaEntrega || p.hora}_${p.rutGarzon}`;
