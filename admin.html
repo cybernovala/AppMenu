@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>++++++Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -49,19 +49,14 @@
 
     .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
 
-    /* CONTENEDOR DE BANNERS EN FLUJO VERTICAL (SIN SOLAPAMIENTO) */
     .banner-container {
       display: flex;
       flex-direction: column;
       gap: 10px;
       margin-bottom: 15px;
-      position: relative;
-      width: 100%;
     }
 
-    /* BANNER DE LICENCIA: SIEMPRE VISIBLE POR DEFECTO */
     .banner-licencia {
-      display: block;
       background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(255, 85, 0, 0.25));
       border: 1px solid var(--neon-yellow);
       color: #ffffff;
@@ -73,19 +68,17 @@
       box-shadow: 0 0 10px rgba(255, 238, 0, 0.2);
     }
 
-    /* BANNER DE BLOQUEO: OCURRE DEBAJO DEL BANNER DE LICENCIA */
     .banner-bloqueo {
-      display: none; /* Se activa mediante JS si activo es false */
-      background: linear-gradient(135deg, rgba(255, 0, 34, 0.9), rgba(150, 0, 0, 0.95));
-      border: 2px solid #ff0033;
-      color: #ffffff;
       text-align: center;
       padding: 12px 15px;
       border-radius: 8px;
       font-size: 14px;
       font-weight: bold;
-      box-shadow: 0 0 15px rgba(255, 0, 51, 0.6);
       transition: all 0.3s ease;
+      background: linear-gradient(135deg, rgba(255, 0, 34, 0.9), rgba(150, 0, 0, 0.95));
+      border: 2px solid #ff0033;
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(255, 0, 51, 0.6);
     }
 
     .header-bar {
@@ -460,16 +453,16 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS -->
+    <!-- CONTENEDOR DE BANNERS DE LICENCIA -->
     <div class="banner-container" id="banner-wrapper">
-      <!-- BANNER 1: SIEMPRE VISIBLE - VENCIMIENTO DE LICENCIA -->
-      <div class="banner-licencia" id="banner-vencimiento">
-        ⚠️ Su licencia vence en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
+      <!-- BANNER 1: SI ACTIVO ES TRUE (LICENCIA VÁLIDA POR X DÍAS) -->
+      <div class="banner-licencia" id="banner-vencimiento" style="display: none;">
+        ✅ Licencia válida por <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
       </div>
 
-      <!-- BANNER 2: APARECE JUSTO DEBAJO SI "activo" ES FALSE -->
-      <div class="banner-bloqueo" id="banner-bloqueo">
-        <span id="txt-estado-bloqueo">🚫 Cuenta inactiva o bloqueada. Contacte a soporte.</span>
+      <!-- BANNER 2: SI ACTIVO ES FALSE (DESACTIVADO CONTACTE PROVEEDOR) -->
+      <div class="banner-bloqueo" id="banner-bloqueo" style="display: none;">
+        <span>🚫 Sistema Desactivado. Por favor, contacte a su proveedor para reactivar la licencia.</span>
       </div>
     </div>
 
@@ -787,8 +780,12 @@
     });
 
     async function obtenerEstadoLicenciaYBloqueo() {
+      const bannerVencimiento = document.getElementById('banner-vencimiento');
+      const bannerBloqueo = document.getElementById('banner-bloqueo');
       const elNumDias = document.getElementById('num-dias-vencimiento');
-      const elBannerBloqueo = document.getElementById('banner-bloqueo');
+
+      let fechaVencimiento = null;
+      let estaActivo = true;
 
       try {
         const urlSinCache = `${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`;
@@ -802,35 +799,35 @@
 
         if (res.ok) {
           const data = await res.json();
-          
-          // Cálculo de días restantes de licencia (se muestra siempre en el primer banner)
-          let fechaVencimiento = data.fechaVencimiento ? new Date(data.fechaVencimiento) : null;
-          if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
-            const hoy = new Date();
-            fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
-          }
-
-          const ahora = new Date();
-          const diferenciaMs = fechaVencimiento - ahora;
-          const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
-
-          if (elNumDias) elNumDias.innerText = diasRestantes;
-
-          // EVALUACIÓN DEL CAMPO "activo" DESDE MONGO
-          if (data.activo === true) {
-            // ACTIVO: Se oculta el banner rojo
-            if (elBannerBloqueo) elBannerBloqueo.style.display = "none";
-          } else {
-            // INACTIVO: Se muestra el banner rojo debajo del de la licencia
-            if (elBannerBloqueo) elBannerBloqueo.style.display = "block";
-          }
+          estaActivo = data.activo === true;
+          if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         } else {
-          // Si el servidor responde error, muestra banner de bloqueo debajo
-          if (elBannerBloqueo) elBannerBloqueo.style.display = "block";
+          estaActivo = false;
         }
       } catch (err) {
-        // En caso de fallo de red, muestra banner de bloqueo debajo
-        if (elBannerBloqueo) elBannerBloqueo.style.display = "block";
+        estaActivo = false;
+      }
+
+      // MANEJO ESTRICTO DE BANNERS SEGÚN CAMPO "ACTIVO"
+      if (estaActivo) {
+        // SI ACTIVO ES TRUE: Mostrar solo banner de días válidos
+        bannerBloqueo.style.display = 'none';
+        
+        if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
+          const hoy = new Date();
+          fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
+        }
+
+        const ahora = new Date();
+        const diferenciaMs = fechaVencimiento - ahora;
+        const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
+
+        if (elNumDias) elNumDias.innerText = diasRestantes;
+        bannerVencimiento.style.display = 'block';
+      } else {
+        // SI ACTIVO ES FALSE: Mostrar solo banner de desactivación
+        bannerVencimiento.style.display = 'none';
+        bannerBloqueo.style.display = 'block';
       }
     }
 
@@ -894,8 +891,6 @@
         productosPlanos = await respuesta.json();
       } catch (err) {
         contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador o error de conexión.</p>';
-        const elBannerBloqueo = document.getElementById('banner-bloqueo');
-        if (elBannerBloqueo) elBannerBloqueo.style.display = "block";
         return;
       }
 
@@ -1148,8 +1143,6 @@
         }
       } catch (e) {
         alert(`⚠️ Error de conexión al backend. La cuenta podría estar desactivada.`);
-        const elBannerBloqueo = document.getElementById('banner-bloqueo');
-        if (elBannerBloqueo) elBannerBloqueo.style.display = "block";
       }
 
       btnEnviar.disabled = false;
@@ -1208,8 +1201,6 @@
         }).join('');
       } catch (e) {
         contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
-        const elBannerBloqueo = document.getElementById('banner-bloqueo');
-        if (elBannerBloqueo) elBannerBloqueo.style.display = "block";
       }
     }
 
@@ -1306,8 +1297,6 @@
         }
       } catch (e) {
         contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
-        const elBannerBloqueo = document.getElementById('banner-bloqueo');
-        if (elBannerBloqueo) elBannerBloqueo.style.display = "block";
       }
     }
 
