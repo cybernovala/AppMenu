@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
 
 const app = express();
 
@@ -14,7 +15,34 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json());
 
-// --- 2. CONEXIÓN A MONGO DB ATLAS ---
+// --- 2. CONFIGURACIÓN DE ENVÍO DE CORREOS (NODEMAILER) ---
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.EMAIL_PORT || '465'),
+  secure: process.env.EMAIL_SECURE !== 'false', // true para puerto 465, false para otros
+  auth: {
+    user: process.env.EMAIL_USER || 'tu_correo@gmail.com',
+    pass: process.env.EMAIL_PASS || 'tu_contraseña_de_aplicacion'
+  }
+});
+
+async function enviarCorreo(destino, asunto, mensajeHtml) {
+  try {
+    const info = await transporter.sendMail({
+      from: `"AppMenu Digital" <${process.env.EMAIL_USER || 'no-reply@appmenu.com'}>`,
+      to: destino,
+      subject: asunto,
+      html: mensajeHtml
+    });
+    console.log("📧 Correo enviado con éxito:", info.messageId);
+    return true;
+  } catch (err) {
+    console.error("❌ Error enviando correo:", err.message);
+    return false;
+  }
+}
+
+// --- 3. CONEXIÓN A MONGO DB ATLAS ---
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:juan2073@cluster0.w3kjxzs.mongodb.net/appmenu?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI, {
@@ -23,7 +51,7 @@ mongoose.connect(MONGO_URI, {
   .then(() => console.log('✅ MongoDB Conectado Exitosamente'))
   .catch(err => console.error('❌ Error crítico al conectar a MongoDB:', err.message));
 
-// --- 3. ESQUEMAS Y MODELOS ---
+// --- 4. ESQUEMAS Y MODELOS ---
 
 const CounterSchema = new mongoose.Schema({
   _id: { type: String, required: true },
@@ -96,7 +124,7 @@ function buildLocalFilter(queryVal) {
   return { $or: filter };
 }
 
-// --- 4. MIDDLEWARE DE VERIFICACIÓN DE LICENCIA ---
+// --- 5. MIDDLEWARE DE VERIFICACIÓN DE LICENCIA ---
 const verificarLicencia = async (req, res, next) => {
   try {
     const localQuery = (req.query.local || req.body.local || req.params.local || req.params.id || '').toLowerCase().trim();
@@ -123,7 +151,7 @@ const verificarLicencia = async (req, res, next) => {
   }
 };
 
-// --- 5. RUTAS DE LICENCIA Y SUPERADMIN ---
+// --- 6. RUTAS DE LICENCIA, ALTA Y SUPERADMIN ---
 
 app.get('/api/licencia', async (req, res) => {
   try {
@@ -229,6 +257,7 @@ app.post('/api/locales', async (req, res) => {
   }
 });
 
+// --- RUTA DAR DE ALTA NEGOCIO CON ENVÍO DE CORREO ---
 app.post('/api/locales/alta', async (req, res) => {
   try {
     const { nombre, rut, correo, password } = req.body;
@@ -245,29 +274,49 @@ app.post('/api/locales/alta', async (req, res) => {
       doc.password = password.trim();
       doc.altaRegistrada = true;
       await doc.save();
-      return res.status(200).json({ mensaje: 'Alta realizada con éxito', local: doc.local });
+    } else {
+      const siguienteId = await getNextSequenceValue('local_id');
+      const ahora = new Date();
+      const fechaVencimiento = new Date(ahora.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+      doc = new Local({
+        id: siguienteId,
+        local: localSlug,
+        nombre: nombre.trim(),
+        rut: rut.trim(),
+        correo: correo.trim().toLowerCase(),
+        password: password.trim(),
+        altaRegistrada: true,
+        activo: true,
+        fechaCreacion: ahora.toISOString(),
+        fechaVencimiento: fechaVencimiento,
+        menu: []
+      });
+      await doc.save();
     }
 
-    const siguienteId = await getNextSequenceValue('local_id');
-    const ahora = new Date();
-    const fechaVencimiento = new Date(ahora.getTime() + (30 * 24 * 60 * 60 * 1000));
+    // Plantilla de Correo de Confirmación de Alta
+    const htmlCorreo = `
+      <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
+        <h2 style="color: #ffee00;">🎉 ¡Registro Exitoso en AppMenu!</h2>
+        <p>Hola, tu negocio <strong>${doc.nombre}</strong> ha sido dado de alta correctamente en el sistema.</p>
+        <hr style="border: 1px solid #ff007f;">
+        <h3>🔑 Tus Credenciales de Acceso:</h3>
+        <ul>
+          <li><strong>Restaurante / Local:</strong> ${doc.nombre}</li>
+          <li><strong>RUT Empresa:</strong> ${doc.rut}</li>
+          <li><strong>Correo Registrado:</strong> ${doc.correo}</li>
+          <li><strong>Contraseña de Administración:</strong> ${doc.password}</li>
+        </ul>
+        <br>
+        <p style="font-size: 12px; color: #a0a0b0;">Guarda este correo para no perder tu acceso de administración.</p>
+      </div>
+    `;
 
-    doc = new Local({
-      id: siguienteId,
-      local: localSlug,
-      nombre: nombre.trim(),
-      rut: rut.trim(),
-      correo: correo.trim().toLowerCase(),
-      password: password.trim(),
-      altaRegistrada: true,
-      activo: true,
-      fechaCreacion: ahora.toISOString(),
-      fechaVencimiento: fechaVencimiento,
-      menu: []
-    });
+    // Envío del correo en segundo plano
+    enviarCorreo(doc.correo, `✅ Alta Exitosa de tu Negocio - ${doc.nombre}`, htmlCorreo);
 
-    await doc.save();
-    return res.status(201).json({ mensaje: 'Alta creada con éxito', local: doc.local });
+    return res.status(200).json({ mensaje: 'Alta realizada con éxito y correo de notificación enviado', local: doc.local });
   } catch (err) {
     console.error("❌ Error en POST /api/locales/alta:", err.message);
     return res.status(500).json({ error: 'Error al procesar el alta' });
@@ -287,8 +336,20 @@ app.post('/api/locales/recuperar', async (req, res) => {
       return res.status(404).json({ error: 'No se encontró una cuenta asociada a este correo' });
     }
 
+    const htmlCorreo = `
+      <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
+        <h2 style="color: #ffee00;">🔑 Recuperación de Clave - AppMenu</h2>
+        <p>Has solicitado la contraseña para el negocio: <strong>${doc.nombre}</strong></p>
+        <div style="background-color: #16161e; padding: 15px; border: 1px solid #ff5500; border-radius: 8px; margin: 15px 0;">
+          <p style="font-size: 18px; margin: 0;">Tu contraseña actual es: <strong style="color: #00ff66;">${doc.password}</strong></p>
+        </div>
+      </div>
+    `;
+
+    enviarCorreo(doc.correo, `🔐 Recuperación de Clave - ${doc.nombre}`, htmlCorreo);
+
     return res.status(200).json({
-      mensaje: 'Recuperación de clave',
+      mensaje: 'Recuperación de clave enviada al correo registrado.',
       password: doc.password || 'Sin contraseña asignada'
     });
   } catch (err) {
@@ -314,17 +375,41 @@ app.post('/api/locales/login', async (req, res) => {
   }
 });
 
+// --- RUTA SUPERADMIN REENVIAR CLAVE POR CORREO ---
 app.post('/api/locales/reenviar-clave', async (req, res) => {
   try {
     const { local } = req.body;
     const doc = await Local.findOne(buildLocalFilter(local));
     if (!doc) return res.status(404).json({ error: 'Local no encontrado' });
 
-    return res.status(200).json({
-      mensaje: `Contraseña del local "${doc.nombre}": ${doc.password || '1234'}`
-    });
+    if (!doc.correo) {
+      return res.status(400).json({ error: `El local "${doc.nombre}" no tiene un correo electrónico registrado.` });
+    }
+
+    const htmlCorreo = `
+      <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
+        <h2 style="color: #00d2ff;">📩 Recordatorio de Contraseña - SuperAdmin</h2>
+        <p>El administrador ha solicitado reenviarte las credenciales de tu local <strong>${doc.nombre}</strong>.</p>
+        <div style="background-color: #16161e; padding: 15px; border: 1px solid #00d2ff; border-radius: 8px; margin: 15px 0;">
+          <p style="margin: 5px 0;"><strong>Local:</strong> ${doc.nombre}</p>
+          <p style="margin: 5px 0;"><strong>Contraseña:</strong> <span style="color: #ffee00; font-weight: bold; font-size: 16px;">${doc.password || '1234'}</span></p>
+        </div>
+      </div>
+    `;
+
+    const enviado = await enviarCorreo(doc.correo, `🔐 Credenciales de Acceso - ${doc.nombre}`, htmlCorreo);
+
+    if (enviado) {
+      return res.status(200).json({
+        mensaje: `Contraseña reenviada con éxito al correo: ${doc.correo}`
+      });
+    } else {
+      return res.status(500).json({
+        error: `No se pudo enviar el correo a ${doc.correo}. Revisa la configuración SMTP.`
+      });
+    }
   } catch (err) {
-    return res.status(500).json({ error: 'Error al reenviar contraseña' });
+    return res.status(500).json({ error: 'Error interno al reenviar contraseña' });
   }
 });
 
@@ -360,7 +445,7 @@ app.patch('/api/locales/:id/licencia', async (req, res) => {
   }
 });
 
-// --- 6. RUTAS DEL MENÚ Y CATEGORÍAS ---
+// --- 7. RUTAS DEL MENÚ Y CATEGORÍAS ---
 
 app.get('/api/menu', verificarLicencia, async (req, res) => {
   try {
@@ -481,51 +566,45 @@ app.post('/api/menu', verificarLicencia, async (req, res) => {
 app.put('/api/menu/edit', verificarLicencia, async (req, res) => {
   try {
     const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaCategoria } = req.body;
-
     const doc = await Local.findOne(buildLocalFilter(local));
-    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
+    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local o menú no encontrado' });
 
-    let catObj = doc.menu.find(c => c.categoria === categoriaOriginal);
-    if (!catObj || !catObj.productos || catObj.productos[indexOriginal] === undefined) {
+    let catObj = doc.menu.find(c => c.categoria.toLowerCase() === categoriaOriginal.toLowerCase().trim());
+    if (!catObj || !catObj.productos || !catObj.productos[indexOriginal]) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    const productoActualizado = {
-      nombre: nuevoNombre.trim(),
-      precio: Number(nuevoPrecio) || 0
-    };
+    const prodOriginal = catObj.productos.splice(indexOriginal, 1)[0];
+    prodOriginal.nombre = nuevoNombre ? nuevoNombre.trim() : prodOriginal.nombre;
+    prodOriginal.precio = nuevoPrecio !== undefined ? Number(nuevoPrecio) : prodOriginal.precio;
 
-    if (nuevaCategoria && nuevaCategoria !== categoriaOriginal) {
-      catObj.productos.splice(indexOriginal, 1);
+    const nombreCatDestino = nuevaCategoria ? nuevaCategoria.trim() : categoriaOriginal;
+    let catDestino = doc.menu.find(c => c.categoria.toLowerCase() === nombreCatDestino.toLowerCase());
 
-      let nuevaCatObj = doc.menu.find(c => c.categoria === nuevaCategoria);
-      if (!nuevaCatObj) {
-        nuevaCatObj = { categoria: nuevaCategoria, productos: [] };
-        doc.menu.push(nuevaCatObj);
-      }
-      nuevaCatObj.productos.push(productoActualizado);
-    } else {
-      catObj.productos[indexOriginal] = productoActualizado;
+    if (!catDestino) {
+      catDestino = { categoria: nombreCatDestino, productos: [] };
+      doc.menu.push(catDestino);
     }
+
+    catDestino.productos.push(prodOriginal);
+    doc.menu = doc.menu.filter(c => c.productos.length > 0 || c.categoria === nombreCatDestino);
 
     doc.markModified('menu');
     await doc.save();
 
     return res.status(200).json({ mensaje: 'Producto actualizado con éxito' });
   } catch (err) {
-    console.error("❌ Error en PUT /api/menu/edit:", err.message);
-    return res.status(500).json({ error: 'Error al actualizar producto' });
+    return res.status(500).json({ error: 'Error al editar producto' });
   }
 });
 
 app.delete('/api/menu/del', verificarLicencia, async (req, res) => {
   try {
     const { local, categoria, index } = req.query;
-
     const doc = await Local.findOne(buildLocalFilter(local));
-    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
+    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local o menú no encontrado' });
 
-    let catObj = doc.menu.find(c => c.categoria === categoria);
+    let catObj = doc.menu.find(c => c.categoria.toLowerCase() === categoria.toLowerCase().trim());
     if (catObj && catObj.productos) {
       catObj.productos.splice(Number(index), 1);
       doc.markModified('menu');
@@ -534,23 +613,21 @@ app.delete('/api/menu/del', verificarLicencia, async (req, res) => {
 
     return res.status(200).json({ mensaje: 'Producto eliminado correctamente' });
   } catch (err) {
-    console.error("❌ Error en DELETE /api/menu/del:", err.message);
     return res.status(500).json({ error: 'Error al eliminar producto' });
   }
 });
 
-// --- 7. RUTAS DE PEDIDOS Y COMANDAS ---
+// --- 8. RUTAS DE PEDIDOS Y HISTORIAL ---
 
 app.get('/api/pedidos', verificarLicencia, async (req, res) => {
   try {
     const { local } = req.query;
-    let query = {};
-    if (local) query.local = local.toLowerCase().trim();
+    if (!local) return res.status(200).json([]);
 
-    const pedidos = await Pedido.find(query).sort({ fecha: -1 }).lean();
+    const filter = buildLocalFilter(local);
+    const pedidos = await Pedido.find(filter).sort({ createdAt: -1 }).lean();
     return res.status(200).json(pedidos);
   } catch (err) {
-    console.error("❌ Error en GET /api/pedidos:", err.message);
     return res.status(500).json([]);
   }
 });
@@ -558,81 +635,69 @@ app.get('/api/pedidos', verificarLicencia, async (req, res) => {
 app.post('/api/pedidos', verificarLicencia, async (req, res) => {
   try {
     const { local, mesa, items, total, estado, fecha } = req.body;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'El pedido no contiene productos válidos' });
-    }
-
     const nuevoPedido = new Pedido({
-      local: (local || 'mongo').toLowerCase().trim(),
+      local: local ? String(local).toLowerCase().trim() : '',
       mesa: String(mesa || '1'),
-      items,
-      total: Number(total) || 0,
+      items: Array.isArray(items) ? items : [],
+      total: Number(total || 0),
       estado: estado || 'pendiente',
       fecha: fecha ? new Date(fecha) : new Date()
     });
 
     await nuevoPedido.save();
-    return res.status(201).json({ mensaje: 'Pedido registrado con éxito', id: nuevoPedido._id });
+    return res.status(201).json(nuevoPedido);
   } catch (err) {
-    console.error("❌ Error en POST /api/pedidos:", err.message);
-    return res.status(500).json({ error: 'Error interno al procesar el pedido' });
+    return res.status(500).json({ error: 'Error al guardar el pedido' });
   }
 });
 
-app.delete('/api/pedidos/:id', async (req, res) => {
+app.delete('/api/pedidos/:id', verificarLicencia, async (req, res) => {
   try {
-    const { id } = req.params;
-    await Pedido.findByIdAndDelete(id);
-    return res.status(200).json({ mensaje: 'Pedido completado y eliminado' });
+    await Pedido.findByIdAndDelete(req.params.id);
+    return res.status(200).json({ mensaje: 'Pedido eliminado correctamente' });
   } catch (err) {
-    console.error("❌ Error en DELETE /api/pedidos/:id:", err.message);
-    return res.status(500).json({ error: 'Error al eliminar el pedido' });
-  }
-});
-
-// --- 8. RUTAS DE HISTORIAL DE ENTREGAS ---
-
-app.post('/api/historials', verificarLicencia, async (req, res) => {
-  try {
-    const data = req.body;
-
-    const nuevoRegistro = new Historial({
-      id: data.id || String(Date.now()),
-      local: (data.local || 'mongo').toLowerCase().trim(),
-      mesa: String(data.mesa || '1'),
-      items: data.items || [],
-      total: Number(data.total) || 0,
-      estado: 'entregado',
-      hora: data.hora,
-      rutGarzon: data.rutGarzon,
-      horaEntrega: data.horaEntrega,
-      fechaEntrega: data.fechaEntrega
-    });
-
-    await nuevoRegistro.save();
-    return res.status(201).json({ mensaje: 'Historial guardado exitosamente' });
-  } catch (err) {
-    console.error("❌ Error en POST /api/historials:", err.message);
-    return res.status(500).json({ error: 'Error al registrar historial' });
+    return res.status(500).json({ error: 'Error al eliminar pedido' });
   }
 });
 
 app.get('/api/historials', verificarLicencia, async (req, res) => {
   try {
     const { local } = req.query;
-    let query = {};
-    if (local) query.local = local.toLowerCase().trim();
+    if (!local) return res.status(200).json([]);
 
-    const historial = await Historial.find(query).sort({ createdAt: -1 }).lean();
+    const filter = buildLocalFilter(local);
+    const historial = await Historial.find(filter).sort({ createdAt: -1 }).lean();
     return res.status(200).json(historial);
   } catch (err) {
-    console.error("❌ Error en GET /api/historials:", err.message);
     return res.status(500).json([]);
   }
 });
 
+app.post('/api/historials', verificarLicencia, async (req, res) => {
+  try {
+    const { local, mesa, items, total, estado, hora, rutGarzon, horaEntrega, fechaEntrega } = req.body;
+    const nuevoHistorial = new Historial({
+      id: new mongoose.Types.ObjectId().toString(),
+      local: local ? String(local).toLowerCase().trim() : '',
+      mesa: String(mesa || '1'),
+      items: Array.isArray(items) ? items : [],
+      total: Number(total || 0),
+      estado: estado || 'entregado',
+      hora: hora || '',
+      rutGarzon: rutGarzon || '',
+      horaEntrega: horaEntrega || '',
+      fechaEntrega: fechaEntrega || ''
+    });
+
+    await nuevoHistorial.save();
+    return res.status(201).json(nuevoHistorial);
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al guardar en el historial' });
+  }
+});
+
+// --- 9. ARRANCAR EL SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
+  console.log(`🚀 Servidor backend escuchando en el puerto ${PORT}`);
 });
