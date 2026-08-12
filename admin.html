@@ -485,8 +485,8 @@
 
     <!-- BARRA DE PESTAÑAS -->
     <div class="nav-tabs" id="admin-nav-tabs">
-      <button class="tab-btn active" id="btn-tab-alta" onclick="cambiarPestana('tab-alta', this)">📝 Dar de Alta Negocio</button>
-      <button class="tab-btn" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
+      <button class="tab-btn" id="btn-tab-alta" onclick="cambiarPestana('tab-alta', this)">📝 Dar de Alta Negocio</button>
+      <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 QR Mesas</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
@@ -495,7 +495,7 @@
     </div>
 
     <!-- PESTAÑA 0: DAR DE ALTA NEGOCIO -->
-    <div id="tab-alta" class="tab-content active">
+    <div id="tab-alta" class="tab-content">
       <div class="section-card">
         <h3>📝 Registrar y Dar de Alta el Negocio</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
@@ -524,7 +524,7 @@
     </div>
 
     <!-- PESTAÑA 1: GESTIÓN DE MENÚ -->
-    <div id="tab-admin" class="tab-content">
+    <div id="tab-admin" class="tab-content active">
       <div class="section-card">
         <h3>📁 Crear Nueva Categoría</h3>
         <div class="form-inline">
