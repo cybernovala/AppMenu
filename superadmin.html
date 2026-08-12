@@ -167,7 +167,7 @@
     <div class="card">
       <h1>👑 SuperAdmin - Gestión de Licencias</h1>
       <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
-        Crea un nuevo local. Se asignará automáticamente la fecha actual de creación y 30 días de vigencia para la licencia en MongoDB.
+        Registra un nuevo restaurante. Se asignará automáticamente el estado activo y 30 días de vigencia en MongoDB.
       </p>
 
       <form class="form-group" onsubmit="crearNuevoLocal(event)">
@@ -202,7 +202,6 @@
       cargarTodosLocales();
     });
 
-    // Formatear fechas a YYYY-MM-DD
     function formatearFecha(fechaInput) {
       if (!fechaInput) return 'Sin fecha';
       const f = new Date(fechaInput);
@@ -210,7 +209,6 @@
       return f.toISOString().split('T')[0];
     }
 
-    // Cargar todos los locales
     async function cargarTodosLocales() {
       const contenedor = document.getElementById('lista-locales');
       contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando MongoDB...</p>';
@@ -231,68 +229,44 @@
       }
     }
 
-    // Crear un nuevo local compatible exactamente con el LocalSchema de server.js
     async function crearNuevoLocal(e) {
       e.preventDefault();
       const nombreInput = document.getElementById('input-nombre-local');
       const passInput = document.getElementById('input-password-local');
 
       const nombre = nombreInput.value.trim();
-      const password = passInput.value.trim() || '123456';
+      const password = passInput.value.trim();
 
       if (!nombre) return alert("Por favor ingresa el nombre del local.");
 
-      // Generar slug/id amigable para local e id
-      const localSlug = nombre.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
-      const idUnico = localSlug + '_' + Math.floor(Math.random() * 1000);
-
-      const ahora = new Date();
-      const fechaCreacion = ahora.toISOString();
-      const fechaVencimiento = new Date(ahora.getTime() + (30 * 24 * 60 * 60 * 1000)).toISOString();
-
-      // Payload estructurado según LocalSchema del backend
-      const payload = {
-        local: localSlug,
-        id: idUnico,
-        nombre: nombre,
-        password: password,
-        activo: true,
-        fechaCreacion: fechaCreacion,
-        fechaVencimiento: fechaVencimiento,
-        categoria: 'General',
-        nombreProducto: 'Producto Inicial',
-        precio: 0
-      };
-
       try {
-        // Usa la ruta POST /api/menu para crear o actualizar el documento del local en MongoDB
-        const res = await fetch(`${BACKEND_URL}/api/menu`, {
+        const res = await fetch(`${BACKEND_URL}/api/locales`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ nombre, password })
         });
 
+        const data = await res.json();
+
         if (res.ok) {
-          alert(`✅ Local "${nombre}" creado exitosamente.\nFecha Creación: ${formatearFecha(fechaCreacion)}\nVencimiento Licencia: ${formatearFecha(fechaVencimiento)}`);
+          alert(`✅ Restaurante "${data.nombre}" creado exitosamente en MongoDB.`);
           nombreInput.value = '';
           passInput.value = '';
           cargarTodosLocales();
         } else {
-          alert("❌ Error al registrar el local en MongoDB.");
+          alert(`❌ Error: ${data.error || 'No se pudo crear el restaurante'}`);
         }
       } catch (err) {
-        alert("❌ Error de comunicación con el servidor backend.");
+        alert("❌ Error de red al comunicarse con el servidor.");
       }
     }
 
-    // Renderizar la lista de locales
     function renderizarLocales(locales) {
       const contenedor = document.getElementById('lista-locales');
       contenedor.innerHTML = '';
 
       locales.forEach(loc => {
         const idLocal = loc.localId || loc.id || loc.local;
-        const fCreacion = formatearFecha(loc.fechaCreacion);
         const fVenc = formatearFecha(loc.fechaVencimiento);
         const estaActivo = loc.activo === true;
 
@@ -301,8 +275,7 @@
         card.innerHTML = `
           <div class="local-info">
             <b>${(loc.nombre || idLocal).toUpperCase()}</b> (ID: ${idLocal})<br>
-            <p><b>Fecha Creación:</b> ${fCreacion}</p>
-            <p><b>Vencimiento:</b> <input type="date" id="date-${idLocal}" value="${fVenc !== 'Sin fecha' ? fVenc : ''}" style="padding:4px; font-size:12px; min-width:auto;">
+            <p style="margin-top:5px;"><b>Vencimiento:</b> <input type="date" id="date-${idLocal}" value="${fVenc !== 'Sin fecha' ? fVenc : ''}" style="padding:4px; font-size:12px; min-width:auto;">
             <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="guardarFecha('${idLocal}')">💾 Guardar Fecha</button></p>
             <p style="margin-top:5px;">
               Estado Licencia: 
@@ -326,7 +299,6 @@
       });
     }
 
-    // Cambiar estado activo/desactivado a través de PATCH /api/locales/:id/licencia
     async function cambiarEstadoLocal(localId, activo) {
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localId)}/licencia`, {
@@ -346,7 +318,6 @@
       }
     }
 
-    // Actualizar la fecha de vencimiento a través de PATCH /api/locales/:id/licencia
     async function guardarFecha(localId) {
       const nuevaFecha = document.getElementById(`date-${localId}`).value;
       if (!nuevaFecha) return alert("Selecciona una fecha válida.");
@@ -369,7 +340,6 @@
       }
     }
 
-    // Buscar local
     async function buscarLocal() {
       const q = document.getElementById('input-buscar-local').value.trim().toLowerCase();
       if (!q) return cargarTodosLocales();
@@ -383,7 +353,6 @@
             localId: data.local,
             nombre: data.nombre,
             activo: data.activo,
-            fechaCreacion: data.fechaCreacion,
             fechaVencimiento: data.fechaVencimiento
           }]);
         } else {
@@ -394,7 +363,6 @@
       }
     }
 
-    // Generar y descargar archivo HTML dinámico para la validación del Admin
     async function descargarHTML(localId) {
       try {
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
@@ -410,10 +378,7 @@
 </head>
 <body>
   <script>
-    // Configuración de Licencia Generada por SuperAdmin
     window.LICENCIA_CONFIG = ${JSON.stringify(data, null, 2)};
-    
-    // Guardado local para lectura del Panel Admin
     localStorage.setItem('licencia_local_activa', JSON.stringify(window.LICENCIA_CONFIG));
 
     function validarLicencia() {
