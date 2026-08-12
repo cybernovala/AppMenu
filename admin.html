@@ -1012,7 +1012,7 @@
       contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú en la base de datos...</p>';
 
       try {
-        const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
+        const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}&modo=estructurado`);
         
         if (respuesta.status === 403) {
           forzarBloqueoUI();
@@ -1024,7 +1024,25 @@
         }
 
         const data = await respuesta.json();
-        productosPlanos = Array.isArray(data) ? data : [];
+        productosPlanos = [];
+        categoriasSet.clear();
+
+        if (Array.isArray(data)) {
+          data.forEach(c => {
+            if (c.categoria) {
+              categoriasSet.add(c.categoria);
+              if (Array.isArray(c.productos)) {
+                c.productos.forEach(p => {
+                  productosPlanos.push({
+                    categoria: c.categoria,
+                    nombre: p.nombre,
+                    precio: p.precio
+                  });
+                });
+              }
+            }
+          });
+        }
 
       } catch (err) {
         if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
@@ -1034,11 +1052,6 @@
         }
         return;
       }
-
-      categoriasSet.clear();
-      productosPlanos.forEach(p => {
-        if (p.categoria) categoriasSet.add(p.categoria);
-      });
 
       renderizarAdminCategorias();
       renderizarClienteCategorias();
