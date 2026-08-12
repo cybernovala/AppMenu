@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - Control de Licencias y Restaurantes</title>
+  <title>--SuperAdmin - Control de Licencias y Restaurantes</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -242,7 +242,8 @@
     }
 
     function descargarAccesoHTML(localId, nombreLocal) {
-      const urlPanelAdmin = `https://appmenu-tavr.onrender.com/admin?local=${encodeURIComponent(localId)}`;
+      // URL directa a la interfaz del panel admin en GitHub Pages
+      const urlPanelGithub = `https://cybernovala.github.io/AppMenu/admin.html?local=${encodeURIComponent(localId)}`;
       
       const contenidoHTML = `<!DOCTYPE html>
 <html lang="es">
@@ -287,11 +288,11 @@
   <div class="box">
     <h1>Acceso al Panel Admin</h1>
     <p>Restaurante: <b>${nombreLocal}</b></p>
-    <a href="${urlPanelAdmin}" target="_blank">🚀 Entrar al Panel de Administración</a>
+    <a href="${urlPanelGithub}">🚀 Entrar al Panel de Administración</a>
   </div>
   <script>
     setTimeout(() => {
-      window.location.href = "${urlPanelAdmin}";
+      window.location.href = "${urlPanelGithub}";
     }, 1500);
   <\/script>
 </body>
