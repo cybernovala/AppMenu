@@ -196,8 +196,8 @@
         card.className = 'local-card';
         card.innerHTML = `
           <div class="local-info">
-            <b>${loc.nombre.toUpperCase()}</b> (ID: ${loc.localId})<br>
-            <p>Vencimiento: <input type="date" id="date-${loc.localId}" value="${fVenc}" style="padding:4px; font-size:12px; min-width:auto;">
+            <b>${(loc.nombre || loc.localId).toUpperCase()}</b> (ID: ${loc.localId})<br>
+            <p style="margin-top:5px;">Vencimiento: <input type="date" id="date-${loc.localId}" value="${fVenc}" style="padding:4px; font-size:12px; min-width:auto;">
             <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="guardarFecha('${loc.localId}')">💾 Guardar Fecha</button></p>
             <p style="margin-top:5px;">
               Estado Actual: 
@@ -271,7 +271,7 @@
             fechaVencimiento: data.fechaVencimiento
           }]);
         } else {
-          alert("Local no encontrado. Puedes crearlo habilitándolo directamente.");
+          alert("Local no encontrado. Creando y habilitando local...");
           cambiarEstadoLocal(q, true);
         }
       } catch (err) {
