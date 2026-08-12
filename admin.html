@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>--Panel de Administración & Menú Digital</title>
 
+  <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -465,7 +466,7 @@
     <!-- CONTENEDOR DE BANNERS DE LICENCIA -->
     <div class="banner-container" id="banner-wrapper">
       <div class="banner-licencia" id="banner-vencimiento">
-        ⚠️ Su licencia vence en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
+        ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
       </div>
 
       <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
@@ -484,13 +485,12 @@
 
     <!-- BARRA DE PESTAÑAS -->
     <div class="nav-tabs" id="admin-nav-tabs">
-      <button class="tab-btn active" id="btn-tab-admin" onclick="intentarCambiarPestana('tab-admin', this)">⚙️ Menú</button>
+      <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 QR Mesas</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
       <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
-      <button class="tab-btn" id="btn-tab-historial" onclick="intentarCambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
-      <button class="tab-btn" id="btn-tab-alta" onclick="cambiarPestana('tab-alta', this)">📝 Darse de Alta</button>
+      <button class="tab-btn" id="btn-tab-historial" onclick="cambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
     </div>
 
     <!-- PESTAÑA 1: GESTIÓN DE MENÚ -->
@@ -689,53 +689,6 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 7: DARSE DE ALTA -->
-    <div id="tab-alta" class="tab-content">
-      <div class="section-card" style="max-width: 500px; margin: 0 auto;">
-        <h3>📝 Registro y Alta del Local</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Ingresa los datos del local para registrarlo formalmente en el sistema.
-        </p>
-        <form id="form-alta-admin" onsubmit="registrarAltaAdmin(event)">
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div>
-              <label style="display:block; font-size:12px; color:var(--text-muted);">Nombre del Local</label>
-              <input type="text" id="alta-nombre" style="width: 100%;" required placeholder="Ej: Mi Restaurante">
-            </div>
-            <div>
-              <label style="display:block; font-size:12px; color:var(--text-muted);">RUT</label>
-              <input type="text" id="alta-rut" style="width: 100%;" required placeholder="Ej: 76.123.456-7">
-            </div>
-            <div>
-              <label style="display:block; font-size:12px; color:var(--text-muted);">Correo de recuperación</label>
-              <input type="email" id="alta-correo" style="width: 100%;" required placeholder="contacto@local.com">
-            </div>
-            <div>
-              <label style="display:block; font-size:12px; color:var(--text-muted);">Contraseña de Acceso</label>
-              <input type="password" id="alta-password" style="width: 100%;" required placeholder="••••••••">
-            </div>
-            <button type="submit" class="btn btn-success" style="margin-top: 10px;">💾 Registrar e Iniciar Sesión</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- MODAL DE CONTRASEÑA -->
-  <div class="modal" id="modal-auth">
-    <div class="modal-content">
-      <h3>🔒 Acceso Restringido</h3>
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
-        Este local requiere contraseña para acceder a la gestión del menú e historial.
-      </p>
-      <label>Ingresa tu contraseña:</label>
-      <input type="password" id="input-auth-pass" placeholder="••••••••" style="width:100%; margin-bottom:15px;">
-      <div style="display: flex; gap: 10px;">
-        <button class="btn" style="flex:1;" onclick="validarPassword()">Ingresar</button>
-        <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalAuth()">Cancelar</button>
-      </div>
-    </div>
   </div>
 
   <!-- MODAL DE EDICIÓN -->
@@ -798,10 +751,8 @@
     let cachePedidos = [];
     let historialGlobal = [];
 
-    let estaAutenticado = false;
-    let tienePasswordRegistrado = false;
-    let pestanaPendiente = null;
-    let elementoPendiente = null;
+    let clienteDadoDeAlta = false;
+    let autenticadoAdmin = false;
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
@@ -867,7 +818,7 @@
           const data = await res.json();
           if (data.nombre) document.getElementById('lbl-local-nombre').innerText = data.nombre.toUpperCase();
           estaBloqueado = (data.activo === false);
-          tienePasswordRegistrado = Boolean(data.tienePassword);
+          clienteDadoDeAlta = !!data.altaRegistrada;
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         } else if (res.status === 403) {
           estaBloqueado = true;
@@ -897,47 +848,38 @@
       }
     }
 
-    function intentarCambiarPestana(tabId, element) {
-      if (tienePasswordRegistrado && !estaAutenticado) {
-        pestanaPendiente = tabId;
-        elementoPendiente = element;
-        document.getElementById('modal-auth').style.display = 'flex';
-        return;
-      }
-      cambiarPestana(tabId, element);
-    }
+    async function validarPasswordSeguridad() {
+      if (!clienteDadoDeAlta || autenticadoAdmin) return true;
 
-    async function validarPassword() {
-      const pass = document.getElementById('input-auth-pass').value.trim();
-      if (!pass) return alert("Ingresa una contraseña");
+      const claveIngresada = prompt("🔒 Este local está DADO DE ALTA. Ingresa la contraseña de Administrador:");
+      if (!claveIngresada) return false;
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/auth`, {
+        const res = await fetch(`${BACKEND_URL}/api/locales/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, password: pass })
+          body: JSON.stringify({ local: localId, password: claveIngresada })
         });
 
         if (res.ok) {
-          estaAutenticado = true;
-          cerrarModalAuth();
-          if (pestanaPendiente) {
-            cambiarPestana(pestanaPendiente, elementoPendiente);
-          }
+          autenticadoAdmin = true;
+          return true;
         } else {
-          alert("❌ Contraseña incorrecta");
+          alert("❌ Contraseña incorrecta.");
+          return false;
         }
-      } catch (err) {
-        alert("Error de validación.");
+      } catch (e) {
+        alert("Error al verificar la clave.");
+        return false;
       }
     }
 
-    function cerrarModalAuth() {
-      document.getElementById('modal-auth').style.display = 'none';
-      document.getElementById('input-auth-pass').value = '';
-    }
+    async function cambiarPestana(tabId, element) {
+      if (clienteDadoDeAlta && (tabId === 'tab-admin' || tabId === 'tab-historial')) {
+        const ok = await validarPasswordSeguridad();
+        if (!ok) return;
+      }
 
-    function cambiarPestana(tabId, element) {
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       
@@ -947,32 +889,6 @@
       if (tabId === 'tab-cocina') cargarPedidosCocina();
       else if (tabId === 'tab-garzon') { generarQRGarzon(); cargarPedidosGarzon(); }
       else if (tabId === 'tab-historial') cargarHistorialGarantizado();
-    }
-
-    async function registrarAltaAdmin(e) {
-      e.preventDefault();
-      const nombre = document.getElementById('alta-nombre').value.trim();
-      const rut = document.getElementById('alta-rut').value.trim();
-      const correo = document.getElementById('alta-correo').value.trim();
-      const password = document.getElementById('alta-password').value.trim();
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/alta-demo`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, rut, correo, password })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          alert("✅ ¡Alta realizada correctamente!");
-          window.location.href = `admin.html?local=${data.local}`;
-        } else {
-          alert(`⚠️ ${data.error || 'Error al registrar local'}`);
-        }
-      } catch (err) {
-        alert("Error de conexión al dar de alta.");
-      }
     }
 
     function recargarTodo() {
@@ -1029,7 +945,6 @@
         }
 
         const data = await respuesta.json();
-        
         productosPlanos = Array.isArray(data) ? data : [];
 
       } catch (err) {
@@ -1516,7 +1431,7 @@
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(docHistorial)
         });
-      } catch (e) {}
+      } catch (e) { console.error("Error al publicar en historial:", e); }
 
       localStorage.removeItem(`historial_${localId}`);
 
@@ -1548,7 +1463,7 @@
           const apiHist = await resHistorial.json();
           entregados = Array.isArray(apiHist) ? apiHist : [];
         }
-      } catch (e) {}
+      } catch (e) { console.warn("API historial no disponible:", e); }
 
       const mapaUnico = new Map();
       entregados.forEach(p => {
