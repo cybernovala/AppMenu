@@ -631,7 +631,6 @@
           <h3>📊 Historial General & Generador de Informes</h3>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-secondary btn-sm" onclick="cargarHistorialGarantizado()">🔄 Actualizar Historial</button>
-            <button class="btn btn-danger btn-sm" onclick="limpiarHistorialLocal()">🗑️ Limpiar Caché Local</button>
           </div>
         </div>
 
@@ -1383,7 +1382,6 @@
       const horaFormato = `${String(horas).padStart(2, '0')}:${minutos} ${ampm}`;
 
       const docHistorial = {
-        id: String(Date.now()),
         local: String(localId),
         mesa: String(pedidoObj.mesa || '1'),
         items: pedidoObj.items || [],
@@ -1403,9 +1401,8 @@
         });
       } catch (e) { console.error("Error al publicar en historial:", e); }
 
-      let historialLocalArr = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
-      historialLocalArr.unshift(docHistorial);
-      localStorage.setItem(`historial_${localId}`, JSON.stringify(historialLocalArr));
+      // Eliminar copia guardada local para prevenir duplicaciones de caché
+      localStorage.removeItem(`historial_${localId}`);
 
       try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (err) {}
 
@@ -1437,9 +1434,7 @@
         }
       } catch (e) { console.warn("API historial no disponible:", e); }
 
-      const localHist = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
-      if (Array.isArray(localHist)) entregados = entregados.concat(localHist);
-
+      // Desduplicación estricta usando ID de base de datos / campos clave
       const mapaUnico = new Map();
       entregados.forEach(p => {
         const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.horaEntrega || p.hora}_${p.rutGarzon}`;
@@ -1546,12 +1541,6 @@
         }
       });
       doc.save(`Informe_${tipo}_${localId}.pdf`);
-    }
-
-    function limpiarHistorialLocal() {
-      if (!confirm("¿Deseas vaciar la caché local del navegador?")) return;
-      localStorage.removeItem(`historial_${localId}`);
-      cargarHistorialGarantizado();
     }
 
     function generarQRUnico() {
