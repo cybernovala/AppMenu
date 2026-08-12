@@ -118,7 +118,6 @@
       gap: 15px;
     }
 
-    /* Switch toggle */
     .switch {
       position: relative;
       display: inline-block;
@@ -167,12 +166,13 @@
     <div class="card">
       <h1>👑 SuperAdmin - Gestión de Licencias</h1>
       <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
-        Registra un nuevo restaurante. Se asignará automáticamente el estado activo y 30 días de vigencia en MongoDB.
+        Registra un nuevo restaurante ingresando su Nombre y el RUT de la Empresa. Se asignará automáticamente el ID único, estado activo y 30 días de vigencia en MongoDB.
       </p>
 
       <form class="form-group" onsubmit="crearNuevoLocal(event)">
         <input type="text" id="input-nombre-local" placeholder="Nombre del Restaurante (Ej: Pizzería Central)" required>
-        <input type="password" id="input-password-local" placeholder="Contraseña de acceso (Opcional)">
+        <input type="text" id="input-rut-local" placeholder="RUT Empresa (Ej: 76123456-7)" required>
+        <input type="password" id="input-password-local" placeholder="Contraseña (Opcional, defecto: 123)">
         <button type="submit" class="btn">➕ Crear Restaurante</button>
       </form>
     </div>
@@ -185,7 +185,7 @@
       </div>
 
       <div class="form-group">
-        <input type="text" id="input-buscar-local" placeholder="Buscar por Nombre o ID de Local...">
+        <input type="text" id="input-buscar-local" placeholder="Buscar por Nombre, RUT o ID de Local...">
         <button class="btn btn-secondary" onclick="buscarLocal()">🔍 Buscar Local</button>
       </div>
 
@@ -196,7 +196,9 @@
   </div>
 
   <script>
-    const BACKEND_URL = 'https://appmenu-tavr.onrender.com';
+    const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:3000'
+      : window.location.origin;
 
     document.addEventListener("DOMContentLoaded", () => {
       cargarTodosLocales();
@@ -232,25 +234,28 @@
     async function crearNuevoLocal(e) {
       e.preventDefault();
       const nombreInput = document.getElementById('input-nombre-local');
+      const rutInput = document.getElementById('input-rut-local');
       const passInput = document.getElementById('input-password-local');
 
       const nombre = nombreInput.value.trim();
+      const rut = rutInput.value.trim();
       const password = passInput.value.trim();
 
-      if (!nombre) return alert("Por favor ingresa el nombre del local.");
+      if (!nombre || !rut) return alert("Por favor ingresa el Nombre y el RUT del local.");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, password })
+          body: JSON.stringify({ nombre, rut, password })
         });
 
         const data = await res.json();
 
         if (res.ok) {
-          alert(`✅ Restaurante "${data.nombre}" creado exitosamente en MongoDB.`);
+          alert(`✅ Restaurante "${data.nombre}" (ID/RUT: ${data.local}) creado exitosamente en MongoDB.`);
           nombreInput.value = '';
+          rutInput.value = '';
           passInput.value = '';
           cargarTodosLocales();
         } else {
@@ -266,7 +271,8 @@
       contenedor.innerHTML = '';
 
       locales.forEach(loc => {
-        const idLocal = loc.localId || loc.id || loc.local;
+        const idLocal = loc.localId || loc.local;
+        const rutMostrar = loc.rut ? ` | RUT: ${loc.rut}` : '';
         const fVenc = formatearFecha(loc.fechaVencimiento);
         const estaActivo = loc.activo === true;
 
@@ -274,7 +280,7 @@
         card.className = 'local-card';
         card.innerHTML = `
           <div class="local-info">
-            <b>${(loc.nombre || idLocal).toUpperCase()}</b> (ID: ${idLocal})<br>
+            <b>${(loc.nombre || idLocal).toUpperCase()}</b> (ID: ${idLocal}${rutMostrar})<br>
             <p style="margin-top:5px;"><b>Vencimiento:</b> <input type="date" id="date-${idLocal}" value="${fVenc !== 'Sin fecha' ? fVenc : ''}" style="padding:4px; font-size:12px; min-width:auto;">
             <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="guardarFecha('${idLocal}')">💾 Guardar Fecha</button></p>
             <p style="margin-top:5px;">
@@ -349,9 +355,9 @@
         if (res.ok) {
           const data = await res.json();
           renderizarLocales([{
-            id: data.local,
             localId: data.local,
             nombre: data.nombre,
+            rut: data.rut,
             activo: data.activo,
             fechaVencimiento: data.fechaVencimiento
           }]);
@@ -382,7 +388,6 @@
   <script>
     window.LICENCIA_CONFIG = ${JSON.stringify(data, null, 2)};
     
-    // Guardar información del local activo en el navegador
     localStorage.setItem('licencia_local_activa', JSON.stringify(window.LICENCIA_CONFIG));
     localStorage.setItem('local_activo_id', '${localId}');
 
@@ -403,7 +408,6 @@
         }
       }
 
-      // Redirigir directamente al panel admin en GitHub Pages pasando el local en la URL
       window.location.href = 'https://cybernovala.github.io/AppMenu/admin.html?local=' + encodeURIComponent('${localId}');
     }
 
