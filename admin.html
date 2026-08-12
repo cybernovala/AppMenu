@@ -485,7 +485,8 @@
 
     <!-- BARRA DE PESTAÑAS -->
     <div class="nav-tabs" id="admin-nav-tabs">
-      <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
+      <button class="tab-btn active" id="btn-tab-alta" onclick="cambiarPestana('tab-alta', this)">📝 Dar de Alta Negocio</button>
+      <button class="tab-btn" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 QR Mesas</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
@@ -493,8 +494,37 @@
       <button class="tab-btn" id="btn-tab-historial" onclick="cambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
     </div>
 
+    <!-- PESTAÑA 0: DAR DE ALTA NEGOCIO -->
+    <div id="tab-alta" class="tab-content active">
+      <div class="section-card">
+        <h3>📝 Registrar y Dar de Alta el Negocio</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+          Completa este formulario para registrar formalmente el negocio en el sistema backend y proteger el acceso mediante contraseña.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px; max-width: 500px;">
+          <div>
+            <label style="font-size: 12px; color: var(--text-muted);">Nombre del Negocio / Restaurante</label>
+            <input type="text" id="alta-nombre" placeholder="Ej: Mi Restaurante" style="width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 12px; color: var(--text-muted);">RUT Empresa / Titular</label>
+            <input type="text" id="alta-rut" placeholder="Ej: 76123456-7" style="width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 12px; color: var(--text-muted);">Correo Electrónico de Contacto</label>
+            <input type="email" id="alta-correo" placeholder="ejemplo@correo.com" style="width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 12px; color: var(--text-muted);">Contraseña de Administración</label>
+            <input type="password" id="alta-password" placeholder="Crear contraseña" style="width: 100%;">
+          </div>
+          <button class="btn btn-success" style="margin-top: 10px;" onclick="darDeAltaNegocio()">✅ Confirmar y Dar de Alta</button>
+        </div>
+      </div>
+    </div>
+
     <!-- PESTAÑA 1: GESTIÓN DE MENÚ -->
-    <div id="tab-admin" class="tab-content active">
+    <div id="tab-admin" class="tab-content">
       <div class="section-card">
         <h3>📁 Crear Nueva Categoría</h3>
         <div class="form-inline">
@@ -759,6 +789,9 @@
       document.getElementById('txt-local-cliente').innerText = localId.toUpperCase();
       document.getElementById('txt-mesa-cliente').innerText = `MESA N° ${numeroMesa}`;
       
+      const elNombreAlta = document.getElementById('alta-nombre');
+      if (elNombreAlta) elNombreAlta.value = localId;
+
       obtenerEstadoLicenciaYBloqueo();
 
       if (rutGarzonSesion) {
@@ -871,6 +904,39 @@
       } catch (e) {
         alert("Error al verificar la clave.");
         return false;
+      }
+    }
+
+    async function darDeAltaNegocio() {
+      const nombre = document.getElementById('alta-nombre').value.trim();
+      const rut = document.getElementById('alta-rut').value.trim();
+      const correo = document.getElementById('alta-correo').value.trim();
+      const password = document.getElementById('alta-password').value.trim();
+
+      if (!nombre || !rut || !correo || !password) {
+        return alert("⚠️ Por favor completa todos los campos para dar de alta el negocio.");
+      }
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, rut, correo, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          alert("🎉 ¡Negocio dado de alta con éxito!");
+          clienteDadoDeAlta = true;
+          autenticadoAdmin = true;
+          obtenerEstadoLicenciaYBloqueo();
+          cambiarPestana('tab-admin', document.getElementById('btn-tab-admin'));
+        } else {
+          alert(`❌ Error: ${data.error || 'No se pudo completar el alta.'}`);
+        }
+      } catch (e) {
+        alert("❌ Error de conexión con el servidor backend.");
       }
     }
 
