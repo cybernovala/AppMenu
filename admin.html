@@ -730,13 +730,12 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    // Configuración de la URL del servidor Backend
     const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:3000'
       : window.location.origin;
 
     const params = new URLSearchParams(window.location.search);
-    const localId = (params.get('local') || 'mongo').toLowerCase().trim();
+    const localId = (params.get('local') || 'resto_bar_mongo').toLowerCase().trim();
     const numeroMesa = params.get('mesa') || '1';
     const vistaModo = params.get('view');
 
@@ -810,17 +809,14 @@
 
         if (res.ok) {
           const data = await res.json();
-          // CORRECCIÓN: Si 'activo' no viene explícitamente como false (o si la API devuelve status true/ok), se asume activo.
           estaBloqueado = (data.activo === false || data.bloqueado === true);
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         } else if (res.status === 403) {
           estaBloqueado = true;
         } else {
-          // Si la API de licencia da 404 u otro estado, no forzamos bloqueo inmediato para evitar falsos positivos por error de red.
           estaBloqueado = false;
         }
       } catch (err) {
-        // En caso de falla de red, mantenemos el estado abierto en modo fallback local
         estaBloqueado = false;
       }
 
@@ -911,8 +907,11 @@
         const data = await respuesta.json();
         
         productosPlanos = [];
+        categoriasSet.clear();
+
         if (data && Array.isArray(data.menu)) {
           data.menu.forEach(cat => {
+            if (cat.categoria) categoriasSet.add(cat.categoria);
             if (Array.isArray(cat.productos)) {
               cat.productos.forEach(prod => {
                 productosPlanos.push({
@@ -923,12 +922,12 @@
               });
             }
           });
-        } else if (Array.isArray(data)) {
-          productosPlanos = data;
+        } else if (data && Array.isArray(data.productosPlanos)) {
+          productosPlanos = data.productosPlanos;
+          productosPlanos.forEach(p => { if (p.categoria) categoriasSet.add(p.categoria); });
         }
 
       } catch (err) {
-        // CORRECCIÓN: Manejo defensivo para mostrar el error real o dar opción de reintento
         console.warn("Advertencia de carga de menú:", err);
         if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
           contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
@@ -937,11 +936,6 @@
         }
         return;
       }
-
-      categoriasSet.clear();
-      productosPlanos.forEach(p => {
-        if (p.categoria) categoriasSet.add(p.categoria);
-      });
 
       if (categoriasSet.size === 0) categoriasSet.add("General");
 
@@ -959,12 +953,14 @@
         const catCard = document.createElement('div');
         catCard.className = 'category-card';
 
+        const catEscapada = catNombre.replace(/'/g, "\\'");
+
         catCard.innerHTML = `
           <div class="category-header">
             <span class="category-name">📂 ${catNombre}</span>
             <div style="display:flex; gap:10px; align-items:center;">
               <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
-              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Cat.</button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catEscapada}')">🗑️ Eliminar Cat.</button>
             </div>
           </div>
           <div class="product-list">
@@ -976,8 +972,8 @@
                   <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
                 </div>
                 <div class="product-actions">
-                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
-                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${subIndex})">🗑️ Eliminar</button>
+                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catEscapada}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
+                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catEscapada}', ${subIndex})">🗑️ Eliminar</button>
                 </div>
               </div>
             `).join('')}
@@ -985,7 +981,7 @@
           <div class="add-product-box">
             <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
             <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
-            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
+            <button class="btn btn-sm" onclick="agregarProducto('${catEscapada}')">+ Guardar Producto</button>
           </div>
         `;
         contenedor.appendChild(catCard);
@@ -1024,6 +1020,8 @@
     async function agregarProducto(categoria) {
       const inputNombre = document.getElementById(`nuevo-nombre-${categoria}`);
       const inputPrecio = document.getElementById(`nuevo-precio-${categoria}`);
+      if (!inputNombre || !inputPrecio) return;
+
       const nombre = inputNombre.value.trim();
       const precio = parseFloat(inputPrecio.value);
 
@@ -1084,7 +1082,7 @@
         catSeleccionadaCliente = cats[0];
       }
       bar.innerHTML = cats.map(c => `
-        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c}')">${c}</div>
+        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c.replace(/'/g, "\\'")}')">${c}</div>
       `).join('');
     }
 
