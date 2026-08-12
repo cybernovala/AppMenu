@@ -25,7 +25,6 @@ mongoose.connect(MONGO_URI, {
 
 // --- 3. ESQUEMAS Y MODELOS ---
 
-// Esquema para auto-incremento de ID numérico de locales
 const CounterSchema = new mongoose.Schema({
   _id: { type: String, required: true },
   seq: { type: Number, default: 0 }
@@ -33,9 +32,9 @@ const CounterSchema = new mongoose.Schema({
 const Counter = mongoose.models.Counter || mongoose.model('Counter', CounterSchema);
 
 const LocalSchema = new mongoose.Schema({
-  id: Number,              // ID Numérico (1, 2, 3...)
-  local: String,           // Identificador slug para la URL
-  nombre: String,          // Nombre legible asignado por SuperAdmin
+  id: Number,
+  local: String,
+  nombre: String,
   password: String,
   activo: { type: Boolean, default: true },
   fechaCreacion: { type: String, default: () => new Date().toISOString() },
@@ -71,7 +70,6 @@ const HistorialSchema = new mongoose.Schema({
 
 const Historial = mongoose.models.Historial || mongoose.model('Historial', HistorialSchema, 'historials');
 
-// Función auxiliar para obtener el ID incremental
 async function getNextSequenceValue(sequenceName) {
   const sequenceDocument = await Counter.findByIdAndUpdate(
     sequenceName,
@@ -81,7 +79,6 @@ async function getNextSequenceValue(sequenceName) {
   return sequenceDocument.seq;
 }
 
-// Helper de búsqueda flexible por id (número o cadena) o identificador local
 function buildLocalFilter(queryVal) {
   if (!queryVal) return {};
   const trimmed = String(queryVal).toLowerCase().trim();
@@ -257,13 +254,18 @@ app.patch('/api/locales/:id/licencia', async (req, res) => {
 
 app.get('/api/menu', verificarLicencia, async (req, res) => {
   try {
-    const { local } = req.query;
+    const { local, modo } = req.query;
     if (!local) return res.status(200).json([]);
 
     const doc = await Local.findOne(buildLocalFilter(local)).lean();
-
     if (!doc || !doc.menu) return res.status(200).json([]);
 
+    // Si se solicita modo estructurado (para el admin) retorna el arreglo con las categorías intactas
+    if (modo === 'estructurado') {
+      return res.status(200).json(doc.menu || []);
+    }
+
+    // Modo por defecto plano (para la vista de cliente)
     let productosPlanos = [];
     if (Array.isArray(doc.menu)) {
       doc.menu.forEach(c => {
@@ -286,7 +288,6 @@ app.get('/api/menu', verificarLicencia, async (req, res) => {
   }
 });
 
-// ENDPOINT PARA CREAR CATEGORÍA EXPLÍCITA
 app.post('/api/menu/categoria', verificarLicencia, async (req, res) => {
   try {
     const { local, categoria } = req.body;
@@ -377,7 +378,7 @@ app.put('/api/menu/edit', verificarLicencia, async (req, res) => {
     if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
 
     let catObj = doc.menu.find(c => c.categoria === categoriaOriginal);
-    if (!catObj || !catObj.productos || !catObj.productos[indexOriginal]) {
+    if (!catObj || !catObj.productos || catObj.productos[indexOriginal] === undefined) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
