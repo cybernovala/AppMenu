@@ -730,7 +730,10 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    const BACKEND_URL = window.location.origin.includes('localhost') ? 'http://localhost:3000' : window.location.origin;
+    // Configuración de la URL del servidor Backend
+    const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:3000'
+      : window.location.origin;
 
     const params = new URLSearchParams(window.location.search);
     const localId = (params.get('local') || 'mongo').toLowerCase().trim();
@@ -791,7 +794,7 @@
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
       if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
-      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
+      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Administrador.";
     }
 
     async function obtenerEstadoLicenciaYBloqueo() {
@@ -807,13 +810,18 @@
 
         if (res.ok) {
           const data = await res.json();
-          estaBloqueado = (data.activo === false);
+          // CORRECCIÓN: Si 'activo' no viene explícitamente como false (o si la API devuelve status true/ok), se asume activo.
+          estaBloqueado = (data.activo === false || data.bloqueado === true);
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
-        } else if (res.status === 403 || res.status === 404) {
+        } else if (res.status === 403) {
           estaBloqueado = true;
+        } else {
+          // Si la API de licencia da 404 u otro estado, no forzamos bloqueo inmediato para evitar falsos positivos por error de red.
+          estaBloqueado = false;
         }
       } catch (err) {
-        estaBloqueado = true;
+        // En caso de falla de red, mantenemos el estado abierto en modo fallback local
+        estaBloqueado = false;
       }
 
       if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
@@ -886,27 +894,56 @@
 
     async function cargarDatosMenu() {
       const contenedorAdmin = document.getElementById('contenedor-categorias');
-      contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú...</p>';
+      contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú en la base de datos...</p>';
 
       try {
         const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
-        if (respuesta.status === 403 || respuesta.status === 404) {
+        
+        if (respuesta.status === 403) {
           forzarBloqueoUI();
-          throw new Error("Licencia desactivada o bloqueada");
+          throw new Error("Licencia desactivada o bloqueada por administrador");
         }
         
-        productosPlanos = await respuesta.json();
+        if (!respuesta.ok) {
+          throw new Error(`Error HTTP: ${respuesta.status}`);
+        }
+
+        const data = await respuesta.json();
+        
+        productosPlanos = [];
+        if (data && Array.isArray(data.menu)) {
+          data.menu.forEach(cat => {
+            if (Array.isArray(cat.productos)) {
+              cat.productos.forEach(prod => {
+                productosPlanos.push({
+                  categoria: cat.categoria,
+                  nombre: prod.nombre,
+                  precio: prod.precio
+                });
+              });
+            }
+          });
+        } else if (Array.isArray(data)) {
+          productosPlanos = data;
+        }
+
       } catch (err) {
-        contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador o error de conexión.</p>';
+        // CORRECCIÓN: Manejo defensivo para mostrar el error real o dar opción de reintento
+        console.warn("Advertencia de carga de menú:", err);
+        if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
+          contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
+        } else {
+          contenedorAdmin.innerHTML = '<p style="color: var(--neon-yellow); text-align: center;">⚠️ No se pudo obtener el menú del servidor. Revisa tu conexión o vuelve a intentar.</p>';
+        }
         return;
       }
-
-      if (!Array.isArray(productosPlanos)) productosPlanos = [];
 
       categoriasSet.clear();
       productosPlanos.forEach(p => {
         if (p.categoria) categoriasSet.add(p.categoria);
       });
+
+      if (categoriasSet.size === 0) categoriasSet.add("General");
 
       renderizarAdminCategorias();
       renderizarClienteCategorias();
@@ -917,11 +954,6 @@
       const contenedor = document.getElementById('contenedor-categorias');
       contenedor.innerHTML = '';
 
-      if (categoriasSet.size === 0) {
-        contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay categorías creadas aún. Agrega una arriba.</p>';
-        return;
-      }
-
       categoriasSet.forEach(catNombre => {
         const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
         const catCard = document.createElement('div');
@@ -930,7 +962,10 @@
         catCard.innerHTML = `
           <div class="category-header">
             <span class="category-name">📂 ${catNombre}</span>
-            <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
+              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Cat.</button>
+            </div>
           </div>
           <div class="product-list">
             ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>' : ''}
@@ -957,14 +992,33 @@
       });
     }
 
-    function crearCategoria() {
+    async function crearCategoria() {
       const inputCat = document.getElementById('nueva-categoria');
       const nombreCat = inputCat.value.trim();
       if (!nombreCat) return alert("Ingresa un nombre para la categoría.");
-      categoriasSet.add(nombreCat);
-      inputCat.value = '';
-      renderizarAdminCategorias();
-      renderizarClienteCategorias();
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/menu/categoria`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, categoria: nombreCat })
+        });
+        if (res.ok) {
+          inputCat.value = '';
+          cargarDatosMenu();
+        } else {
+          const errData = await res.json();
+          alert(errData.error || "Error al crear la categoría");
+        }
+      } catch (err) { alert("Error de red al crear categoría."); }
+    }
+
+    async function eliminarCategoria(categoria) {
+      if (!confirm(`¿Deseas eliminar la categoría "${categoria}" y todos sus productos?`)) return;
+      try {
+        await fetch(`${BACKEND_URL}/api/menu/categoria?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}`, { method: 'DELETE' });
+        cargarDatosMenu();
+      } catch (err) {}
     }
 
     async function agregarProducto(categoria) {
@@ -1149,11 +1203,11 @@
           cargarPedidosCocina();
           cargarPedidosGarzon();
         } else {
-          alert(`⚠️ Su cuenta podría estar inactiva o hubo un error (${res.status}).`);
+          alert(`⚠️ No se pudo registrar el pedido (Estado: ${res.status}).`);
           if (res.status === 403) forzarBloqueoUI();
         }
       } catch (e) {
-        alert(`⚠️ Error de conexión al backend.`);
+        alert(`⚠️ Error de conexión al servidor backend.`);
       }
 
       btnEnviar.disabled = false;
@@ -1171,8 +1225,10 @@
           throw new Error("Cuenta desactivada");
         }
         
+        if (!res.ok) throw new Error("Error al consultar pedidos");
+
         const pedidos = await res.json();
-        const pendientes = pedidos.filter(p => p.estado !== 'entregado');
+        const pendientes = Array.isArray(pedidos) ? pedidos.filter(p => p.estado !== 'entregado') : [];
 
         if (pendientes.length === 0) {
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comandas activas en la cocina.</p>';
@@ -1209,13 +1265,17 @@
           `;
         }).join('');
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
+        if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
+          contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
+        } else {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Sin comunicación momentánea con el servidor de pedidos.</p>';
+        }
       }
     }
 
     async function despacharPedido(idPedido) {
       if (!confirm("¿Marcar este pedido como preparado?")) return;
-      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' }); } catch (e) {}
+      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (e) {}
       cargarPedidosCocina();
       cargarPedidosGarzon();
     }
@@ -1265,8 +1325,10 @@
           throw new Error("Cuenta desactivada");
         }
 
+        if (!resPedidos.ok) throw new Error("Error al consultar pedidos");
+
         const pedidos = await resPedidos.json();
-        cachePedidos = pedidos.filter(p => p.estado !== 'entregado');
+        cachePedidos = Array.isArray(pedidos) ? pedidos.filter(p => p.estado !== 'entregado') : [];
 
         if (cachePedidos.length === 0) {
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">🎉 No hay pedidos pendientes por llevar a mesa.</p>';
@@ -1301,7 +1363,11 @@
           }).join('');
         }
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador o sin conexión.</p>';
+        if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
+          contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
+        } else {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Sin comunicación momentánea con el servidor.</p>';
+        }
       }
     }
 
@@ -1358,7 +1424,7 @@
       historialLocalArr.unshift(docHistorial);
       localStorage.setItem(`historial_${localId}`, JSON.stringify(historialLocalArr));
 
-      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { method: 'DELETE' }); } catch (err) {}
+      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (err) {}
 
       const cardEl = document.getElementById(`card-garzon-${idPedido}`);
       if (cardEl) cardEl.remove();
