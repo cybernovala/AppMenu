@@ -75,10 +75,20 @@
       font-size: 14px;
       font-weight: bold;
       transition: all 0.3s ease;
+    }
+
+    .banner-bloqueo.estado-bloqueado {
       background: linear-gradient(135deg, rgba(255, 0, 34, 0.9), rgba(150, 0, 0, 0.95));
       border: 2px solid #ff0033;
       color: #ffffff;
       box-shadow: 0 0 15px rgba(255, 0, 51, 0.6);
+    }
+
+    .banner-bloqueo.estado-desbloqueado {
+      background: linear-gradient(135deg, rgba(0, 255, 102, 0.2), rgba(0, 150, 50, 0.25));
+      border: 1px solid var(--neon-green);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
     }
 
     .header-bar {
@@ -455,14 +465,12 @@
     
     <!-- CONTENEDOR DE BANNERS DE LICENCIA -->
     <div class="banner-container" id="banner-wrapper">
-      <!-- BANNER 1: SI ACTIVO ES TRUE (LICENCIA VÁLIDA POR X DÍAS) -->
-      <div class="banner-licencia" id="banner-vencimiento" style="display: none;">
-        ✅ Licencia válida por <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
+      <div class="banner-licencia" id="banner-vencimiento">
+        ⚠️ Su licencia vence en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
       </div>
 
-      <!-- BANNER 2: SI ACTIVO ES FALSE (DESACTIVADO CONTACTE PROVEEDOR) -->
-      <div class="banner-bloqueo" id="banner-bloqueo" style="display: none;">
-        <span>🚫 Sistema Desactivado. Por favor, contacte a su proveedor para reactivar la licencia.</span>
+      <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
+        <span id="txt-estado-bloqueo">✅ Sistema Activo y Desbloqueado</span>
       </div>
     </div>
 
@@ -722,7 +730,8 @@
   <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    const BACKEND_URL = 'https://appmenu-tavr.onrender.com';
+    // Usa automáticamente la misma URL donde corre el frontend si está alojado dinámicamente
+    const BACKEND_URL = window.location.origin.includes('localhost') ? 'http://localhost:3000' : window.location.origin;
 
     const params = new URLSearchParams(window.location.search);
     const localId = (params.get('local') || 'mongo').toLowerCase().trim();
@@ -779,55 +788,51 @@
       }, 5000); 
     });
 
+    function forzarBloqueoUI() {
+      const elBannerBloqueo = document.getElementById('banner-bloqueo');
+      const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
+      if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
+      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Superadministrador.";
+    }
+
     async function obtenerEstadoLicenciaYBloqueo() {
-      const bannerVencimiento = document.getElementById('banner-vencimiento');
-      const bannerBloqueo = document.getElementById('banner-bloqueo');
       const elNumDias = document.getElementById('num-dias-vencimiento');
+      const elBannerBloqueo = document.getElementById('banner-bloqueo');
+      const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
 
       let fechaVencimiento = null;
-      let estaActivo = true;
+      let estaBloqueado = false;
 
       try {
-        const urlSinCache = `${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`;
-        const res = await fetch(urlSinCache, {
-          headers: { 
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          }
-        });
+        const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
 
         if (res.ok) {
           const data = await res.json();
-          estaActivo = data.activo === true;
+          estaBloqueado = (data.activo === false);
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
-        } else {
-          estaActivo = false;
+        } else if (res.status === 403 || res.status === 404) {
+          estaBloqueado = true;
         }
       } catch (err) {
-        estaActivo = false;
+        estaBloqueado = true;
       }
 
-      // MANEJO ESTRICTO DE BANNERS SEGÚN CAMPO "ACTIVO"
-      if (estaActivo) {
-        // SI ACTIVO ES TRUE: Mostrar solo banner de días válidos
-        bannerBloqueo.style.display = 'none';
-        
-        if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
-          const hoy = new Date();
-          fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
-        }
+      if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
+        const hoy = new Date();
+        fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
+      }
 
-        const ahora = new Date();
-        const diferenciaMs = fechaVencimiento - ahora;
-        const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
+      const ahora = new Date();
+      const diferenciaMs = fechaVencimiento - ahora;
+      const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
-        if (elNumDias) elNumDias.innerText = diasRestantes;
-        bannerVencimiento.style.display = 'block';
+      if (elNumDias) elNumDias.innerText = diasRestantes;
+
+      if (estaBloqueado) {
+        forzarBloqueoUI();
       } else {
-        // SI ACTIVO ES FALSE: Mostrar solo banner de desactivación
-        bannerVencimiento.style.display = 'none';
-        bannerBloqueo.style.display = 'block';
+        if (elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
+        if (elTxtBloqueo) elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
       }
     }
 
@@ -886,7 +891,10 @@
 
       try {
         const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
-        if (!respuesta.ok) throw new Error(`Status ${respuesta.status}`);
+        if (respuesta.status === 403 || respuesta.status === 404) {
+          forzarBloqueoUI();
+          throw new Error("Licencia desactivada o bloqueada");
+        }
         
         productosPlanos = await respuesta.json();
       } catch (err) {
@@ -1140,9 +1148,10 @@
           cargarPedidosGarzon();
         } else {
           alert(`⚠️ Su cuenta podría estar inactiva o hubo un error (${res.status}).`);
+          if (res.status === 403) forzarBloqueoUI();
         }
       } catch (e) {
-        alert(`⚠️ Error de conexión al backend. La cuenta podría estar desactivada.`);
+        alert(`⚠️ Error de conexión al backend.`);
       }
 
       btnEnviar.disabled = false;
@@ -1155,14 +1164,12 @@
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        
-        const datos = await res.json();
-        let pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
-
-        if (localId && localId !== 'default') {
-          pedidos = pedidos.filter(p => !p.local || String(p.local).toLowerCase() === localId.toLowerCase());
+        if (res.status === 403) {
+          forzarBloqueoUI();
+          throw new Error("Cuenta desactivada");
         }
+        
+        const pedidos = await res.json();
         const pendientes = pedidos.filter(p => p.estado !== 'entregado');
 
         if (pendientes.length === 0) {
@@ -1170,9 +1177,9 @@
           return;
         }
 
-        contenedor.innerHTML = pendientes.map((p, idx) => {
-          const idPedido = p._id || p.id || idx;
-          const fechaFormateada = p.hora || (p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora');
+        contenedor.innerHTML = pendientes.map((p) => {
+          const idPedido = p._id;
+          const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
           const itemsList = Array.isArray(p.items) ? p.items : [];
 
           return `
@@ -1251,24 +1258,20 @@
 
       try {
         const resPedidos = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
-        if (!resPedidos.ok) throw new Error(`Status ${resPedidos.status}`);
-
-        let pedidos = [];
-        const datos = await resPedidos.json();
-        pedidos = Array.isArray(datos) ? datos : (datos.pedidos || datos.data || []);
-
-        if (localId && localId !== 'default') {
-          pedidos = pedidos.filter(p => !p.local || String(p.local).toLowerCase() === localId.toLowerCase());
+        if (resPedidos.status === 403) {
+          forzarBloqueoUI();
+          throw new Error("Cuenta desactivada");
         }
 
+        const pedidos = await resPedidos.json();
         cachePedidos = pedidos.filter(p => p.estado !== 'entregado');
 
         if (cachePedidos.length === 0) {
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">🎉 No hay pedidos pendientes por llevar a mesa.</p>';
         } else {
-          contenedor.innerHTML = cachePedidos.map((p, idx) => {
-            const idPedido = p._id || p.id || idx;
-            const fechaFormateada = p.hora || (p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora');
+          contenedor.innerHTML = cachePedidos.map((p) => {
+            const idPedido = p._id;
+            const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
             const itemsList = Array.isArray(p.items) ? p.items : [];
 
             return `
@@ -1314,30 +1317,37 @@
         }
       }
 
-      const pedidoObj = cachePedidos.find(p => (p._id || p.id || '') == idPedido) || { local: localId, mesa: '1', total: 0, items: [] };
+      const pedidoObj = cachePedidos.find(p => p._id == idPedido) || { local: localId, mesa: '1', total: 0, items: [] };
 
       const ahora = new Date();
       const anio = ahora.getFullYear();
       const mes = String(ahora.getMonth() + 1).padStart(2, '0');
       const dia = String(ahora.getDate()).padStart(2, '0');
-      const fechaFormatoMongo = `${anio}-${mes}-${dia}`;
+      const fechaFormato = `${anio}-${mes}-${dia}`;
       
       let horas = ahora.getHours();
       const minutos = String(ahora.getMinutes()).padStart(2, '0');
       const ampm = horas >= 12 ? 'p. m.' : 'a. m.';
       horas = horas % 12; horas = horas ? horas : 12; 
-      const horaFormatoMongo = `${String(horas).padStart(2, '0')}:${minutos} ${ampm}`;
+      const horaFormato = `${String(horas).padStart(2, '0')}:${minutos} ${ampm}`;
 
       const docHistorial = {
-        id: String(Date.now()), local: String(localId), mesa: String(pedidoObj.mesa || '1'),
-        items: pedidoObj.items || [], total: Number(pedidoObj.total || 0), estado: 'pendiente',
-        hora: pedidoObj.hora || horaFormatoMongo, rutGarzon: String(rutGarzonSesion),
-        horaEntrega: horaFormatoMongo, fechaEntrega: fechaFormatoMongo
+        id: String(Date.now()),
+        local: String(localId),
+        mesa: String(pedidoObj.mesa || '1'),
+        items: pedidoObj.items || [],
+        total: Number(pedidoObj.total || 0),
+        estado: 'entregado',
+        hora: horaFormato,
+        rutGarzon: String(rutGarzonSesion),
+        horaEntrega: horaFormato,
+        fechaEntrega: fechaFormato
       };
 
       try {
         await fetch(`${BACKEND_URL}/api/historials`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(docHistorial)
         });
       } catch (e) { console.error("Error al publicar en historial:", e); }
@@ -1372,28 +1382,12 @@
         const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
         if (resHistorial.ok) {
           const apiHist = await resHistorial.json();
-          const arrayApi = Array.isArray(apiHist) ? apiHist : (apiHist.historial || apiHist.data || []);
-          entregados = entregados.concat(arrayApi);
+          entregados = Array.isArray(apiHist) ? apiHist : [];
         }
       } catch (e) { console.warn("API historial no disponible:", e); }
 
       const localHist = JSON.parse(localStorage.getItem(`historial_${localId}`) || '[]');
       if (Array.isArray(localHist)) entregados = entregados.concat(localHist);
-
-      try {
-        const resPedidos = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
-        if (resPedidos.ok) {
-          const apiPed = await resPedidos.json();
-          const arrayPed = Array.isArray(apiPed) ? apiPed : (apiPed.pedidos || apiPed.data || []);
-          entregados = entregados.concat(arrayPed.filter(p => p.estado === 'entregado'));
-        }
-      } catch (e) {}
-
-      entregados = entregados.filter(p => {
-        if (!p) return false;
-        if (!p.local) return true; 
-        return String(p.local).toLowerCase().trim() === localId.toLowerCase().trim();
-      });
 
       const mapaUnico = new Map();
       entregados.forEach(p => {
@@ -1414,10 +1408,10 @@
       let filtrados = [...historialGlobal];
 
       if (tipo === 'rut' && rutBuscado) {
-        filtrados = filtrados.filter(p => { const r = (p.rutGarzon || p.garzon || p.rut || '').toUpperCase(); return r.includes(rutBuscado); });
+        filtrados = filtrados.filter(p => { const r = (p.rutGarzon || '').toUpperCase(); return r.includes(rutBuscado); });
       } else if (tipo === 'fechas') {
-        if (fechaDesde) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f >= fechaDesde; });
-        if (fechaHasta) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f <= fechaHasta; });
+        if (fechaDesde) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f >= fechaDesde; });
+        if (fechaHasta) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f <= fechaHasta; });
       }
       renderizarTablaYMetricas(filtrados);
     }
@@ -1436,8 +1430,8 @@
         tablaHistorial.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron entregas para el filtro seleccionado.</td></tr>';
       } else {
         tablaHistorial.innerHTML = lista.map(p => {
-          const rutMostrar = p.rutGarzon || p.garzon || p.rut || '12022962-1';
-          const fechaMostrar = p.fechaEntrega || p.fecha || (p.createdAt ? p.createdAt.split('T')[0] : 'Hoy');
+          const rutMostrar = p.rutGarzon || 'S/RUT';
+          const fechaMostrar = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : 'Hoy');
           const horaMostrar = p.horaEntrega || p.hora || 'S/H';
 
           let itemsTexto = 'Atención en Mesa';
