@@ -4,7 +4,7 @@ const cors = require('cors');
 
 const app = express();
 
-// --- 1. CONFIGURACIÓN CORS ---
+// --- 1. CONFIGURACIÓN CORS Y MIDDLEWARE ---
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -62,7 +62,6 @@ const HistorialSchema = new mongoose.Schema({
 
 const Historial = mongoose.models.Historial || mongoose.model('Historial', HistorialSchema, 'historials');
 
-
 // --- 4. MIDDLEWARE DE VERIFICACIÓN DE LICENCIA ---
 const verificarLicencia = async (req, res, next) => {
   try {
@@ -89,7 +88,6 @@ const verificarLicencia = async (req, res, next) => {
     return res.status(500).json({ error: 'Error interno al validar la licencia.' });
   }
 };
-
 
 // --- 5. RUTAS DE LICENCIA Y SUPERADMIN ---
 
@@ -212,86 +210,40 @@ app.patch('/api/locales/:id/licencia', async (req, res) => {
   }
 });
 
+// --- 6. RUTAS DEL MENÚ (RETORNA PRODUCTOS PLANOS Y PERMITE CREAR/EDITAR) ---
 
-// --- 6. RUTAS DEL MENÚ (ESTRUCTURADO POR CATEGORÍAS Y PRODUCTOS) ---
-
-// Obtener estructura completa del menú del local
 app.get('/api/menu', verificarLicencia, async (req, res) => {
   try {
     const { local } = req.query;
-    if (!local) return res.status(200).json({ menu: [] });
+    if (!local) return res.status(200).json([]);
 
     const localQuery = local.toLowerCase().trim();
     const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] }).lean();
 
-    if (!doc || !doc.menu) return res.status(200).json({ menu: [] });
+    if (!doc || !doc.menu) return res.status(200).json([]);
 
-    return res.status(200).json({ menu: doc.menu });
+    let productosPlanos = [];
+    if (Array.isArray(doc.menu)) {
+      doc.menu.forEach(c => {
+        if (c.productos && Array.isArray(c.productos)) {
+          c.productos.forEach(p => {
+            productosPlanos.push({
+              categoria: c.categoria,
+              nombre: p.nombre,
+              precio: p.precio
+            });
+          });
+        }
+      });
+    }
+
+    return res.status(200).json(productosPlanos);
   } catch (err) {
     console.error("❌ Error en GET /api/menu:", err.message);
-    return res.status(500).json({ menu: [] });
+    return res.status(500).json([]);
   }
 });
 
-// Crear únicamente una nueva categoría en la BD
-app.post('/api/menu/categoria', verificarLicencia, async (req, res) => {
-  try {
-    const { local, categoria } = req.body;
-    if (!local || !categoria) {
-      return res.status(400).json({ error: 'Nombre de categoría es obligatorio' });
-    }
-
-    const localQuery = local.toLowerCase().trim();
-    const nombreCategoria = categoria.trim();
-    let doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
-
-    if (!doc) {
-      return res.status(404).json({ error: 'Local no encontrado' });
-    }
-
-    if (!Array.isArray(doc.menu)) doc.menu = [];
-
-    const catExiste = doc.menu.some(c => c.categoria.toLowerCase() === nombreCategoria.toLowerCase());
-    if (catExiste) {
-      return res.status(400).json({ error: 'La categoría ya existe' });
-    }
-
-    doc.menu.push({ categoria: nombreCategoria, productos: [] });
-    doc.markModified('menu');
-    await doc.save();
-
-    return res.status(201).json({ mensaje: 'Categoría creada con éxito', menu: doc.menu });
-  } catch (err) {
-    console.error("❌ Error en POST /api/menu/categoria:", err.message);
-    return res.status(500).json({ error: 'Error al crear la categoría' });
-  }
-});
-
-// Eliminar categoría completa
-app.delete('/api/menu/categoria', verificarLicencia, async (req, res) => {
-  try {
-    const { local, categoria } = req.query;
-    if (!local || !categoria) {
-      return res.status(400).json({ error: 'Faltan parámetros obligatorios' });
-    }
-
-    const localQuery = local.toLowerCase().trim();
-    const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
-
-    if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
-
-    doc.menu = doc.menu.filter(c => c.categoria.toLowerCase() !== categoria.toLowerCase().trim());
-    doc.markModified('menu');
-    await doc.save();
-
-    return res.status(200).json({ mensaje: 'Categoría eliminada con éxito', menu: doc.menu });
-  } catch (err) {
-    console.error("❌ Error en DELETE /api/menu/categoria:", err.message);
-    return res.status(500).json({ error: 'Error al eliminar la categoría' });
-  }
-});
-
-// Agregar producto editable a una categoría existente
 app.post('/api/menu', verificarLicencia, async (req, res) => {
   try {
     const { local, categoria, nombre, precio } = req.body;
@@ -321,18 +273,17 @@ app.post('/api/menu', verificarLicencia, async (req, res) => {
     doc.markModified('menu');
     await doc.save();
 
-    return res.status(200).json({ mensaje: 'Producto guardado con éxito', menu: doc.menu });
+    return res.status(200).json({ mensaje: 'Producto guardado con éxito' });
   } catch (err) {
     console.error("❌ Error en POST /api/menu:", err.message);
     return res.status(500).json({ error: 'Error al agregar producto' });
   }
 });
 
-// Editar un producto existente (nombre, precio o categoría)
 app.put('/api/menu/edit', verificarLicencia, async (req, res) => {
   try {
     const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaCategoria } = req.body;
-    
+
     const localQuery = local.toLowerCase().trim();
     const doc = await Local.findOne({ $or: [{ id: localQuery }, { local: localQuery }] });
     if (!doc || !doc.menu) return res.status(404).json({ error: 'Local no encontrado' });
@@ -363,14 +314,13 @@ app.put('/api/menu/edit', verificarLicencia, async (req, res) => {
     doc.markModified('menu');
     await doc.save();
 
-    return res.status(200).json({ mensaje: 'Producto actualizado con éxito', menu: doc.menu });
+    return res.status(200).json({ mensaje: 'Producto actualizado con éxito' });
   } catch (err) {
     console.error("❌ Error en PUT /api/menu/edit:", err.message);
     return res.status(500).json({ error: 'Error al actualizar producto' });
   }
 });
 
-// Eliminar un producto
 app.delete('/api/menu/del', verificarLicencia, async (req, res) => {
   try {
     const { local, categoria, index } = req.query;
@@ -386,13 +336,12 @@ app.delete('/api/menu/del', verificarLicencia, async (req, res) => {
       await doc.save();
     }
 
-    return res.status(200).json({ mensaje: 'Producto eliminado correctamente', menu: doc.menu });
+    return res.status(200).json({ mensaje: 'Producto eliminado correctamente' });
   } catch (err) {
     console.error("❌ Error en DELETE /api/menu/del:", err.message);
     return res.status(500).json({ error: 'Error al eliminar producto' });
   }
 });
-
 
 // --- 7. RUTAS DE PEDIDOS Y COMANDAS ---
 
@@ -445,7 +394,6 @@ app.delete('/api/pedidos/:id', async (req, res) => {
     return res.status(500).json({ error: 'Error al eliminar el pedido' });
   }
 });
-
 
 // --- 8. RUTAS DE HISTORIAL DE ENTREGAS ---
 
