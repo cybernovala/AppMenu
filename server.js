@@ -564,7 +564,7 @@ app.post('/api/pedidos', verificarLicencia, async (req, res) => {
 app.delete('/api/pedidos/:id', verificarLicencia, async (req, res) => {
   try {
     await Pedido.findByIdAndDelete(req.params.id);
-    return res.status(200).json({ mensaje: 'Pedido eliminado' });
+    return res.status(200).json({ mensaje: 'Pedido eliminado de MongoDB correctamente' });
   } catch (err) {
     return res.status(500).json({ error: 'Error al eliminar pedido' });
   }
@@ -584,9 +584,10 @@ app.get('/api/historials', verificarLicencia, async (req, res) => {
 
 app.post('/api/historials', verificarLicencia, async (req, res) => {
   try {
-    const { local, mesa, items, total, hora, rutGarzon, horaEntrega, fechaEntrega } = req.body;
+    const { id, local, mesa, items, total, hora, rutGarzon, horaEntrega, fechaEntrega } = req.body;
 
     const registro = new Historial({
+      id: id || String(Date.now()),
       local: local.toLowerCase().trim(),
       mesa: String(mesa || '1'),
       items: items || [],
