@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>-Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -56,19 +56,6 @@
       margin-bottom: 15px;
     }
 
-    .banner-anuncio {
-      background: linear-gradient(135deg, rgba(0, 210, 255, 0.3), rgba(0, 119, 255, 0.4));
-      border: 1px solid var(--neon-blue);
-      color: #ffffff;
-      text-align: center;
-      padding: 12px 15px;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: bold;
-      box-shadow: 0 0 12px rgba(0, 210, 255, 0.4);
-      display: none;
-    }
-
     .banner-licencia {
       background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(255, 85, 0, 0.25));
       border: 1px solid var(--neon-yellow);
@@ -79,6 +66,19 @@
       font-size: 14px;
       font-weight: bold;
       box-shadow: 0 0 10px rgba(255, 238, 0, 0.2);
+    }
+
+    .banner-comunicado {
+      background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 119, 255, 0.25));
+      border: 1px solid var(--neon-blue);
+      color: #ffffff;
+      text-align: center;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      display: none;
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
     }
 
     .banner-bloqueo {
@@ -476,14 +476,15 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y ANUNCIOS -->
+    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y MENSAJES SUPERADMIN -->
     <div class="banner-container" id="banner-wrapper">
-      <div class="banner-anuncio" id="banner-anuncio">
-        📢 <span id="txt-mensaje-anuncio"></span>
-      </div>
-
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
+      </div>
+
+      <!-- BANNER MENSAJES SUPERADMIN -->
+      <div class="banner-comunicado" id="banner-comunicado">
+        📢 <span id="txt-comunicado-superadmin"></span>
       </div>
 
       <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
@@ -823,6 +824,7 @@
       if (elNombreAlta) elNombreAlta.value = localId;
 
       obtenerEstadoLicenciaYBloqueo();
+      cargarMensajesSuperadmin();
 
       if (rutGarzonSesion) {
         document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
@@ -847,6 +849,7 @@
 
       setInterval(() => {
         obtenerEstadoLicenciaYBloqueo();
+        cargarMensajesSuperadmin();
         if (document.getElementById('tab-cocina').classList.contains('active')) {
           cargarPedidosCocina();
         }
@@ -859,6 +862,28 @@
       }, 5000); 
     });
 
+    async function cargarMensajesSuperadmin() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensajes?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          const elBanner = document.getElementById('banner-comunicado');
+          const elTexto = document.getElementById('txt-comunicado-superadmin');
+
+          let mensajesUnificados = [];
+          if (data.mensajeGlobal && data.mensajeGlobal.trim()) mensajesUnificados.push(data.mensajeGlobal.trim());
+          if (data.mensajeLocal && data.mensajeLocal.trim()) mensajesUnificados.push(data.mensajeLocal.trim());
+
+          if (mensajesUnificados.length > 0 && elBanner && elTexto) {
+            elTexto.innerText = mensajesUnificados.join(' | ');
+            elBanner.style.display = 'block';
+          } else if (elBanner) {
+            elBanner.style.display = 'none';
+          }
+        }
+      } catch (e) {}
+    }
+
     function forzarBloqueoUI() {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
@@ -870,8 +895,6 @@
       const elNumDias = document.getElementById('num-dias-vencimiento');
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
-      const elBannerAnuncio = document.getElementById('banner-anuncio');
-      const elTxtAnuncio = document.getElementById('txt-mensaje-anuncio');
 
       let fechaVencimiento = null;
       let estaBloqueado = false;
@@ -885,16 +908,6 @@
           estaBloqueado = (data.activo === false);
           clienteDadoDeAlta = !!data.altaRegistrada;
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
-
-          if (data.anuncio && data.anuncio.trim() !== '') {
-            if (elBannerAnuncio && elTxtAnuncio) {
-              elTxtAnuncio.innerText = data.anuncio;
-              elBannerAnuncio.style.display = 'block';
-            }
-          } else {
-            if (elBannerAnuncio) elBannerAnuncio.style.display = 'none';
-          }
-
         } else if (res.status === 403) {
           estaBloqueado = true;
         } else {
@@ -1001,6 +1014,7 @@
 
     function recargarTodo() {
       obtenerEstadoLicenciaYBloqueo();
+      cargarMensajesSuperadmin();
       cargarDatosMenu();
       cargarPedidosCocina();
       cargarPedidosGarzon();
@@ -1550,14 +1564,12 @@
       };
 
       try {
-        // 1. Guardar en Historial
         await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(docHistorial)
         });
 
-        // 2. Borrar de Pedidos en Mongo (Cocina/Pendientes) con await explícito
         await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { 
           method: 'DELETE' 
         });
@@ -1571,7 +1583,6 @@
       const cardEl = document.getElementById(`card-garzon-${idPedido}`);
       if (cardEl) cardEl.remove();
 
-      // Recargar estados de vistas sincronizadamente
       await cargarPedidosGarzon(); 
       await cargarPedidosCocina(); 
       await cargarHistorialGarantizado();
@@ -1601,7 +1612,6 @@
 
       const mapaUnico = new Map();
       entregados.forEach(p => {
-        // Garantizar filtrado por el local activo en memoria
         const localRegistro = (p.local || '').toString().toLowerCase().trim();
         if (!localRegistro || localRegistro === localId) {
           const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.horaEntrega || p.hora}_${p.rutGarzon}`;
