@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - Gestión de Licencias & Locales AppMenu</title>
+  <title>Panel SuperAdmin - Gestión de Locales y Licencias</title>
   <style>
     :root {
-      --bg-dark: #08070d;
-      --card-bg: rgba(18, 16, 28, 0.9);
+      --bg-dark: #09090e;
+      --card-bg: rgba(20, 20, 30, 0.9);
       --neon-orange: #ff5500;
       --neon-pink: #ff007f;
       --neon-yellow: #ffee00;
@@ -15,7 +15,7 @@
       --neon-blue: #00d2ff;
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
-      --border-neon: rgba(0, 210, 255, 0.3);
+      --border-color: rgba(255, 85, 0, 0.3);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
@@ -25,17 +25,16 @@
       color: var(--text-main);
       min-height: 100vh;
       padding: 20px;
-      position: relative;
     }
 
     .container { max-width: 1200px; margin: 0 auto; }
 
     header {
       background: var(--card-bg);
-      border: 1px solid var(--border-neon);
-      padding: 20px;
+      border: 1px solid var(--neon-pink);
       border-radius: 12px;
-      margin-bottom: 20px;
+      padding: 20px;
+      margin-bottom: 25px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -45,19 +44,18 @@
 
     h1 {
       font-size: 22px;
-      background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       text-transform: uppercase;
-      letter-spacing: 1px;
     }
 
     .section-card {
       background: var(--card-bg);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
     }
 
     .section-card h2 {
@@ -67,72 +65,68 @@
       text-transform: uppercase;
     }
 
-    .btn {
-      background: linear-gradient(135deg, var(--neon-blue), #0055ff);
-      border: none;
-      color: #fff;
-      padding: 10px 16px;
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      transition: all 0.2s;
-    }
-
-    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-danger { background: linear-gradient(135deg, #ff3344, #990011); }
-    .btn-success { background: linear-gradient(135deg, var(--neon-green), #00aa44); color: #000; }
-    .btn-orange { background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink)); }
-
     .form-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 12px;
-      margin-bottom: 15px;
+      align-items: end;
     }
 
     input, select {
       width: 100%;
       padding: 10px 12px;
-      background: #14141c;
+      background: #14141f;
       border: 1px solid #333;
       color: #fff;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 14px;
     }
 
-    .table-wrapper { overflow-x: auto; }
+    .btn {
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
+      border: none;
+      color: #000;
+      padding: 10px 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn-green { background: var(--neon-green); color: #000; }
+    .btn-danger { background: #ff3344; color: #fff; }
+    .btn-blue { background: linear-gradient(135deg, var(--neon-blue), #0077ff); color: #fff; }
+
+    .table-wrapper { overflow-x: auto; margin-top: 15px; }
 
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
-      margin-top: 10px;
-      min-width: 800px;
     }
 
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
-    th { background: #12121c; color: var(--neon-blue); text-transform: uppercase; font-size: 11px; }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #222;
+    }
+
+    th { background: #12121c; color: var(--neon-yellow); }
 
     .status-badge {
-      display: inline-block;
       padding: 4px 8px;
       border-radius: 12px;
       font-size: 11px;
       font-weight: bold;
+      display: inline-block;
     }
 
-    .status-activo { background: rgba(0, 255, 102, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
-    .status-bloqueado { background: rgba(255, 51, 68, 0.2); color: #ff3344; border: 1px solid #ff3344; }
+    .status-active { background: rgba(0, 255, 102, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .status-blocked { background: rgba(255, 51, 68, 0.15); color: #ff3344; border: 1px solid #ff3344; }
 
-    .support-box {
-      background: rgba(0, 210, 255, 0.05);
-      border: 1px solid var(--border-neon);
-      padding: 15px;
-      border-radius: 8px;
-      margin-top: 15px;
-      font-size: 13px;
-    }
+    .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -140,64 +134,66 @@
   <div class="container">
     <header>
       <div>
-        <h1>PANEL SUPERADMIN - APPMENU</h1>
-        <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Gestión Centralizada de Licencias, Locales y Accesos</p>
+        <h1>👑 Panel SuperAdmin - AppMenu</h1>
+        <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Control de Locales, Licencias y Accesos Demos</p>
       </div>
       <div style="display: flex; gap: 10px;">
-        <button class="btn btn-orange" onclick="descargarDemoInteractivo()">📥 Descargar Demo Interactivo (appmenudemo.html)</button>
-        <button class="btn" onclick="cargarLocales()">🔄 Actualizar Vistas</button>
+        <button class="btn btn-blue" onclick="descargarDemoHTML()">📥 Descargar appmenudemo.html</button>
+        <button class="btn" onclick="cargarLocales()">🔄 Actualizar Tabla</button>
       </div>
     </header>
 
+    <!-- CREAR NUEVO LOCAL -->
     <div class="section-card">
-      <h2>➕ Registrar Nuevo Restaurante / Local</h2>
+      <h2>➕ Registrar Nuevo Local / Restaurante</h2>
       <div class="form-grid">
-        <input type="text" id="new-nombre" placeholder="Nombre del Restaurante (ej: Sushi Nova)">
-        <input type="text" id="new-rut" placeholder="RUT Empresa (Opcional)">
-        <input type="email" id="new-correo" placeholder="Correo Electrónico (Opcional)">
-        <input type="password" id="new-password" placeholder="Contraseña Admin (Por defecto: 1234)">
+        <div>
+          <label style="font-size: 11px; color: var(--text-muted);">Nombre Comercial</label>
+          <input type="text" id="nuevo-nombre" placeholder="Ej: Pizzería Roma">
+        </div>
+        <div>
+          <label style="font-size: 11px; color: var(--text-muted);">RUT Empresa / Titular</label>
+          <input type="text" id="nuevo-rut" placeholder="Ej: 76123456-7">
+        </div>
+        <div>
+          <label style="font-size: 11px; color: var(--text-muted);">Correo de Contacto</label>
+          <input type="email" id="nuevo-correo" placeholder="contacto@pizzeria.cl">
+        </div>
+        <div>
+          <label style="font-size: 11px; color: var(--text-muted);">Contraseña Inicial</label>
+          <input type="text" id="nuevo-pass" value="1234">
+        </div>
+        <div>
+          <button class="btn btn-green" onclick="crearLocalSuperAdmin()">✅ Crear Restaurante</button>
+        </div>
       </div>
-      <button class="btn btn-success" onclick="crearRestaurante()">✅ Registrar Local y Asignar Licencia (30 Días)</button>
     </div>
 
+    <!-- LISTA DE LOCALES -->
     <div class="section-card">
-      <h2>🔑 Recuperación & Recuperar Clave de Administración</h2>
-      <div style="display: flex; gap: 10px; max-width: 500px; flex-wrap: wrap;">
-        <input type="text" id="input-recuperar-local" placeholder="Ingrese Nombre o ID del Local">
-        <button class="btn btn-orange" onclick="recuperarClaveLocal()">🔍 Obtener Contraseña</button>
-      </div>
-      <div id="resultado-recuperacion" style="margin-top: 12px; font-weight: bold; color: var(--neon-yellow); font-size: 13px;"></div>
-    </div>
-
-    <div class="section-card">
-      <h2>🏪 Locales Registrados & Estado de Licencias</h2>
+      <h2>📋 Locales Registrados y Estado de Licencias</h2>
       <div class="table-wrapper">
         <table>
           <thead>
             <tr>
               <th>ID</th>
-              <th>Nombre Local</th>
+              <th>Local (Slug)</th>
+              <th>Nombre Comercial</th>
               <th>RUT</th>
               <th>Correo</th>
-              <th>Clave Admin</th>
-              <th>Alta Registrada</th>
-              <th>Estado</th>
+              <th>Creación</th>
               <th>Vencimiento</th>
-              <th>Acciones Licencia</th>
+              <th>Estado</th>
+              <th>Acciones de Licencia</th>
             </tr>
           </thead>
-          <tbody id="tabla-locales">
+          <tbody id="tabla-locales-body">
             <tr>
-              <td colspan="9" style="text-align: center; color: var(--text-muted);">Cargando restaurantes desde el servidor...</td>
+              <td colspan="9" style="text-align: center; color: var(--text-muted);">Cargando locales desde el servidor...</td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
-
-    <div class="support-box">
-      <h3 style="color: var(--neon-yellow); margin-bottom: 5px;">📞 Contacto de Soporte Oficial</h3>
-      <p>WhatsApp Técnico: <b>+56966648585</b> | Correo Oficial: <b>appmenunova@gmail.com</b></p>
     </div>
   </div>
 
@@ -211,60 +207,51 @@
     });
 
     async function cargarLocales() {
-      const tbody = document.getElementById('tabla-locales');
+      const tbody = document.getElementById('tabla-locales-body');
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Cargando locales...</td></tr>';
+
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales?_t=${Date.now()}`);
-        if (!res.ok) throw new Error("Error al obtener locales");
-
+        if (!res.ok) throw new Error("Error al obtener los locales");
         const locales = await res.json();
 
         if (!Array.isArray(locales) || locales.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">No hay locales registrados en MongoDB.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">No hay locales registrados aún.</td></tr>';
           return;
         }
 
         tbody.innerHTML = locales.map(l => {
-          const idVal = l.id || '--';
-          const localSlug = l.localId || l.local || String(idVal);
-          const nombreVal = l.nombre || localSlug;
-          const rutVal = l.rut || 'S/RUT';
-          const correoVal = l.correo || 'S/Correo';
-          const passVal = l.password || '1234';
-          const estaActivo = l.activo !== false;
-          const altaOk = l.altaRegistrada ? '✅ Sí' : '❌ No';
-
-          let fechaVencStr = 'Sin fecha';
-          if (l.fechaVencimiento) {
-            fechaVencStr = new Date(l.fechaVencimiento).toLocaleDateString('es-CL');
-          }
-
-          const urlAdmin = `${window.location.origin}/admin.html?local=${encodeURIComponent(localSlug)}`;
+          const id = l.id || '--';
+          const localId = l.localId || l.local || '';
+          const nombre = l.nombre || localId;
+          const rut = l.rut || 'N/A';
+          const correo = l.correo || 'N/A';
+          const fCreacion = l.fechaCreacion ? new Date(l.fechaCreacion).toLocaleDateString('es-CL') : '--';
+          const fVenc = l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString('es-CL') : '--';
+          const activo = l.activo !== false;
 
           return `
             <tr>
-              <td><b>#${idVal}</b></td>
+              <td><b>#${id}</b></td>
+              <td><code>${localId}</code></td>
+              <td><b>${nombre}</b></td>
+              <td>${rut}</td>
+              <td>${correo}</td>
+              <td>${fCreacion}</td>
+              <td>${fVenc}</td>
               <td>
-                <a href="${urlAdmin}" target="_blank" style="color: var(--neon-blue); font-weight: bold; text-decoration: none;">
-                  ${nombreVal.toUpperCase()} 🔗
-                </a>
-              </td>
-              <td>${rutVal}</td>
-              <td>${correoVal}</td>
-              <td><span style="color: var(--neon-yellow); font-weight: bold;">${passVal}</span></td>
-              <td>${altaOk}</td>
-              <td>
-                <span class="status-badge ${estaActivo ? 'status-activo' : 'status-bloqueado'}">
-                  ${estaActivo ? 'ACTIVO' : 'BLOQUEADO'}
+                <span class="status-badge ${activo ? 'status-active' : 'status-blocked'}">
+                  ${activo ? '✅ ACTIVO' : '🚫 BLOQUEADO'}
                 </span>
               </td>
-              <td>${fechaVencStr}</td>
               <td>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                  ${estaActivo ? 
-                    `<button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="cambiarEstadoLicencia('${localSlug}', false)">🚫 Bloquear</button>` : 
-                    `<button class="btn btn-success" style="padding:4px 8px; font-size:11px;" onclick="cambiarEstadoLicencia('${localSlug}', true)">✅ Desbloquear</button>`
+                <div class="actions-cell">
+                  ${activo 
+                    ? `<button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="cambiarEstadoLicencia('${localId}', false)">🚫 Bloquear</button>`
+                    : `<button class="btn btn-green" style="padding: 4px 8px; font-size: 11px;" onclick="cambiarEstadoLicencia('${localId}', true)">✅ Desbloquear</button>`
                   }
-                  <button class="btn" style="padding:4px 8px; font-size:11px;" onclick="extenderLicencia('${localSlug}')">➕ 30 Días</button>
+                  <button class="btn btn-blue" style="padding: 4px 8px; font-size: 11px;" onclick="extenderLicencia30Dias('${localId}', '${l.fechaVencimiento || ''}')">+30 Días</button>
+                  <button class="btn" style="padding: 4px 8px; font-size: 11px; background:#444; color:#fff;" onclick="verClaveLocal('${localId}')">🔑 Clave</button>
                 </div>
               </td>
             </tr>
@@ -272,44 +259,42 @@
         }).join('');
 
       } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #ff3344;">Error de comunicación con el backend.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #ff3344;">Error de comunicación con el backend server.</td></tr>';
       }
     }
 
-    async function crearRestaurante() {
-      const nombre = document.getElementById('new-nombre').value.trim();
-      const rut = document.getElementById('new-rut').value.trim();
-      const correo = document.getElementById('new-correo').value.trim();
-      const password = document.getElementById('new-password').value.trim() || '1234';
+    async function crearLocalSuperAdmin() {
+      const nombre = document.getElementById('nuevo-nombre').value.trim();
+      const rut = document.getElementById('nuevo-rut').value.trim();
+      const correo = document.getElementById('nuevo-correo').value.trim();
+      const password = document.getElementById('nuevo-pass').value.trim();
 
-      if (!nombre) return alert("Por favor ingresa el nombre del restaurante.");
+      if (!nombre) return alert("Ingresa el nombre comercial del local.");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, rut, correo, password })
+          body: JSON.stringify({ nombre, rut, correo, password, altaRegistrada: true })
         });
 
         const data = await res.json();
         if (res.ok) {
-          alert(`🎉 Restaurante "${nombre}" creado exitosamente.`);
-          document.getElementById('new-nombre').value = '';
-          document.getElementById('new-rut').value = '';
-          document.getElementById('new-correo').value = '';
-          document.getElementById('new-password').value = '';
+          alert(`🎉 Restaurante "${data.nombre}" creado con éxito.`);
+          document.getElementById('nuevo-nombre').value = '';
+          document.getElementById('nuevo-rut').value = '';
+          document.getElementById('nuevo-correo').value = '';
           cargarLocales();
         } else {
-          alert(`❌ Error: ${data.error || 'No se pudo crear el restaurante'}`);
+          alert(`❌ ${data.error || 'Error al crear local'}`);
         }
-      } catch (err) {
-        alert("Error de red al conectar con el servidor.");
+      } catch (e) {
+        alert("Error de red al registrar el local.");
       }
     }
 
     async function cambiarEstadoLicencia(localId, activar) {
-      const accionText = activar ? "activar / desbloquear" : "bloquear / desactivar";
-      if (!confirm(`¿Estás seguro de que deseas ${accionText} el local "${localId}"?`)) return;
+      if (!confirm(`¿Estás seguro de ${activar ? 'DESBLOQUEAR' : 'BLOQUEAR'} el acceso para el local "${localId}"?`)) return;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localId)}/licencia`, {
@@ -321,67 +306,65 @@
         if (res.ok) {
           cargarLocales();
         } else {
-          alert("Error al actualizar la licencia.");
+          alert("No se pudo cambiar el estado de la licencia.");
         }
       } catch (e) {
-        alert("Error de red.");
+        alert("Error al actualizar la licencia.");
       }
     }
 
-    async function extenderLicencia(localId) {
-      const nuevaFecha = new Date();
-      nuevaFecha.setDate(nuevaFecha.getDate() + 30);
+    async function extenderLicencia30Dias(localId, fechaVencActual) {
+      let baseFecha = fechaVencActual ? new Date(fechaVencActual) : new Date();
+      if (isNaN(baseFecha.getTime()) || baseFecha < new Date()) {
+        baseFecha = new Date();
+      }
+
+      baseFecha.setDate(baseFecha.getDate() + 30);
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localId)}/licencia`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ activo: true, fechaVencimiento: nuevaFecha.toISOString() })
+          body: JSON.stringify({ fechaVencimiento: baseFecha.toISOString(), activo: true })
         });
 
         if (res.ok) {
-          alert(`✅ Licencia de "${localId}" extendida por 30 días adicionales.`);
+          alert(`✅ Licencia extendida exitosamente hasta: ${baseFecha.toLocaleDateString('es-CL')}`);
           cargarLocales();
         } else {
-          alert("Error al extender licencia.");
+          alert("Error al extender la fecha de la licencia.");
         }
       } catch (e) {
         alert("Error de red.");
       }
     }
 
-    async function recuperarClaveLocal() {
-      const localInput = document.getElementById('input-recuperar-local').value.trim();
-      const divRes = document.getElementById('resultado-recuperacion');
-      if (!localInput) return alert("Por favor ingrese el nombre del local.");
-
-      divRes.innerText = "Buscando información...";
-
+    async function verClaveLocal(localId) {
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/reenviar-clave`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localInput })
+          body: JSON.stringify({ local: localId })
         });
 
         const data = await res.json();
         if (res.ok) {
-          divRes.innerHTML = `🔑 Contraseña del local <b>${data.nombre}</b>: <span style="color: var(--neon-green); font-size:16px;">${data.clave}</span> | Correo: ${data.correo}`;
+          alert(data.mensaje);
         } else {
-          divRes.innerText = `❌ ${data.error || 'Local no encontrado'}`;
+          alert(data.error || "Error al obtener la contraseña.");
         }
       } catch (e) {
-        divRes.innerText = "Error de red al consultar la contraseña.";
+        alert("Error al consultar credenciales.");
       }
     }
 
-    function descargarDemoInteractivo() {
-      const contenidoDemo = `<!DOCTYPE html>
+    function descargarDemoHTML() {
+      const demoHTMLContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AppMenu Demo - Tu Menú Digital</title>
+  <title>Lanzador AppMenu Demo - 30 Días de Licencia</title>
   <style>
     body {
       background-color: #08070d;
@@ -397,78 +380,127 @@
     }
     .card {
       background: rgba(18, 16, 28, 0.95);
-      border: 1px solid #ff5500;
-      padding: 30px;
+      border: 2px solid #ff5500;
       border-radius: 16px;
-      max-width: 500px;
+      padding: 30px;
+      max-width: 480px;
       width: 100%;
       text-align: center;
       box-shadow: 0 0 20px rgba(255, 85, 0, 0.3);
     }
-    h1 { color: #ffee00; font-size: 24px; margin-bottom: 10px; text-transform: uppercase; }
-    p { color: #a0a0b0; font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+    h1 {
+      color: #ffee00;
+      font-size: 22px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    p {
+      color: #a0a0b0;
+      font-size: 14px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
     input {
       width: 100%;
-      padding: 12px;
-      background: #14141c;
+      padding: 14px;
+      background: #181822;
       border: 1px solid #333;
       color: #fff;
       border-radius: 8px;
       font-size: 15px;
-      box-sizing: border-box;
       margin-bottom: 15px;
+      box-sizing: border-box;
     }
     .btn {
+      width: 100%;
       background: linear-gradient(135deg, #ff5500, #ff007f);
       color: #fff;
       border: none;
-      padding: 14px 20px;
+      padding: 14px;
       font-weight: bold;
+      font-size: 15px;
       border-radius: 8px;
       cursor: pointer;
-      width: 100%;
-      font-size: 15px;
+      margin-bottom: 10px;
+      transition: opacity 0.2s;
     }
-    .contact-info {
+    .btn:hover { opacity: 0.9; }
+    .contacto-box {
       margin-top: 25px;
       padding-top: 15px;
-      border-top: 1px dashed rgba(255,255,255,0.2);
-      font-size: 12px;
-      color: #00d2ff;
+      border-top: 1px dashed rgba(255, 255, 255, 0.2);
+      font-size: 13px;
+      color: #00ff66;
+      text-align: left;
     }
+    .contacto-box b { color: #ffee00; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>🚀 Demo AppMenu Digital</h1>
-    <p>Ingresa el nombre de tu restaurante o local para generar tu enlace permalink reutilizable para tu período demo de 30 días y posterior suscripción mensual.</p>
-    <input type="text" id="nombre-local" placeholder="Ej: Mi Restaurante Demo">
-    <button class="btn" onclick="iniciarDemo()">Lanzar / Abrir Mi Menú Digital</button>
+    <h1>🚀 AppMenu Demo (30 Días)</h1>
+    <p>Ingresa el nombre de tu local o restaurante para ingresar o generar tu acceso permanente durante los 30 días de demo o pago de licencia mensual.</p>
     
-    <div class="contact-info">
-      <p style="margin-bottom: 5px; color:#fff;"><b>Soporte & Activación de Licencias:</b></p>
-      📱 WhatsApp: +56966648585<br>
-      📧 Correo: appmenunova@gmail.com
+    <input type="text" id="nombreLocal" placeholder="Ej: Mi Restaurante Demo">
+    <button class="btn" onclick="iniciarOAbrirLocal()">⚡ Acceder / Abrir Mi Local</button>
+    <button class="btn" style="background: #00d2ff; color:#000;" onclick="descargarAccesoDirectoLocal()">📥 Descargar Lanzador Exclusivo de Mi Local (.html)</button>
+
+    <div class="contacto-box">
+      <p style="margin-bottom: 5px;">📲 <b>Soporte & Licencias Mensuales:</b></p>
+      <p style="margin-bottom: 3px;">💬 WhatsApp: <b>+56966648585</b></p>
+      <p style="margin-bottom: 0;">✉️ Correo: <b>appmenunova@gmail.com</b></p>
     </div>
   </div>
 
   <script>
-    function iniciarDemo() {
-      const val = document.getElementById('nombre-local').value.trim();
-      if (!val) return alert("Por favor ingresa un nombre para tu local.");
-      const slug = val.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
-      const urlFinal = "https://appmenu-tavr.onrender.com/admin.html?local=" + encodeURIComponent(slug);
-      window.location.href = urlFinal;
+    const SERVER_URL = "https://appmenu-tavr.onrender.com";
+
+    function obtenerSlug(nombre) {
+      return nombre.toLowerCase().trim().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+    }
+
+    function iniciarOAbrirLocal() {
+      const nombre = document.getElementById('nombreLocal').value.trim();
+      if (!nombre) return alert("Por favor ingresa el nombre de tu local.");
+      const slug = obtenerSlug(nombre);
+      window.location.href = \`\${SERVER_URL}/admin.html?local=\${encodeURIComponent(slug)}\`;
+    }
+
+    function descargarAccesoDirectoLocal() {
+      const nombre = document.getElementById('nombreLocal').value.trim();
+      if (!nombre) return alert("Por favor ingresa el nombre de tu local para generar la descarga.");
+      const slug = obtenerSlug(nombre);
+
+      const htmlAccesoLocal = \`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Acceso Directo - \${nombre}</title>
+  <script>
+    window.location.href = "\${SERVER_URL}/admin.html?local=\${encodeURIComponent(slug)}";
+  <\\/script>
+</head>
+<body style="background:#08070d; color:#fff; font-family:sans-serif; text-align:center; padding-top:50px;">
+  <h2>Cargando \${nombre}...</h2>
+  <p>Si no te redirige automáticamente, <a href="\${SERVER_URL}/admin.html?local=\${encodeURIComponent(slug)}" style="color:#00ff66;">haz clic aquí</a>.</p>
+</body>
+</html>\`;
+
+      const blob = new Blob([htmlAccesoLocal], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.download = \`Acceso_\${slug}.html\`;
+      a.href = URL.createObjectURL(blob);
+      a.click();
     }
   <\\/script>
 </body>
 </html>`;
 
-      const blob = new Blob([contenidoDemo], { type: 'text/html' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'appmenudemo.html';
-      a.click();
+      const blob = new Blob([demoHTMLContent], { type: 'text/html' });
+      const link = document.createElement('a');
+      link.download = 'appmenudemo.html';
+      link.href = URL.createObjectURL(blob);
+      link.click();
     }
   </script>
 </body>
