@@ -3,169 +3,162 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - Control de Licencias y Restaurantes</title>
+  <title>Panel Superadmin - Gestión de Locales</title>
   <style>
     :root {
-      --bg-dark: #08080a;
-      --card-bg: rgba(18, 18, 22, 0.95);
+      --bg-dark: #08070d;
+      --card-bg: rgba(18, 16, 28, 0.85);
       --neon-orange: #ff5500;
-      --neon-yellow: #ffea00;
-      --neon-red: #ff3333;
-      --neon-green: #00e676;
+      --neon-pink: #ff007f;
+      --neon-yellow: #ffee00;
+      --neon-green: #00ff66;
       --neon-blue: #00d2ff;
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
+      --border-neon: rgba(255, 0, 127, 0.3);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
 
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
+      min-height: 100vh;
       padding: 20px;
     }
 
-    .container { max-width: 950px; margin: 0 auto; }
+    .container { max-width: 1100px; margin: 0 auto; }
 
-    .card {
+    header {
       background: var(--card-bg);
-      border: 1px solid rgba(255, 85, 0, 0.3);
+      border: 1px solid var(--border-neon);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 { color: var(--neon-yellow); font-size: 22px; font-weight: 800; text-transform: uppercase; }
+
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid #222;
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 25px;
     }
 
-    h1, h2 {
-      font-size: 20px;
-      color: var(--neon-yellow);
+    .section-card h3 {
+      color: var(--neon-orange);
+      font-size: 16px;
       margin-bottom: 15px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
-    .form-group {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
       margin-bottom: 15px;
     }
 
-    input, select, textarea {
+    input {
       padding: 12px;
-      background: #121218;
+      background: #181822;
       border: 1px solid #333;
       color: #fff;
       border-radius: 6px;
       font-size: 14px;
-      flex: 1;
-      min-width: 180px;
+      width: 100%;
     }
 
     .btn {
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
       border: none;
-      color: #000;
+      color: #fff;
       padding: 12px 20px;
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.2s;
     }
-
     .btn:hover { opacity: 0.9; }
+    .btn-success { background: linear-gradient(135deg, var(--neon-green), #00b347); color: #000; }
+    .btn-msg { background: linear-gradient(135deg, var(--neon-blue), #0077ff); color: #fff; }
 
-    .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
-    .btn-secondary:hover { background: #333; }
-
-    .btn-danger { background: var(--neon-red); color: #fff; }
-    .btn-success { background: var(--neon-green); color: #000; }
-    .btn-download { background: var(--neon-blue); color: #000; }
-
-    .local-card {
-      background: #121218;
-      border: 1px solid #2a2a36;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
-
-    .local-info b { font-size: 16px; color: var(--neon-blue); }
-    .local-info span { font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
+    th { background: #12121c; color: var(--neon-yellow); }
 
     .badge {
-      display: inline-block;
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 12px;
       font-weight: bold;
+      font-size: 11px;
     }
-    .badge-active { background: rgba(0, 230, 118, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
-    .badge-disabled { background: rgba(255, 51, 51, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
+    .badge-active { background: rgba(0, 255, 102, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .badge-inactive { background: rgba(255, 0, 51, 0.2); color: #ff3344; border: 1px solid #ff3344; }
 
-    .msg-box-container {
-      width: 100%;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px dashed rgba(255, 255, 255, 0.15);
-      display: flex;
-      gap: 10px;
-      align-items: center;
+    .action-btn {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 12px;
     }
+    .btn-toggle { background: #333; color: #fff; }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h1>🛡️ Panel SuperAdmin - Gestión de Locales</h1>
-      <div style="display: flex; gap: 10px;">
-        <button class="btn btn-download" onclick="descargarAppMenuDemo()">📥 Descargar appmenudemo.html</button>
-        <button class="btn btn-secondary" onclick="cargarLocales()">🔄 Recargar Lista</button>
-      </div>
-    </div>
+    <header>
+      <h1>👑 PANEL SUPERADMINISTRADOR</h1>
+      <button class="btn btn-msg" onclick="recargarLocales()">🔄 Actualizar</button>
+    </header>
 
-    <!-- CREAR NUEVO LOCAL DIRECTO (DEMO SIN REGISTRARSE) -->
-    <div class="card">
-      <h2>⚡ Crear Local Demo (Sin Registro)</h2>
-      <div class="form-group">
-        <input type="text" id="nuevo-nombre-local" placeholder="Nombre del Local (Ej: Resto Bar Mongo)">
-        <button class="btn" onclick="crearNuevoLocal()">Crear Local</button>
-      </div>
-    </div>
-
-    <!-- DAR DE ALTA UN LOCAL (CON NOMBRE, RUT, CORREO Y CLAVE) -->
-    <div class="card">
-      <h2>📝 Dar de Alta Restaurante (Cliente Oficial)</h2>
-      <div class="form-group">
-        <input type="text" id="alta-nombre" placeholder="Nombre del Local">
-        <input type="text" id="alta-rut" placeholder="RUT Empresa/Cliente">
+    <!-- SECCIÓN DE DAR DE ALTA RESTAURANTE -->
+    <div class="section-card">
+      <h3>➕ Dar de Alta Restaurante (Cliente Oficial)</h3>
+      <div class="form-grid">
+        <input type="text" id="alta-nombre" placeholder="Nombre Restaurante">
+        <input type="text" id="alta-rut" placeholder="RUT Empresa">
         <input type="email" id="alta-correo" placeholder="Correo Electrónico">
-        <input type="password" id="alta-password" placeholder="Contraseña Admin">
-        <button class="btn btn-success" onclick="darDeAltaLocal()">Dar de Alta</button>
+        <input type="text" id="alta-pass" placeholder="Contraseña Admin">
       </div>
-    </div>
-
-    <!-- CUADRO DE MENSAJE GLOBAL A TODOS LOS CLIENTES -->
-    <div class="card">
-      <h2>📢 Mensaje Global para Todos los Clientes Activos</h2>
-      <div class="form-group">
-        <input type="text" id="input-mensaje-global" placeholder="Escribe aquí un saludo o aviso de ajuste de precios para todos los restaurantes...">
-        <button class="btn btn-download" onclick="guardarMensajeGlobal()">💬 Enviar Mensaje Global</button>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-success" onclick="crearNuevoLocal()">✅ Dar de Alta Restaurante</button>
+        <!-- BOTÓN PARA ABRIR PESTAÑA DE MENSAJES -->
+        <button class="btn btn-msg" onclick="window.open('mensajes.html', '_blank')">📢 Enviar Mensaje Global a Clientes</button>
       </div>
     </div>
 
     <!-- LISTADO DE LOCALES -->
-    <div class="card">
-      <h2>🏪 Restaurantes Registrados</h2>
-      <div id="contenedor-locales">
-        <p style="color: var(--text-muted);">Cargando restaurantes desde el servidor...</p>
+    <div class="section-card">
+      <h3>🏪 Clientes y Locales Registrados</h3>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre / Local Slug</th>
+              <th>RUT</th>
+              <th>Correo</th>
+              <th>Estado Licencia</th>
+              <th>Fecha Vencimiento</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-locales">
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--text-muted);">Cargando locales...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -176,266 +169,103 @@
       : 'https://appmenu-tavr.onrender.com';
 
     document.addEventListener("DOMContentLoaded", () => {
-      cargarLocales();
-      cargarMensajeGlobal();
+      recargarLocales();
     });
 
-    async function cargarMensajeGlobal() {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/mensaje-global`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.mensajeGlobal) {
-            document.getElementById('input-mensaje-global').value = data.mensajeGlobal;
-          }
-        }
-      } catch (e) {}
-    }
-
-    async function guardarMensajeGlobal() {
-      const msg = document.getElementById('input-mensaje-global').value.trim();
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/mensaje-global`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mensaje: msg })
-        });
-        if (res.ok) {
-          alert("✅ Mensaje global actualizado para todos los locales.");
-        } else {
-          alert("❌ Error al guardar el mensaje global.");
-        }
-      } catch (e) {
-        alert("❌ Error de red.");
-      }
-    }
-
-    async function cargarLocales() {
-      const cont = document.getElementById('contenedor-locales');
-      cont.innerHTML = '<p style="color: var(--text-muted);">Cargando restaurantes...</p>';
+    async function recargarLocales() {
+      const tbody = document.getElementById('tabla-locales');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Cargando locales...</td></tr>';
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales?_t=${Date.now()}`);
-        if (!res.ok) throw new Error("Error al obtener lista");
-
+        if (!res.ok) throw new Error("Error al obtener los locales");
         const locales = await res.json();
 
         if (!Array.isArray(locales) || locales.length === 0) {
-          cont.innerHTML = '<p style="color: var(--text-muted);">No hay restaurantes registrados aún.</p>';
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No hay clientes registrados.</td></tr>';
           return;
         }
 
-        cont.innerHTML = locales.map(l => {
-          const idNum = l.id || '--';
+        tbody.innerHTML = locales.map(l => {
           const estaActivo = l.activo !== false;
-          const fechaCrea = l.fechaCreacion ? new Date(l.fechaCreacion).toLocaleDateString('es-CL') : 'Sin fecha';
-          const fechaVenc = l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString('es-CL') : 'Sin fecha';
-          const esAlta = l.altaRegistrada ? 'OFICIAL' : 'DEMO';
-          const msgIndividual = l.mensajeLocal || '';
+          const fechaVenc = l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString('es-CL') : 'Indefinido';
 
           return `
-            <div class="local-card">
-              <div class="local-info" style="flex: 1; min-width: 280px;">
-                <b>[ID: ${idNum}] ${l.nombre}</b> (${esAlta})
-                <span>Slug URL: <i>${l.localId}</i></span>
-                <span>📅 Fecha Creación: <b>${fechaCrea}</b> | ⏳ Fecha Vencimiento: <b>${fechaVenc}</b></span>
-                ${l.rut ? `<span>RUT: ${l.rut} | Correo: ${l.correo}</span>` : ''}
-                <span style="margin-top: 6px;">
-                  Estado: <span class="badge ${estaActivo ? 'badge-active' : 'badge-disabled'}">${estaActivo ? 'ACTIVO' : 'BLOQUEADO'}</span>
+            <tr>
+              <td><b>#${l.id || '--'}</b></td>
+              <td><b>${l.nombre || l.localId}</b><br><span style="font-size: 11px; color: var(--text-muted);">${l.localId}</span></td>
+              <td>${l.rut || 'S/RUT'}</td>
+              <td>${l.correo || 'S/Correo'}</td>
+              <td>
+                <span class="badge ${estaActivo ? 'badge-active' : 'badge-inactive'}">
+                  ${estaActivo ? '✅ ACTIVO' : '🚫 BLOQUEADO'}
                 </span>
-              </div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                <button class="btn btn-secondary" onclick="reenviarContrasena('${l.localId}')">🔑 Reenviar Clave</button>
-                <button class="btn btn-download" onclick="descargarAccesoHTML('${l.localId}', '${l.nombre}')">📥 Descargar Acceso HTML</button>
-                <button class="btn ${estaActivo ? 'btn-danger' : 'btn-success'}" onclick="cambiarEstadoLicencia('${l.localId}', ${!estaActivo})">
-                  ${estaActivo ? '🚫 Bloquear' : '✅ Desbloquear'}
+              </td>
+              <td>${fechaVenc}</td>
+              <td>
+                <button class="action-btn btn-toggle" onclick="cambiarEstadoLicencia('${l.localId}', ${!estaActivo})">
+                  ${estaActivo ? '🚫 Desactivar' : '✅ Activar'}
                 </button>
-              </div>
-
-              <!-- CUADRO DE MENSAJE SOLO PARA ESTE LOCAL -->
-              <div class="msg-box-container">
-                <input type="text" id="msg-local-${l.localId}" value="${msgIndividual.replace(/"/g, '&quot;')}" placeholder="Escribir mensaje exclusivo solo para este local...">
-                <button class="btn btn-secondary" onclick="guardarMensajeLocal('${l.localId}')">📩 Enviar Mensaje Local</button>
-              </div>
-            </div>
+              </td>
+            </tr>
           `;
         }).join('');
-      } catch (err) {
-        cont.innerHTML = '<p style="color: var(--neon-red);">❌ Error al cargar los restaurantes desde el servidor.</p>';
-      }
-    }
 
-    async function guardarMensajeLocal(localId) {
-      const inputEl = document.getElementById(`msg-local-${localId}`);
-      if (!inputEl) return;
-      const mensaje = inputEl.value.trim();
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localId)}/mensaje`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mensaje })
-        });
-        if (res.ok) {
-          alert(`✅ Mensaje enviado exitosamente a ${localId.toUpperCase()}`);
-        } else {
-          alert("❌ Error al guardar el mensaje.");
-        }
       } catch (e) {
-        alert("❌ Error de comunicación con el servidor.");
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #ff3344;">Error al conectar con el servidor.</td></tr>';
       }
     }
 
     async function crearNuevoLocal() {
-      const nombreInput = document.getElementById('nuevo-nombre-local');
-      const nombre = nombreInput.value.trim();
-
-      if (!nombre) return alert("Por favor ingresa un nombre para el local.");
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          alert(`🎉 Restaurante "${data.nombre}" creado con exito.`);
-          nombreInput.value = '';
-          cargarLocales();
-        } else {
-          alert(`❌ Error: ${data.error || 'No se pudo crear el local'}`);
-        }
-      } catch (err) {
-        alert("❌ Error al intentar conectar con el servidor.");
-      }
-    }
-
-    async function darDeAltaLocal() {
       const nombre = document.getElementById('alta-nombre').value.trim();
       const rut = document.getElementById('alta-rut').value.trim();
       const correo = document.getElementById('alta-correo').value.trim();
-      const password = document.getElementById('alta-password').value.trim();
+      const password = document.getElementById('alta-pass').value.trim();
 
-      if (!nombre || !rut || !correo || !password) {
-        return alert("⚠️ Por favor completa todos los campos para dar de alta.");
-      }
+      if (!nombre) return alert("El nombre del restaurante es obligatorio.");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, rut, correo, password })
+          body: JSON.stringify({ nombre, rut, correo, password: password || '1234' })
         });
 
         const data = await res.json();
 
         if (res.ok) {
-          alert("🎉 Local DADO DE ALTA con exito.");
+          alert("🎉 Cliente / Restaurante creado correctamente");
           document.getElementById('alta-nombre').value = '';
           document.getElementById('alta-rut').value = '';
           document.getElementById('alta-correo').value = '';
-          document.getElementById('alta-password').value = '';
-          cargarLocales();
+          document.getElementById('alta-pass').value = '';
+          recargarLocales();
         } else {
-          alert(`❌ Error: ${data.error || 'No se pudo completar el alta'}`);
+          alert(`❌ Error: ${data.error || 'No se pudo dar de alta'}`);
         }
       } catch (e) {
-        alert("❌ Error al conectar con el servidor.");
+        alert("Error de conexión al servidor");
       }
     }
 
-    async function reenviarContrasena(localId) {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/reenviar-clave`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          alert(data.mensaje);
-        } else {
-          alert(`❌ Error: ${data.error || 'No se pudo obtener la clave'}`);
-        }
-      } catch (e) {
-        alert("❌ Error de comunicación con el servidor.");
-      }
-    }
-
-    async function cambiarEstadoLicencia(localId, activar) {
-      const accion = activar ? "activar" : "bloquear";
-      if (!confirm(`¿Estás seguro de que deseas ${accion} el local "${localId}"?`)) return;
+    async function cambiarEstadoLicencia(localId, nuevoEstado) {
+      if (!confirm(`¿Estás seguro de ${nuevoEstado ? 'ACTIVAR' : 'DESACTIVAR'} la cuenta de "${localId}"?`)) return;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localId)}/licencia`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ activo: activar })
+          body: JSON.stringify({ activo: nuevoEstado })
         });
 
         if (res.ok) {
-          alert(`✅ Local ${localId} ${activar ? 'activado' : 'bloqueado'} con éxito.`);
-          cargarLocales();
+          recargarLocales();
         } else {
-          alert("❌ Error al actualizar el estado de la licencia.");
+          alert("No se pudo actualizar el estado.");
         }
-      } catch (err) {
-        alert("❌ Error de red al intentar actualizar el estado.");
+      } catch (e) {
+        alert("Error al conectar con el servidor.");
       }
-    }
-
-    function descargarAppMenuDemo() {
-      const contenidoHtml = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>AppMenu Demo</title>
-</head>
-<body>
-  <h1>AppMenu Demo System</h1>
-</body>
-</html>`;
-
-      const blob = new Blob([contenidoHtml], { type: 'text/html;charset=utf-8;' });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", "appmenudemo.html");
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    function descargarAccesoHTML(localId, nombre) {
-      const urlAcceso = `https://appmenu-tavr.onrender.com/?local=${localId}`;
-      const contenidoHtml = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Acceso direct - ${nombre}</title>
-  <script>
-    window.location.href = "${urlAcceso}";
-  <\/script>
-</head>
-<body>
-  <p>Redirigiendo a ${nombre}...</p>
-</body>
-</html>`;
-
-      const blob = new Blob([contenidoHtml], { type: 'text/html;charset=utf-8;' });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `Acceso_${localId}.html`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
     }
   </script>
 </body>
