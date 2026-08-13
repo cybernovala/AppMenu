@@ -3,162 +3,162 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Superadmin - Gestión de Locales</title>
+  <title>SuperAdmin - Control de Licencias y Restaurantes</title>
   <style>
     :root {
-      --bg-dark: #08070d;
-      --card-bg: rgba(18, 16, 28, 0.85);
+      --bg-dark: #08080a;
+      --card-bg: rgba(18, 18, 22, 0.95);
       --neon-orange: #ff5500;
-      --neon-pink: #ff007f;
-      --neon-yellow: #ffee00;
-      --neon-green: #00ff66;
+      --neon-yellow: #ffea00;
+      --neon-red: #ff3333;
+      --neon-green: #00e676;
       --neon-blue: #00d2ff;
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
-      --border-neon: rgba(255, 0, 127, 0.3);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
-      min-height: 100vh;
       padding: 20px;
     }
 
-    .container { max-width: 1100px; margin: 0 auto; }
+    .container { max-width: 950px; margin: 0 auto; }
 
-    header {
+    .card {
       background: var(--card-bg);
-      border: 1px solid var(--border-neon);
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 25px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    h1 { color: var(--neon-yellow); font-size: 22px; font-weight: 800; text-transform: uppercase; }
-
-    .section-card {
-      background: var(--card-bg);
-      border: 1px solid #222;
+      border: 1px solid rgba(255, 85, 0, 0.3);
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 25px;
     }
 
-    .section-card h3 {
-      color: var(--neon-orange);
-      font-size: 16px;
+    h1, h2 {
+      font-size: 20px;
+      color: var(--neon-yellow);
       margin-bottom: 15px;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
+    .form-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
       margin-bottom: 15px;
     }
 
-    input {
+    input, select, textarea {
       padding: 12px;
-      background: #181822;
+      background: #121218;
       border: 1px solid #333;
       color: #fff;
       border-radius: 6px;
       font-size: 14px;
-      width: 100%;
+      flex: 1;
+      min-width: 180px;
     }
 
     .btn {
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
       border: none;
-      color: #fff;
+      color: #000;
       padding: 12px 20px;
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
-      transition: opacity 0.2s;
+      transition: opacity 0.2s ease;
     }
-    .btn:hover { opacity: 0.9; }
-    .btn-success { background: linear-gradient(135deg, var(--neon-green), #00b347); color: #000; }
-    .btn-msg { background: linear-gradient(135deg, var(--neon-blue), #0077ff); color: #fff; }
 
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
-    th { background: #12121c; color: var(--neon-yellow); }
+    .btn:hover { opacity: 0.9; }
+
+    .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
+    .btn-secondary:hover { background: #333; }
+
+    .btn-danger { background: var(--neon-red); color: #fff; }
+    .btn-success { background: var(--neon-green); color: #000; }
+    .btn-download { background: var(--neon-blue); color: #000; }
+
+    .local-card {
+      background: #121218;
+      border: 1px solid #2a2a36;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .local-info b { font-size: 16px; color: var(--neon-blue); }
+    .local-info span { font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px; }
 
     .badge {
+      display: inline-block;
       padding: 4px 8px;
       border-radius: 4px;
-      font-weight: bold;
-      font-size: 11px;
-    }
-    .badge-active { background: rgba(0, 255, 102, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
-    .badge-inactive { background: rgba(255, 0, 51, 0.2); color: #ff3344; border: 1px solid #ff3344; }
-
-    .action-btn {
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
       font-size: 12px;
+      font-weight: bold;
     }
-    .btn-toggle { background: #333; color: #fff; }
+    .badge-active { background: rgba(0, 230, 118, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .badge-disabled { background: rgba(255, 51, 51, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <header>
-      <h1>👑 PANEL SUPERADMINISTRADOR</h1>
-      <button class="btn btn-msg" onclick="recargarLocales()">🔄 Actualizar</button>
-    </header>
-
-    <!-- SECCIÓN DE DAR DE ALTA RESTAURANTE -->
-    <div class="section-card">
-      <h3>➕ Dar de Alta Restaurante (Cliente Oficial)</h3>
-      <div class="form-grid">
-        <input type="text" id="alta-nombre" placeholder="Nombre Restaurante">
-        <input type="text" id="alta-rut" placeholder="RUT Empresa">
-        <input type="email" id="alta-correo" placeholder="Correo Electrónico">
-        <input type="text" id="alta-pass" placeholder="Contraseña Admin">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h1>🛡️ Panel SuperAdmin - Gestión de Locales</h1>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-download" onclick="descargarAppMenuDemo()">📥 Descargar appmenudemo.html</button>
+        <button class="btn btn-secondary" onclick="cargarLocales()">🔄 Recargar Lista</button>
       </div>
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button class="btn btn-success" onclick="crearNuevoLocal()">✅ Dar de Alta Restaurante</button>
-        <!-- BOTÓN PARA ABRIR PESTAÑA DE MENSAJES -->
-        <button class="btn btn-msg" onclick="window.open('mensajes.html', '_blank')">📢 Enviar Mensaje Global a Clientes</button>
+    </div>
+
+    <!-- CREAR NUEVO LOCAL DIRECTO (DEMO SIN REGISTRARSE) -->
+    <div class="card">
+      <h2>⚡ Crear Local Demo (Sin Registro)</h2>
+      <div class="form-group">
+        <input type="text" id="nuevo-nombre-local" placeholder="Nombre del Local (Ej: Resto Bar Mongo)">
+        <button class="btn" onclick="crearNuevoLocal()">Crear Local</button>
+      </div>
+    </div>
+
+    <!-- DAR DE ALTA UN LOCAL (CON NOMBRE, RUT, CORREO Y CLAVE) -->
+    <div class="card">
+      <h2>📝 Dar de Alta Restaurante (Cliente Oficial)</h2>
+      <div class="form-group">
+        <input type="text" id="alta-nombre" placeholder="Nombre del Local">
+        <input type="text" id="alta-rut" placeholder="RUT Empresa/Cliente">
+        <input type="email" id="alta-correo" placeholder="Correo Electrónico">
+        <input type="password" id="alta-password" placeholder="Contraseña Admin">
+        <button class="btn btn-success" onclick="darDeAltaLocal()">Dar de Alta</button>
+      </div>
+    </div>
+
+    <!-- MENSAJE MASIVO A CLIENTES ACTIVOS -->
+    <div class="card" style="border-color: var(--neon-blue);">
+      <h2>📢 Enviar Mensaje a Todos los Clientes Activos</h2>
+      <div class="form-group" style="flex-direction: column; align-items: stretch;">
+        <textarea id="msg-global-input" rows="3" placeholder="Escribe un aviso para mostrar a todos los clientes activos..."></textarea>
+        <div style="display: flex; gap: 10px; margin-top: 5px;">
+          <button class="btn btn-download" style="flex: 1;" onclick="enviarMensajeGlobal()">📢 Enviar Notificación Masiva</button>
+          <button class="btn btn-danger" style="flex: 1;" onclick="borrarMensajeGlobal()">🗑️ Borrar Notificación de Todos</button>
+        </div>
       </div>
     </div>
 
     <!-- LISTADO DE LOCALES -->
-    <div class="section-card">
-      <h3>🏪 Clientes y Locales Registrados</h3>
-      <div style="overflow-x: auto;">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre / Local Slug</th>
-              <th>RUT</th>
-              <th>Correo</th>
-              <th>Estado Licencia</th>
-              <th>Fecha Vencimiento</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-locales">
-            <tr>
-              <td colspan="7" style="text-align: center; color: var(--text-muted);">Cargando locales...</td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="card">
+      <h2>🏪 Restaurantes Registrados</h2>
+      <div id="contenedor-locales">
+        <p style="color: var(--text-muted);">Cargando restaurantes desde el servidor...</p>
       </div>
     </div>
   </div>
@@ -169,87 +169,126 @@
       : 'https://appmenu-tavr.onrender.com';
 
     document.addEventListener("DOMContentLoaded", () => {
-      recargarLocales();
+      cargarLocales();
     });
 
-    async function recargarLocales() {
-      const tbody = document.getElementById('tabla-locales');
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Cargando locales...</td></tr>';
+    async function cargarLocales() {
+      const cont = document.getElementById('contenedor-locales');
+      cont.innerHTML = '<p style="color: var(--text-muted);">Cargando restaurantes...</p>';
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales?_t=${Date.now()}`);
-        if (!res.ok) throw new Error("Error al obtener los locales");
+        if (!res.ok) throw new Error("Error al obtener lista");
+
         const locales = await res.json();
 
         if (!Array.isArray(locales) || locales.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No hay clientes registrados.</td></tr>';
+          cont.innerHTML = '<p style="color: var(--text-muted);">No hay restaurantes registrados aún.</p>';
           return;
         }
 
-        tbody.innerHTML = locales.map(l => {
+        cont.innerHTML = locales.map(l => {
+          const idNum = l.id || '--';
           const estaActivo = l.activo !== false;
-          const fechaVenc = l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString('es-CL') : 'Indefinido';
+          const fechaCrea = l.fechaCreacion ? new Date(l.fechaCreacion).toLocaleDateString('es-CL') : 'Sin fecha';
+          const fechaVenc = l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString('es-CL') : 'Sin fecha';
+          const esAlta = l.altaRegistrada ? 'OFICIAL' : 'DEMO';
+          const msgActual = l.mensajeNotificacion || '';
 
           return `
-            <tr>
-              <td><b>#${l.id || '--'}</b></td>
-              <td><b>${l.nombre || l.localId}</b><br><span style="font-size: 11px; color: var(--text-muted);">${l.localId}</span></td>
-              <td>${l.rut || 'S/RUT'}</td>
-              <td>${l.correo || 'S/Correo'}</td>
-              <td>
-                <span class="badge ${estaActivo ? 'badge-active' : 'badge-inactive'}">
-                  ${estaActivo ? '✅ ACTIVO' : '🚫 BLOQUEADO'}
+            <div class="local-card">
+              <div class="local-info" style="width: 100%;">
+                <b>[ID: ${idNum}] ${l.nombre}</b> (${esAlta})
+                <span>Slug URL: <i>${l.localId}</i></span>
+                <span>📅 Fecha Creación: <b>${fechaCrea}</b> | ⏳ Fecha Vencimiento: <b>${fechaVenc}</b></span>
+                ${l.rut ? `<span>RUT: ${l.rut} | Correo: ${l.correo}</span>` : ''}
+                <span style="margin-top: 6px;">
+                  Estado: <span class="badge ${estaActivo ? 'badge-active' : 'badge-disabled'}">${estaActivo ? 'ACTIVO' : 'BLOQUEADO'}</span>
                 </span>
-              </td>
-              <td>${fechaVenc}</td>
-              <td>
-                <button class="action-btn btn-toggle" onclick="cambiarEstadoLicencia('${l.localId}', ${!estaActivo})">
-                  ${estaActivo ? '🚫 Desactivar' : '✅ Activar'}
-                </button>
-              </td>
-            </tr>
+                
+                <div style="margin-top: 12px; background: #08080a; padding: 10px; border-radius: 6px; border: 1px solid #222;">
+                  <span style="color: var(--neon-yellow); font-weight: bold; margin-bottom: 5px; display: block;">💬 Mensaje Directo a este Cliente:</span>
+                  <input type="text" id="msg-indiv-${l.localId}" value="${msgActual}" placeholder="Mensaje para este local..." style="width: 100%; margin-bottom: 8px;">
+                  <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="enviarMensajeIndividual('${l.localId}')">💾 Guardar / Enviar Mensaje</button>
+                    <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="borrarMensajeIndividual('${l.localId}')">🗑️ Borrar</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+                <button class="btn btn-secondary" onclick="reenviarContrasena('${l.localId}')">🔑 Reenviar Clave</button>
+                <button class="btn btn-secondary" onclick="descargarHTMLAcceso('${l.localId}')">📥 Descargar Acceso HTML</button>
+                ${estaActivo ? 
+                  `<button class="btn btn-danger" onclick="cambiarEstadoLicencia('${l.localId}', false)">🚫 Bloquear</button>` : 
+                  `<button class="btn btn-success" onclick="cambiarEstadoLicencia('${l.localId}', true)">✅ Desbloquear</button>`
+                }
+              </div>
+            </div>
           `;
         }).join('');
-
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #ff3344;">Error al conectar con el servidor.</td></tr>';
+      } catch (err) {
+        cont.innerHTML = '<p style="color: var(--neon-red);">❌ Error al conectarse con el servidor backend.</p>';
       }
     }
 
     async function crearNuevoLocal() {
+      const nombre = document.getElementById('nuevo-nombre-local').value.trim();
+      if (!nombre) return alert("Por favor ingresa un nombre para el local.");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`✅ ¡Local "${data.nombre}" creado exitosamente!`);
+          document.getElementById('nuevo-nombre-local').value = '';
+          cargarLocales();
+        } else {
+          alert(`❌ Error: ${data.error}`);
+        }
+      } catch (e) {
+        alert("Error de conexión al crear local.");
+      }
+    }
+
+    async function darDeAltaLocal() {
       const nombre = document.getElementById('alta-nombre').value.trim();
       const rut = document.getElementById('alta-rut').value.trim();
       const correo = document.getElementById('alta-correo').value.trim();
-      const password = document.getElementById('alta-pass').value.trim();
+      const password = document.getElementById('alta-password').value.trim();
 
-      if (!nombre) return alert("El nombre del restaurante es obligatorio.");
+      if (!nombre || !rut || !correo || !password) {
+        return alert("⚠️ Completa todos los campos para dar de alta.");
+      }
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, rut, correo, password: password || '1234' })
+          body: JSON.stringify({ nombre, rut, correo, password })
         });
-
         const data = await res.json();
-
         if (res.ok) {
-          alert("🎉 Cliente / Restaurante creado correctamente");
+          alert("🎉 Restaurante dado de alta formalmente.");
           document.getElementById('alta-nombre').value = '';
           document.getElementById('alta-rut').value = '';
           document.getElementById('alta-correo').value = '';
-          document.getElementById('alta-pass').value = '';
-          recargarLocales();
+          document.getElementById('alta-password').value = '';
+          cargarLocales();
         } else {
-          alert(`❌ Error: ${data.error || 'No se pudo dar de alta'}`);
+          alert(`❌ Error: ${data.error}`);
         }
       } catch (e) {
-        alert("Error de conexión al servidor");
+        alert("Error de conexión al dar de alta.");
       }
     }
 
     async function cambiarEstadoLicencia(localId, nuevoEstado) {
-      if (!confirm(`¿Estás seguro de ${nuevoEstado ? 'ACTIVAR' : 'DESACTIVAR'} la cuenta de "${localId}"?`)) return;
+      if (!confirm(`¿Estás seguro de que deseas ${nuevoEstado ? 'ACTIVAR' : 'BLOQUEAR'} a este cliente?`)) return;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localId)}/licencia`, {
@@ -259,13 +298,111 @@
         });
 
         if (res.ok) {
-          recargarLocales();
+          cargarLocales();
         } else {
-          alert("No se pudo actualizar el estado.");
+          alert("No se pudo cambiar el estado.");
         }
       } catch (e) {
-        alert("Error al conectar con el servidor.");
+        alert("Error de conexión con el servidor.");
       }
+    }
+
+    async function reenviarContrasena(localId) {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/reenviar-clave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(data.mensaje);
+        } else {
+          alert("Error: " + data.error);
+        }
+      } catch (e) {
+        alert("Error de red.");
+      }
+    }
+
+    async function enviarMensajeGlobal() {
+      const msg = document.getElementById('msg-global-input').value.trim();
+      if (!msg) return alert("Escribe un mensaje para enviar.");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/mensaje-global`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mensaje: msg })
+        });
+        if (res.ok) {
+          alert("📢 ¡Notificación enviada a todos los clientes activos!");
+          cargarLocales();
+        } else {
+          alert("Error al enviar mensaje masivo.");
+        }
+      } catch (e) {
+        alert("Error de red.");
+      }
+    }
+
+    async function borrarMensajeGlobal() {
+      if (!confirm("¿Deseas eliminar las notificaciones globales de todos los locales?")) return;
+      document.getElementById('msg-global-input').value = '';
+      await enviarMensajeGlobal();
+    }
+
+    async function enviarMensajeIndividual(localId) {
+      const input = document.getElementById(`msg-indiv-${localId}`);
+      const msg = input ? input.value.trim() : '';
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/mensaje-individual`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, mensaje: msg })
+        });
+        if (res.ok) {
+          alert("💬 Mensaje guardado para el cliente.");
+        } else {
+          alert("Error al enviar mensaje individual.");
+        }
+      } catch (e) {
+        alert("Error de red.");
+      }
+    }
+
+    async function borrarMensajeIndividual(localId) {
+      const input = document.getElementById(`msg-indiv-${localId}`);
+      if (input) input.value = '';
+      await enviarMensajeIndividual(localId);
+    }
+
+    function descargarAppMenuDemo() {
+      const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'appmenu.html';
+      a.click();
+    }
+
+    function descargarHTMLAcceso(localId) {
+      const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0; url=${window.location.origin}${window.location.pathname.replace('superadmin.html', 'admin.html')}?local=${localId}">
+  <title>Acceso ${localId}</title>
+</head>
+<body>
+  <p>Redirigiendo a ${localId}... <a href="${window.location.origin}${window.location.pathname.replace('superadmin.html', 'admin.html')}?local=${localId}">Haz clic aquí</a></p>
+</body>
+</html>`;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Acceso_${localId}.html`;
+      a.click();
     }
   </script>
 </body>
