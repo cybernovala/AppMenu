@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración & Menú Digital</title>
+  <title>-Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -68,8 +68,8 @@
       box-shadow: 0 0 10px rgba(255, 238, 0, 0.2);
     }
 
-    .banner-comunicado {
-      background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 119, 255, 0.25));
+    .banner-mensaje-global {
+      background: linear-gradient(135deg, rgba(0, 210, 255, 0.25), rgba(0, 119, 255, 0.3));
       border: 1px solid var(--neon-blue);
       color: #ffffff;
       text-align: center;
@@ -77,8 +77,21 @@
       border-radius: 8px;
       font-size: 14px;
       font-weight: bold;
+      box-shadow: 0 0 12px rgba(0, 210, 255, 0.3);
       display: none;
-      box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+    }
+
+    .banner-mensaje-local {
+      background: linear-gradient(135deg, rgba(255, 0, 127, 0.25), rgba(255, 85, 0, 0.3));
+      border: 1px solid var(--neon-pink);
+      color: #ffffff;
+      text-align: center;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 0 12px rgba(255, 0, 127, 0.3);
+      display: none;
     }
 
     .banner-bloqueo {
@@ -476,15 +489,21 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y MENSAJES SUPERADMIN -->
+    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y MENSAJES -->
     <div class="banner-container" id="banner-wrapper">
-      <div class="banner-licencia" id="banner-vencimiento">
-        ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
+      
+      <!-- BANNER MENSAJE GLOBAL -->
+      <div class="banner-mensaje-global" id="banner-msg-global">
+        📢 <span id="txt-msg-global"></span>
       </div>
 
-      <!-- BANNER MENSAJES SUPERADMIN -->
-      <div class="banner-comunicado" id="banner-comunicado">
-        📢 <span id="txt-comunicado-superadmin"></span>
+      <!-- BANNER MENSAJE EXCLUSIVO DEL LOCAL -->
+      <div class="banner-mensaje-local" id="banner-msg-local">
+        💬 <span id="txt-msg-local"></span>
+      </div>
+
+      <div class="banner-licencia" id="banner-vencimiento">
+        ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
       </div>
 
       <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
@@ -824,7 +843,6 @@
       if (elNombreAlta) elNombreAlta.value = localId;
 
       obtenerEstadoLicenciaYBloqueo();
-      cargarMensajesSuperadmin();
 
       if (rutGarzonSesion) {
         document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
@@ -849,7 +867,6 @@
 
       setInterval(() => {
         obtenerEstadoLicenciaYBloqueo();
-        cargarMensajesSuperadmin();
         if (document.getElementById('tab-cocina').classList.contains('active')) {
           cargarPedidosCocina();
         }
@@ -861,28 +878,6 @@
         }
       }, 5000); 
     });
-
-    async function cargarMensajesSuperadmin() {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/mensajes?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-        if (res.ok) {
-          const data = await res.json();
-          const elBanner = document.getElementById('banner-comunicado');
-          const elTexto = document.getElementById('txt-comunicado-superadmin');
-
-          let mensajesUnificados = [];
-          if (data.mensajeGlobal && data.mensajeGlobal.trim()) mensajesUnificados.push(data.mensajeGlobal.trim());
-          if (data.mensajeLocal && data.mensajeLocal.trim()) mensajesUnificados.push(data.mensajeLocal.trim());
-
-          if (mensajesUnificados.length > 0 && elBanner && elTexto) {
-            elTexto.innerText = mensajesUnificados.join(' | ');
-            elBanner.style.display = 'block';
-          } else if (elBanner) {
-            elBanner.style.display = 'none';
-          }
-        }
-      } catch (e) {}
-    }
 
     function forzarBloqueoUI() {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
@@ -896,6 +891,11 @@
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
 
+      const elBannerMsgGlobal = document.getElementById('banner-msg-global');
+      const elTxtMsgGlobal = document.getElementById('txt-msg-global');
+      const elBannerMsgLocal = document.getElementById('banner-msg-local');
+      const elTxtMsgLocal = document.getElementById('txt-msg-local');
+
       let fechaVencimiento = null;
       let estaBloqueado = false;
 
@@ -908,6 +908,21 @@
           estaBloqueado = (data.activo === false);
           clienteDadoDeAlta = !!data.altaRegistrada;
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
+
+          if (data.mensajeGlobal && data.mensajeGlobal.trim() !== '') {
+            if (elTxtMsgGlobal) elTxtMsgGlobal.innerText = data.mensajeGlobal;
+            if (elBannerMsgGlobal) elBannerMsgGlobal.style.display = 'block';
+          } else {
+            if (elBannerMsgGlobal) elBannerMsgGlobal.style.display = 'none';
+          }
+
+          if (data.mensaje && data.mensaje.trim() !== '') {
+            if (elTxtMsgLocal) elTxtMsgLocal.innerText = data.mensaje;
+            if (elBannerMsgLocal) elBannerMsgLocal.style.display = 'block';
+          } else {
+            if (elBannerMsgLocal) elBannerMsgLocal.style.display = 'none';
+          }
+
         } else if (res.status === 403) {
           estaBloqueado = true;
         } else {
@@ -1014,7 +1029,6 @@
 
     function recargarTodo() {
       obtenerEstadoLicenciaYBloqueo();
-      cargarMensajesSuperadmin();
       cargarDatosMenu();
       cargarPedidosCocina();
       cargarPedidosGarzon();
