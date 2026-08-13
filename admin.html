@@ -1491,7 +1491,7 @@
         }
       }
 
-      const pedidoObj = cachePedidos.find(p => p._id == idPedido) || { local: localId, mesa: '1', total: 0, items: [] };
+      const pedidoObj = cachePedidos.find(p => String(p._id) === String(idPedido)) || { local: localId, mesa: '1', total: 0, items: [] };
 
       const ahora = new Date();
       const anio = ahora.getFullYear();
@@ -1506,6 +1506,7 @@
       const horaFormato = `${String(horas).padStart(2, '0')}:${minutos} ${ampm}`;
 
       const docHistorial = {
+        id: String(idPedido),
         local: String(localId),
         mesa: String(pedidoObj.mesa || '1'),
         items: pedidoObj.items || [],
@@ -1518,21 +1519,33 @@
       };
 
       try {
+        // 1. Guardar en el historial de entregas de MongoDB
         await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(docHistorial)
         });
-      } catch (e) { console.error("Error al publicar en historial:", e); }
 
-      localStorage.removeItem(`historial_${localId}`);
+        // 2. Eliminar el pedido activo de la cocina y garzón
+        await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { 
+          method: 'DELETE',
+          headers: { 'Accept': 'application/json' }
+        });
 
-      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (err) {}
+        // 3. Remover el elemento visualmente y actualizar vistas
+        const cardEl = document.getElementById(`card-garzon-${idPedido}`);
+        if (cardEl) cardEl.remove();
 
-      const cardEl = document.getElementById(`card-garzon-${idPedido}`);
-      if (cardEl) cardEl.remove();
+        cachePedidos = cachePedidos.filter(p => String(p._id) !== String(idPedido));
 
-      cargarPedidosGarzon(); cargarPedidosCocina(); cargarHistorialGarantizado();
+        await cargarPedidosGarzon();
+        await cargarPedidosCocina();
+        await cargarHistorialGarantizado();
+
+      } catch (e) {
+        console.error("Error al procesar la entrega:", e);
+        alert("⚠️ Ocurrió un inconveniente al actualizar el pedido. Reintenta.");
+      }
     }
 
     function cambiarFiltrosInforme() {
