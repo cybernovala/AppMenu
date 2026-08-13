@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>--SuperAdmin - Control de Licencias y Restaurantes</title>
+  <title>SuperAdmin - Control de Licencias y Restaurantes</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -340,182 +340,148 @@
     }
 
     function descargarAppMenuDemo() {
-      const demoHTML = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AppMenu Demo - AutoRegistro y Alta</title>
-  <style>
-    body { background-color: #08070d; color: #fff; font-family: sans-serif; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .card { background: #12101c; border: 1px solid #ff5500; border-radius: 12px; padding: 25px; width: 100%; max-width: 450px; text-align: center; }
-    h2 { color: #ffee00; margin-bottom: 15px; }
-    input { width: 100%; padding: 12px; margin-bottom: 10px; background: #181822; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }
-    button { width: 100%; background: linear-gradient(135deg, #ff5500, #ffee00); border: none; color: #000; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 5px; }
-    .tabs { display: flex; gap: 5px; margin-bottom: 15px; }
-    .tab { flex: 1; padding: 10px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; border-radius: 6px; font-size: 12px; }
-    .tab.active { background: #ff5500; color: #fff; border-color: #ff5500; font-weight: bold; }
-    .form-sec { display: none; }
-    .form-sec.active { display: block; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h2>🚀 AppMenu Demo</h2>
-    <div class="tabs">
-      <div class="tab active" onclick="verTab('demo')">Crear Demo</div>
-      <div class="tab" onclick="verTab('alta')">Dar de Alta</div>
-      <div class="tab" onclick="verTab('recuperar')">Recuperar Clave</div>
-    </div>
+      const lineasHTML = [
+        '<!DOCTYPE html>',
+        '<html lang="es">',
+        '<head>',
+        '  <meta charset="UTF-8">',
+        '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+        '  <title>AppMenu Demo - AutoRegistro y Alta</title>',
+        '  <style>',
+        '    body { background-color: #08070d; color: #fff; font-family: sans-serif; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }',
+        '    .card { background: #12101c; border: 1px solid #ff5500; border-radius: 12px; padding: 25px; width: 100%; max-width: 450px; text-align: center; }',
+        '    h2 { color: #ffee00; margin-bottom: 15px; }',
+        '    input { width: 100%; padding: 12px; margin-bottom: 10px; background: #181822; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }',
+        '    button { width: 100%; background: linear-gradient(135deg, #ff5500, #ffee00); border: none; color: #000; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 5px; }',
+        '    .tabs { display: flex; gap: 5px; margin-bottom: 15px; }',
+        '    .tab { flex: 1; padding: 10px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; border-radius: 6px; font-size: 12px; }',
+        '    .tab.active { background: #ff5500; color: #fff; border-color: #ff5500; font-weight: bold; }',
+        '    .form-sec { display: none; }',
+        '    .form-sec.active { display: block; }',
+        '  </style>',
+        '</head>',
+        '<body>',
+        '  <div class="card">',
+        '    <h2>🚀 AppMenu Demo</h2>',
+        '    <div class="tabs">',
+        '      <div class="tab active" onclick="verTab(\'demo\')">Crear Demo</div>',
+        '      <div class="tab" onclick="verTab(\'alta\')">Dar de Alta</div>',
+        '      <div class="tab" onclick="verTab(\'recuperar\')">Recuperar Clave</div>',
+        '    </div>',
+        '    <div id="sec-demo" class="form-sec active">',
+        '      <input type="text" id="demo-nombre" placeholder="Nombre del Local">',
+        '      <button onclick="crearDemo()">Crear Local Demo</button>',
+        '    </div>',
+        '    <div id="sec-alta" class="form-sec">',
+        '      <input type="text" id="alta-nombre" placeholder="Nombre del Local">',
+        '      <input type="text" id="alta-rut" placeholder="RUT Empresa/Cliente">',
+        '      <input type="email" id="alta-correo" placeholder="Correo Electrónico">',
+        '      <input type="password" id="alta-pass" placeholder="Contraseña Admin">',
+        '      <button onclick="crearAlta()">Registrar y Dar de Alta</button>',
+        '    </div>',
+        '    <div id="sec-recuperar" class="form-sec">',
+        '      <input type="email" id="rec-correo" placeholder="Ingresa tu correo registrado">',
+        '      <button onclick="recuperarClave()">Solicitar Contraseña</button>',
+        '    </div>',
+        '  </div>',
+        '  <script>',
+        '    const BACKEND_URL = "https://appmenu-tavr.onrender.com";',
+        '    function verTab(t) {',
+        '      document.querySelectorAll(".tab").forEach(el => el.classList.remove("active"));',
+        '      document.querySelectorAll(".form-sec").forEach(el => el.classList.remove("active"));',
+        '      if(t==="demo") { document.querySelectorAll(".tab")[0].classList.add("active"); document.getElementById("sec-demo").classList.add("active"); }',
+        '      if(t==="alta") { document.querySelectorAll(".tab")[1].classList.add("active"); document.getElementById("sec-alta").classList.add("active"); }',
+        '      if(t==="recuperar") { document.querySelectorAll(".tab")[2].classList.add("active"); document.getElementById("sec-recuperar").classList.add("active"); }',
+        '    }',
+        '    function descargarAccesoHTMLDirecto(localSlug, nombreLocal) {',
+        '      const urlPanelGithub = "https://cybernovala.github.io/AppMenu/admin.html?local=" + encodeURIComponent(localSlug);',
+        '      const htmlDoc = "<!DOCTYPE html><html lang=\\"es\\"><head><meta charset=\\"UTF-8\\"><title>Acceso Admin - " + nombreLocal + "</title><style>body{background:#08080a;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.box{background:#121218;border:1px solid #ff5500;padding:30px;border-radius:12px;text-align:center;}h1{color:#ffea00;font-size:20px;}a{display:inline-block;background:linear-gradient(135deg,#ff5500,#ffea00);color:#000;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:6px;margin-top:15px;}</style></head><body><div class=\\"box\\"><h1>Acceso al Panel Admin</h1><p>Restaurante: <b>" + nombreLocal + "</b></p><a href=\\"" + urlPanelGithub + "\\">🚀 Entrar al Panel</a></div><script>setTimeout(()=>{window.location.href=\\"" + urlPanelGithub + "\\";},1500);<\\/script></body></html>";',
+        '      const blob = new Blob([htmlDoc], { type: "text/html" });',
+        '      const urlBlob = URL.createObjectURL(blob);',
+        '      const a = document.createElement("a");',
+        '      a.href = urlBlob;',
+        '      a.download = "Acceso_Admin_" + localSlug + ".html";',
+        '      document.body.appendChild(a);',
+        '      a.click();',
+        '      document.body.removeChild(a);',
+        '      URL.revokeObjectURL(urlBlob);',
+        '    }',
+        '    async function crearDemo() {',
+        '      const nombre = document.getElementById("demo-nombre").value.trim();',
+        '      if(!nombre) return alert("Ingresa el nombre de tu local.");',
+        '      try {',
+        '        const res = await fetch(BACKEND_URL + "/api/locales", {',
+        '          method: "POST",',
+        '          headers: { "Content-Type": "application/json" },',
+        '          body: JSON.stringify({ nombre })',
+        '        });',
+        '        const data = await res.json();',
+        '        if(res.ok) {',
+        '          const localSlug = data.local || data.localId;',
+        '          descargarAccesoHTMLDirecto(localSlug, nombre);',
+        '          alert("✅ Local Demo Creado. Se ha descargado tu acceso directo. Redirigiendo a tu panel...");',
+        '          window.location.href = "https://cybernovala.github.io/AppMenu/admin.html?local=" + localSlug;',
+        '        } else {',
+        '          alert(data.error);',
+        '        }',
+        '      } catch(e) {',
+        '        alert("Error de conexión al crear el demo.");',
+        '      }',
+        '    }',
+        '    async function crearAlta() {',
+        '      const nombre = document.getElementById("alta-nombre").value.trim();',
+        '      const rut = document.getElementById("alta-rut").value.trim();',
+        '      const correo = document.getElementById("alta-correo").value.trim();',
+        '      const password = document.getElementById("alta-pass").value.trim();',
+        '      if(!nombre || !rut || !correo || !password) return alert("Completa todos los datos.");',
+        '      try {',
+        '        const res = await fetch(BACKEND_URL + "/api/locales/alta", {',
+        '          method: "POST",',
+        '          headers: { "Content-Type": "application/json" },',
+        '          body: JSON.stringify({ nombre, rut, correo, password })',
+        '        });',
+        '        const data = await res.json();',
+        '        if(res.ok) {',
+        '          const localSlug = data.local || data.localId;',
+        '          alert("✅ Alta realizada. Accediendo a tu panel...");',
+        '          window.location.href = "https://cybernovala.github.io/AppMenu/admin.html?local=" + localSlug;',
+        '        } else {',
+        '          alert(data.error);',
+        '        }',
+        '      } catch(e) {',
+        '        alert("Error de conexión al dar de alta.");',
+        '      }',
+        '    }',
+        '    async function recuperarClave() {',
+        '      const correo = document.getElementById("rec-correo").value.trim();',
+        '      if(!correo) return alert("Ingresa tu correo.");',
+        '      try {',
+        '        const res = await fetch(BACKEND_URL + "/api/locales/recuperar", {',
+        '          method: "POST",',
+        '          headers: { "Content-Type": "application/json" },',
+        '          body: JSON.stringify({ correo })',
+        '        });',
+        '        const data = await res.json();',
+        '        if(res.ok) {',
+        '          alert("🔑 Su clave es: " + data.password);',
+        '        } else {',
+        '          alert(data.error);',
+        '        }',
+        '      } catch(e) {',
+        '        alert("Error de conexión al solicitar la clave.");',
+        '      }',
+        '    }',
+        '  <\/script>',
+        '</body>',
+        '</html>'
+      ];
 
-    <!-- MODO 1: DEMO SIN REGISTRO -->
-    <div id="sec-demo" class="form-sec active">
-      <input type="text" id="demo-nombre" placeholder="Nombre del Local">
-      <button onclick="crearDemo()">Crear Local Demo</button>
-    </div>
-
-    <!-- MODO 2: DAR DE ALTA -->
-    <div id="sec-alta" class="form-sec">
-      <input type="text" id="alta-nombre" placeholder="Nombre del Local">
-      <input type="text" id="alta-rut" placeholder="RUT Empresa/Cliente">
-      <input type="email" id="alta-correo" placeholder="Correo Electrónico">
-      <input type="password" id="alta-pass" placeholder="Contraseña Admin">
-      <button onclick="crearAlta()">Registrar y Dar de Alta</button>
-    </div>
-
-    <!-- MODO 3: RECUPERAR CONTRASEÑA -->
-    <div id="sec-recuperar" class="form-sec">
-      <input type="email" id="rec-correo" placeholder="Ingresa tu correo registrado">
-      <button onclick="recuperarClave()">Solicitar Contraseña</button>
-    </div>
-  </div>
-
-  <script>
-    const BACKEND_URL = 'https://appmenu-tavr.onrender.com';
-
-    function verTab(t) {
-      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.form-sec').forEach(el => el.classList.remove('active'));
-      if(t==='demo') { document.querySelectorAll('.tab')[0].classList.add('active'); document.getElementById('sec-demo').classList.add('active'); }
-      if(t==='alta') { document.querySelectorAll('.tab')[1].classList.add('active'); document.getElementById('sec-alta').classList.add('active'); }
-      if(t==='recuperar') { document.querySelectorAll('.tab')[2].classList.add('active'); document.getElementById('sec-recuperar').classList.add('active'); }
-    }
-
-    function descargarAccesoHTMLDirecto(localSlug, nombreLocal) {
-      const urlPanelGithub = 'https://cybernovala.github.io/AppMenu/admin.html?local=' + encodeURIComponent(localSlug);
-      const contenidoHTML = '<!DOCTYPE html>' +
-'<html lang="es">' +
-'<head>' +
-'  <meta charset="UTF-8">' +
-'  <title>Acceso Admin - ' + nombreLocal + '</title>' +
-'  <style>' +
-'    body { background-color: #08080a; color: #ffffff; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }' +
-'    .box { background: #121218; border: 1px solid #ff5500; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; }' +
-'    h1 { color: #ffea00; font-size: 20px; margin-bottom: 10px; }' +
-'    p { color: #a0a0b0; font-size: 14px; margin-bottom: 20px; }' +
-'    a { display: inline-block; background: linear-gradient(135deg, #ff5500, #ffea00); color: #000; text-decoration: none; font-weight: bold; padding: 12px 24px; border-radius: 6px; }' +
-'  </style>' +
-'</head>' +
-'<body>' +
-'  <div class="box">' +
-'    <h1>Acceso al Panel Admin</h1>' +
-'    <p>Restaurante: <b>' + nombreLocal + '</b></p>' +
-'    <a href="' + urlPanelGithub + '">🚀 Entrar al Panel de Administración</a>' +
-'  </div>' +
-'  <script>' +
-'    setTimeout(() => { window.location.href = "' + urlPanelGithub + '"; }, 1500);' +
-'  <\/script>' +
-'</body>' +
-'</html>';
-
-      const blob = new Blob([contenidoHTML], { type: 'text/html' });
-      const urlBlob = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = urlBlob;
-      a.download = 'Acceso_Admin_' + localSlug + '.html';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(urlBlob);
-    }
-
-    async function crearDemo() {
-      const nombre = document.getElementById('demo-nombre').value.trim();
-      if(!nombre) return alert("Ingresa el nombre de tu local.");
-      try {
-        const res = await fetch(BACKEND_URL + '/api/locales', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre })
-        });
-        const data = await res.json();
-        if(res.ok) {
-          const localSlug = data.local || data.localId;
-          descargarAccesoHTMLDirecto(localSlug, nombre);
-          alert("✅ Local Demo Creado. Se ha descargado tu acceso directo. Redirigiendo a tu panel...");
-          window.location.href = 'https://cybernovala.github.io/AppMenu/admin.html?local=' + localSlug;
-        } else {
-          alert(data.error);
-        }
-      } catch(e) {
-        alert("Error de conexión al crear el demo.");
-      }
-    }
-
-    async function crearAlta() {
-      const nombre = document.getElementById('alta-nombre').value.trim();
-      const rut = document.getElementById('alta-rut').value.trim();
-      const correo = document.getElementById('alta-correo').value.trim();
-      const password = document.getElementById('alta-pass').value.trim();
-
-      if(!nombre || !rut || !correo || !password) return alert("Completa todos los datos.");
-      try {
-        const res = await fetch(BACKEND_URL + '/api/locales/alta', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, rut, correo, password })
-        });
-        const data = await res.json();
-        if(res.ok) {
-          const localSlug = data.local || data.localId;
-          alert("✅ Alta realizada. Accediendo a tu panel...");
-          window.location.href = 'https://cybernovala.github.io/AppMenu/admin.html?local=' + localSlug;
-        } else {
-          alert(data.error);
-        }
-      } catch(e) {
-        alert("Error de conexión al dar de alta.");
-      }
-    }
-
-    async function recuperarClave() {
-      const correo = document.getElementById('rec-correo').value.trim();
-      if(!correo) return alert("Ingresa tu correo.");
-      try {
-        const res = await fetch(BACKEND_URL + '/api/locales/recuperar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ correo })
-        });
-        const data = await res.json();
-        if(res.ok) {
-          alert("🔑 Su clave es: " + data.password);
-        } else {
-          alert(data.error);
-        }
-      } catch(e) {
-        alert("Error de conexión al solicitar la clave.");
-      }
-    }
-  <\/script>
-</body>
-</html>`;
-
+      const demoHTML = lineasHTML.join('\n');
       const blob = new Blob([demoHTML], { type: 'text/html' });
       const urlBlob = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = urlBlob;
-      a.download = `appmenudemo.html`;
+      a.download = 'appmenudemo.html';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
