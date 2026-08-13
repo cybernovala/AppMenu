@@ -3,209 +3,150 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - AppMenu Digital</title>
+  <title>SuperAdmin - Control de Licencias y Restaurantes</title>
   <style>
     :root {
-      --bg-dark: #0d0e15;
-      --card-bg: #181925;
-      --neon-pink: #ff007f;
-      --neon-cyan: #00f0ff;
-      --neon-green: #00ff66;
-      --text-main: #f0f0f5;
+      --bg-dark: #08080a;
+      --card-bg: rgba(18, 18, 22, 0.95);
+      --neon-orange: #ff5500;
+      --neon-yellow: #ffea00;
+      --neon-red: #ff3333;
+      --neon-green: #00e676;
+      --neon-blue: #00d2ff;
+      --text-main: #ffffff;
       --text-muted: #a0a0b0;
-      --border-color: #2a2c3d;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
       padding: 20px;
-      min-height: 100vh;
     }
 
-    .container {
-      max-width: 1000px;
-      margin: 0 auto;
-    }
+    .container { max-width: 950px; margin: 0 auto; }
 
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 25px;
-      border-bottom: 2px solid var(--border-color);
-      padding-bottom: 15px;
-    }
-
-    h1 {
-      font-size: 22px;
-      color: var(--neon-cyan);
-    }
-
-    .btn {
-      background: linear-gradient(135deg, var(--neon-pink), #cc0066);
-      color: #fff;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    .btn:hover { opacity: 0.9; }
-    .btn-cyan { background: linear-gradient(135deg, var(--neon-cyan), #00a0cc); color: #000; }
-    .btn-green { background: linear-gradient(135deg, var(--neon-green), #00cc52); color: #000; }
-    .btn-danger { background: #ff3344; color: #fff; }
-
-    .section-card {
+    .card {
       background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
+      border: 1px solid rgba(255, 85, 0, 0.3);
+      border-radius: 12px;
       padding: 20px;
       margin-bottom: 25px;
     }
 
-    .section-card h2 {
-      font-size: 16px;
-      color: var(--neon-pink);
+    h1, h2 {
+      font-size: 20px;
+      color: var(--neon-yellow);
       margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .form-group {
       display: flex;
       gap: 10px;
-      margin-bottom: 15px;
       flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 15px;
     }
 
-    input, select, textarea {
-      flex: 1;
-      padding: 10px 14px;
-      background: #10111a;
-      border: 1px solid var(--border-color);
+    input, select {
+      padding: 12px;
+      background: #121218;
+      border: 1px solid #333;
       color: #fff;
       border-radius: 6px;
       font-size: 14px;
-      min-width: 200px;
+      flex: 1;
+      min-width: 180px;
     }
+
+    .btn {
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
+      border: none;
+      color: #000;
+      padding: 12px 20px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: opacity 0.2s ease;
+    }
+
+    .btn:hover { opacity: 0.9; }
+
+    .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
+    .btn-secondary:hover { background: #333; }
+
+    .btn-danger { background: var(--neon-red); color: #fff; }
+    .btn-success { background: var(--neon-green); color: #000; }
+    .btn-download { background: var(--neon-blue); color: #000; }
 
     .local-card {
-      background: #141520;
-      border: 1px solid var(--border-color);
+      background: #121218;
+      border: 1px solid #2a2a36;
       border-radius: 8px;
       padding: 15px;
-      margin-bottom: 15px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .local-header {
+      margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px dashed var(--border-color);
-      padding-bottom: 10px;
-    }
-
-    .local-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: var(--neon-cyan);
-    }
-
-    .status-badge {
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    .status-active { background: rgba(0, 255, 102, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
-    .status-inactive { background: rgba(255, 51, 68, 0.2); color: #ff3344; border: 1px solid #ff3344; }
-
-    .local-info {
-      font-size: 13px;
-      color: var(--text-muted);
-      display: flex;
       flex-wrap: wrap;
       gap: 15px;
     }
 
-    .actions-bar {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
+    .local-info b { font-size: 16px; color: var(--neon-blue); }
+    .local-info span { font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px; }
 
-    .msg-box-global {
-      background: #10111a;
-      border: 1px solid var(--neon-cyan);
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 20px;
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
     }
-
-    .msg-box-local {
-      background: #0d0e15;
-      border: 1px dashed var(--neon-pink);
-      border-radius: 6px;
-      padding: 10px;
-      margin-top: 10px;
-    }
+    .badge-active { background: rgba(0, 230, 118, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .badge-disabled { background: rgba(255, 51, 51, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <header>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h1>🛡️ Panel SuperAdmin - Gestión de Locales</h1>
       <div style="display: flex; gap: 10px;">
-        <button class="btn btn-cyan" onclick="descargarDemo()">📥 Descargar appmenudemo.html</button>
-        <button class="btn" onclick="cargarLocales()">🔄 Recargar Lista</button>
+        <button class="btn btn-download" onclick="descargarAppMenuDemo()">📥 Descargar appmenudemo.html</button>
+        <button class="btn btn-secondary" onclick="cargarLocales()">🔄 Recargar Lista</button>
       </div>
-    </header>
+    </div>
 
-    <div class="section-card">
+    <!-- CREAR NUEVO LOCAL DIRECTO (DEMO SIN REGISTRARSE) -->
+    <div class="card">
       <h2>⚡ Crear Local Demo (Sin Registro)</h2>
       <div class="form-group">
-        <input type="text" id="demo-nombre" placeholder="Nombre del restaurante (Ej: Taquería El Sol)">
-        <button class="btn btn-green" onclick="crearLocalDemo()">Crear Local Demo</button>
+        <input type="text" id="nuevo-nombre-local" placeholder="Nombre del Local (Ej: Resto Bar Mongo)">
+        <button class="btn" onclick="crearNuevoLocal()">Crear Local</button>
       </div>
     </div>
 
-    <div class="section-card">
+    <!-- DAR DE ALTA UN LOCAL (CON NOMBRE, RUT, CORREO Y CLAVE) -->
+    <div class="card">
       <h2>📝 Dar de Alta Restaurante (Cliente Oficial)</h2>
       <div class="form-group">
-        <input type="text" id="alta-nombre" placeholder="Nombre Fantasía">
-        <input type="text" id="alta-rut" placeholder="RUT Empresa">
-        <input type="email" id="alta-correo" placeholder="Correo Contacto">
-        <input type="password" id="alta-password" placeholder="Contraseña">
-        <button class="btn" onclick="darDeAltaOficial()">Dar de Alta</button>
-      </div>
-
-      <!-- CUADRO DE MENSAJE PARA TODOS LOS CLIENTES ACTIVOS -->
-      <div class="msg-box-global">
-        <h3 style="font-size: 14px; color: var(--neon-cyan); margin-bottom: 8px;">📢 Enviar Comunicado Masivo (A todos los locales activos)</h3>
-        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
-          Escribe un mensaje o aviso que se mostrará en el encabezado del panel de todos los restaurantes activos (ej. ajustes de precios, avisos de mantención, felicitaciones).
-        </p>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <input type="text" id="msg-global-input" placeholder="Escribe tu comunicado masivo aquí..." style="flex: 2;">
-          <button class="btn btn-cyan" onclick="guardarMensajeGlobal()">🚀 Enviar Comunicado Masivo</button>
-          <button class="btn btn-danger" onclick="borrarMensajeGlobal()">🗑️ Borrar Aviso</button>
-        </div>
+        <input type="text" id="alta-nombre" placeholder="Nombre del Local">
+        <input type="text" id="alta-rut" placeholder="RUT Empresa/Cliente">
+        <input type="email" id="alta-correo" placeholder="Correo Electrónico">
+        <input type="password" id="alta-password" placeholder="Contraseña Admin">
+        <button class="btn btn-success" onclick="darDeAltaLocal()">Dar de Alta</button>
       </div>
     </div>
 
-    <div class="section-card">
-      <h2>🏢 Restaurantes Registrados en el Sistema</h2>
-      <div id="lista-locales">
-        <p style="color: var(--text-muted);">Cargando locales desde la base de datos...</p>
+    <!-- LISTADO DE LOCALES -->
+    <div class="card">
+      <h2>🏪 Restaurantes Registrados</h2>
+      <div id="contenedor-locales">
+        <p style="color: var(--text-muted);">Cargando restaurantes desde el servidor...</p>
       </div>
     </div>
   </div>
@@ -220,129 +161,57 @@
     });
 
     async function cargarLocales() {
-      const contenedor = document.getElementById('lista-locales');
-      contenedor.innerHTML = '<p style="color: var(--text-muted);">Cargando locales...</p>';
+      const cont = document.getElementById('contenedor-locales');
+      cont.innerHTML = '<p style="color: var(--text-muted);">Cargando restaurantes...</p>';
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales?_t=${Date.now()}`);
-        if (!res.ok) throw new Error("Error al consultar locales");
+        if (!res.ok) throw new Error("Error al obtener lista");
 
-        const data = await res.json();
-        const lista = Array.isArray(data) ? data : (data.locales || []);
-        const msgGlobal = data.mensajeGlobal || '';
+        const locales = await res.json();
 
-        const inputGlobal = document.getElementById('msg-global-input');
-        if (inputGlobal && msgGlobal) inputGlobal.value = msgGlobal;
-
-        if (lista.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted);">No hay restaurantes registrados.</p>';
+        if (!Array.isArray(locales) || locales.length === 0) {
+          cont.innerHTML = '<p style="color: var(--text-muted);">No hay restaurantes registrados aún.</p>';
           return;
         }
 
-        contenedor.innerHTML = lista.map(loc => {
-          const idNum = loc.id || '--';
-          const localSlug = loc.localId || loc.local || '';
-          const esActivo = loc.activo !== false;
-          const esAlta = loc.altaRegistrada;
-          const fechaCrea = loc.fechaCreacion ? new Date(loc.fechaCreacion).toLocaleDateString('es-CL') : '--';
-          const fechaVenc = loc.fechaVencimiento ? new Date(loc.fechaVencimiento).toLocaleDateString('es-CL') : '--';
-          const msgInd = loc.mensajeIndividual || '';
+        cont.innerHTML = locales.map(l => {
+          const idNum = l.id || '--';
+          const estaActivo = l.activo !== false;
+          const fechaCrea = l.fechaCreacion ? new Date(l.fechaCreacion).toLocaleDateString('es-CL') : 'Sin fecha';
+          const fechaVenc = l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString('es-CL') : 'Sin fecha';
+          const esAlta = l.altaRegistrada ? 'OFICIAL' : 'DEMO';
 
           return `
             <div class="local-card">
-              <div class="local-header">
-                <span class="local-title">[ID: ${idNum}] ${loc.nombre} ${esAlta ? '' : '(DEMO)'}</span>
-                <span class="status-badge ${esActivo ? 'status-active' : 'status-inactive'}">
-                  ${esActivo ? 'ACTIVO' : 'BLOQUEADO'}
+              <div class="local-info">
+                <b>[ID: ${idNum}] ${l.nombre}</b> (${esAlta})
+                <span>Slug URL: <i>${l.localId}</i></span>
+                <span>📅 Fecha Creación: <b>${fechaCrea}</b> | ⏳ Fecha Vencimiento: <b>${fechaVenc}</b></span>
+                ${l.rut ? `<span>RUT: ${l.rut} | Correo: ${l.correo}</span>` : ''}
+                <span style="margin-top: 6px;">
+                  Estado: <span class="badge ${estaActivo ? 'badge-active' : 'badge-disabled'}">${estaActivo ? 'ACTIVO' : 'BLOQUEADO'}</span>
                 </span>
               </div>
-              <div class="local-info">
-                <span><b>Slug URL:</b> ${localSlug}</span>
-                <span>📅 <b>Fecha Creación:</b> ${fechaCrea}</span>
-                <span>⏳ <b>Fecha Vencimiento:</b> ${fechaVenc}</span>
-                ${loc.rut ? `<span><b>RUT:</b> ${loc.rut}</span>` : ''}
-                ${loc.correo ? `<span><b>Correo:</b> ${loc.correo}</span>` : ''}
-              </div>
-              <div class="actions-bar">
-                <button class="btn btn-cyan" onclick="reenviarClave('${localSlug}')">🔑 Reenviar Clave</button>
-                <button class="btn btn-green" onclick="descargarAccesoHTML('${localSlug}', '${loc.nombre}')">📥 Descargar Acceso HTML</button>
-                <button class="btn ${esActivo ? 'btn-danger' : 'btn-green'}" onclick="toggleEstadoLocal('${localSlug}', ${esActivo})">
-                  ${esActivo ? '🚫 Bloquear Local' : '✅ Activar Local'}
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="reenviarContrasena('${l.localId}')">🔑 Reenviar Clave</button>
+                <button class="btn btn-download" onclick="descargarAccesoHTML('${l.localId}', '${l.nombre}')">📥 Descargar Acceso HTML</button>
+                <button class="btn ${estaActivo ? 'btn-danger' : 'btn-success'}" onclick="cambiarEstadoLicencia('${l.localId}', ${!estaActivo})">
+                  ${estaActivo ? '🚫 Bloquear' : '✅ Desbloquear'}
                 </button>
-              </div>
-
-              <!-- CUADRO DE MENSAJE INDIVIDUAL SOLO PARA ESTE LOCAL -->
-              <div class="msg-box-local">
-                <div style="font-size: 12px; color: var(--neon-pink); font-weight: bold; margin-bottom: 5px;">
-                  💬 Mensaje Directo solo para ${loc.nombre}:
-                </div>
-                <div style="display: flex; gap: 8px;">
-                  <input type="text" id="msg-ind-${localSlug}" value="${msgInd.replace(/"/g, '&quot;')}" placeholder="Escribir aviso exclusivo para este local..." style="font-size: 13px;">
-                  <button class="btn btn-cyan" style="padding: 6px 12px; font-size: 12px;" onclick="guardarMensajeLocal('${localSlug}')">💾 Guardar</button>
-                  <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="borrarMensajeLocal('${localSlug}')">🗑️ Borrar</button>
-                </div>
               </div>
             </div>
           `;
         }).join('');
 
       } catch (err) {
-        contenedor.innerHTML = '<p style="color: #ff3344;">Error al cargar los restaurantes desde el servidor.</p>';
+        cont.innerHTML = '<p style="color: var(--neon-red);">⚠️ No se pudo conectar con el servidor backend.</p>';
       }
     }
 
-    async function guardarMensajeGlobal() {
-      const txt = document.getElementById('msg-global-input').value.trim();
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/superadmin/mensaje-global`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mensaje: txt })
-        });
-        if (res.ok) {
-          alert("📢 Comunicado masivo enviado/actualizado correctamente para todos los locales.");
-        } else {
-          alert("Error al enviar comunicado masivo.");
-        }
-      } catch (e) {
-        alert("Error de conexión al guardar mensaje masivo.");
-      }
-    }
-
-    async function borrarMensajeGlobal() {
-      document.getElementById('msg-global-input').value = '';
-      await guardarMensajeGlobal();
-    }
-
-    async function guardarMensajeLocal(localSlug) {
-      const inputEl = document.getElementById(`msg-ind-${localSlug}`);
-      const txt = inputEl ? inputEl.value.trim() : '';
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/superadmin/mensaje-local`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localSlug, mensaje: txt })
-        });
-        if (res.ok) {
-          alert(`💬 Mensaje enviado correctamente al local "${localSlug}".`);
-        } else {
-          alert("Error al enviar el mensaje al local.");
-        }
-      } catch (e) {
-        alert("Error de conexión al guardar mensaje del local.");
-      }
-    }
-
-    async function borrarMensajeLocal(localSlug) {
-      const inputEl = document.getElementById(`msg-ind-${localSlug}`);
-      if (inputEl) inputEl.value = '';
-      await guardarMensajeLocal(localSlug);
-    }
-
-    async function crearLocalDemo() {
-      const nombre = document.getElementById('demo-nombre').value.trim();
-      if (!nombre) return alert("Ingresa un nombre para el local demo.");
+    async function crearNuevoLocal() {
+      const nombre = document.getElementById('nuevo-nombre-local').value.trim();
+      if (!nombre) return alert("Por favor ingresa el nombre del local.");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales`, {
@@ -351,27 +220,27 @@
           body: JSON.stringify({ nombre })
         });
 
+        const data = await res.json();
         if (res.ok) {
-          alert("⚡ Local demo creado exitosamente.");
-          document.getElementById('demo-nombre').value = '';
+          alert(`✅ Restaurante "${data.nombre}" creado exitosamente.`);
+          document.getElementById('nuevo-nombre-local').value = '';
           cargarLocales();
         } else {
-          const err = await res.json();
-          alert(`Error: ${err.error || 'No se pudo crear'}`);
+          alert(`⚠️ Error: ${data.error || 'No se pudo crear el restaurante'}`);
         }
-      } catch (e) {
-        alert("Error de red al crear local demo.");
+      } catch (err) {
+        alert("❌ Error de red al comunicarse con el servidor.");
       }
     }
 
-    async function darDeAltaOficial() {
+    async function darDeAltaLocal() {
       const nombre = document.getElementById('alta-nombre').value.trim();
       const rut = document.getElementById('alta-rut').value.trim();
       const correo = document.getElementById('alta-correo').value.trim();
       const password = document.getElementById('alta-password').value.trim();
 
       if (!nombre || !rut || !correo || !password) {
-        return alert("Por favor completa todos los campos para dar de alta.");
+        return alert("Todos los campos para dar de alta son obligatorios.");
       }
 
       try {
@@ -381,104 +250,247 @@
           body: JSON.stringify({ nombre, rut, correo, password })
         });
 
+        const data = await res.json();
         if (res.ok) {
-          alert("🎉 Cliente oficial dado de alta correctamente.");
+          alert(`✅ Restaurante "${nombre}" se ha dado de alta con éxito.`);
           document.getElementById('alta-nombre').value = '';
           document.getElementById('alta-rut').value = '';
           document.getElementById('alta-correo').value = '';
           document.getElementById('alta-password').value = '';
           cargarLocales();
         } else {
-          const err = await res.json();
-          alert(`Error: ${err.error || 'No se pudo completar el alta'}`);
+          alert(`⚠️ Error: ${data.error}`);
         }
-      } catch (e) {
-        alert("Error de red al registrar alta.");
+      } catch (err) {
+        alert("❌ Error de comunicación con el servidor.");
       }
     }
 
-    async function reenviarClave(localSlug) {
+    async function reenviarContrasena(localId) {
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/reenviar-clave`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localSlug })
+          body: JSON.stringify({ local: localId })
         });
-
         const data = await res.json();
-        if (res.ok) {
-          alert(`🔑 ${data.mensaje}`);
-        } else {
-          alert(`Error: ${data.error || 'No se pudo obtener la clave'}`);
-        }
+        if (res.ok) alert(data.mensaje);
+        else alert(data.error);
       } catch (e) {
         alert("Error al intentar reenviar la clave.");
       }
     }
 
-    async function toggleEstadoLocal(localSlug, estaActivo) {
-      const nuevoEstado = !estaActivo;
-      const accionText = nuevoEstado ? "ACTIVAR" : "BLOQUEAR";
-
-      if (!confirm(`¿Estás seguro de que deseas ${accionText} el local "${localSlug}"?`)) return;
-
+    async function cambiarEstadoLicencia(localId, nuevoEstado) {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localSlug)}/licencia`, {
+        const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localId)}/licencia`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ activo: nuevoEstado })
         });
 
         if (res.ok) {
-          alert(`✅ Local ${nuevoEstado ? 'activado' : 'bloqueado'} con éxito.`);
           cargarLocales();
         } else {
-          alert("Error al cambiar el estado del local.");
+          alert("⚠️ No se pudo actualizar la licencia.");
         }
-      } catch (e) {
-        alert("Error de conexión al actualizar estado.");
+      } catch (err) {
+        alert("❌ Error al procesar cambio de licencia.");
       }
     }
 
-    function descargarDemo() {
-      fetch('admin.html')
-        .then(res => res.text())
-        .then(htmlContent => {
-          const blob = new Blob([htmlContent], { type: 'text/html' });
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = 'appmenudemo.html';
-          link.click();
-        })
-        .catch(() => alert("Error al generar appmenudemo.html"));
+    function descargarAccesoHTML(localId, nombreLocal) {
+      const urlPanelGithub = `https://cybernovala.github.io/AppMenu/admin.html?local=${encodeURIComponent(localId)}`;
+      
+      const contenidoHTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso Admin - ${nombreLocal}</title>
+  <style>
+    body { background-color: #08080a; color: #ffffff; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .box { background: #121218; border: 1px solid #ff5500; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; }
+    h1 { color: #ffea00; font-size: 20px; margin-bottom: 10px; }
+    p { color: #a0a0b0; font-size: 14px; margin-bottom: 20px; }
+    a { display: inline-block; background: linear-gradient(135deg, #ff5500, #ffea00); color: #000; text-decoration: none; font-weight: bold; padding: 12px 24px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Acceso al Panel Admin</h1>
+    <p>Restaurante: <b>${nombreLocal}</b></p>
+    <a href="${urlPanelGithub}">🚀 Entrar al Panel de Administración</a>
+  </div>
+  <script>
+    setTimeout(() => { window.location.href = "${urlPanelGithub}"; }, 1500);
+  <\/script>
+</body>
+</html>`;
+
+      const blob = new Blob([contenidoHTML], { type: 'text/html' });
+      const urlBlob = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlBlob;
+      a.download = `Acceso_Admin_${localId}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(urlBlob);
     }
 
-    function descargarAccesoHTML(localSlug, nombreLocal) {
-      fetch('admin.html')
-        .then(res => res.text())
-        .then(htmlContent => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(htmlContent, 'text/html');
+    function descargarAppMenuDemo() {
+      const lineasHTML = [
+        '<!DOCTYPE html>',
+        '<html lang="es">',
+        '<head>',
+        '  <meta charset="UTF-8">',
+        '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+        '  <title>AppMenu Demo - AutoRegistro y Alta</title>',
+        '  <style>',
+        '    body { background-color: #08070d; color: #fff; font-family: sans-serif; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }',
+        '    .card { background: #12101c; border: 1px solid #ff5500; border-radius: 12px; padding: 25px; width: 100%; max-width: 450px; text-align: center; }',
+        '    h2 { color: #ffee00; margin-bottom: 15px; }',
+        '    input { width: 100%; padding: 12px; margin-bottom: 10px; background: #181822; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }',
+        '    button { width: 100%; background: linear-gradient(135deg, #ff5500, #ffee00); border: none; color: #000; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 5px; }',
+        '    .tabs { display: flex; gap: 5px; margin-bottom: 15px; }',
+        '    .tab { flex: 1; padding: 10px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; border-radius: 6px; font-size: 12px; }',
+        '    .tab.active { background: #ff5500; color: #fff; border-color: #ff5500; font-weight: bold; }',
+        '    .form-sec { display: none; }',
+        '    .form-sec.active { display: block; }',
+        '    .info-box { background: rgba(0, 210, 255, 0.1); border: 1px solid #00d2ff; color: #a0a0b0; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; text-align: left; line-height: 1.4; }',
+        '    .info-box b { color: #00d2ff; }',
+        '  </style>',
+        '</head>',
+        '<body>',
+        '  <div class="card">',
+        '    <h2>🚀 AppMenu Demo</h2>',
+        '    <div class="tabs">',
+        '      <div class="tab active" onclick="verTab(\'demo\')">Crear Demo</div>',
+        '      <div class="tab" onclick="verTab(\'alta\')">Dar de Alta</div>',
+        '      <div class="tab" onclick="verTab(\'recuperar\')">Recuperar Clave</div>',
+        '    </div>',
+        '    <div id="sec-demo" class="form-sec active">',
+        '      <div class="info-box">',
+        '        ℹ️ <b>Nota importante:</b> Al crear tu demo se generará y descargará un enlace de acceso directo a tu PC con el nombre Acceso_Admin_Nombre del Local.html. Depues de ingresar el Nombre del Local y presionar el botón Crear Local Demo. Espera a que aparezca el cuadro de dialogo y recuerda donde lo guardas porque podrás abrirlo en cualquier momento para volver a ingresar a tu sesión, y también puedes compartirlo o usarlo en más de un computador de escritorio.',
+        '      </div>',
+        '      <input type="text" id="demo-nombre" placeholder="Nombre del Local">',
+        '      <button onclick="crearDemo()">Crear Local Demo</button>',
+        '    </div>',
+        '    <div id="sec-alta" class="form-sec">',
+        '      <input type="text" id="alta-nombre" placeholder="Nombre del Local">',
+        '      <input type="text" id="alta-rut" placeholder="RUT Empresa/Cliente">',
+        '      <input type="email" id="alta-correo" placeholder="Correo Electrónico">',
+        '      <input type="password" id="alta-pass" placeholder="Contraseña Admin">',
+        '      <button onclick="crearAlta()">Registrar y Dar de Alta</button>',
+        '    </div>',
+        '    <div id="sec-recuperar" class="form-sec">',
+        '      <input type="email" id="rec-correo" placeholder="Ingresa tu correo registrado">',
+        '      <button onclick="recuperarClave()">Solicitar Contraseña</button>',
+        '    </div>',
+        '  </div>',
+        '  <script>',
+        '    const BACKEND_URL = "https://appmenu-tavr.onrender.com";',
+        '    function verTab(t) {',
+        '      document.querySelectorAll(".tab").forEach(el => el.classList.remove("active"));',
+        '      document.querySelectorAll(".form-sec").forEach(el => el.classList.remove("active"));',
+        '      if(t==="demo") { document.querySelectorAll(".tab")[0].classList.add("active"); document.getElementById("sec-demo").classList.add("active"); }',
+        '      if(t==="alta") { document.querySelectorAll(".tab")[1].classList.add("active"); document.getElementById("sec-alta").classList.add("active"); }',
+        '      if(t==="recuperar") { document.querySelectorAll(".tab")[2].classList.add("active"); document.getElementById("sec-recuperar").classList.add("active"); }',
+        '    }',
+        '    function descargarAccesoHTMLDirecto(localSlug, nombreLocal) {',
+        '      const urlPanelGithub = "https://cybernovala.github.io/AppMenu/admin.html?local=" + encodeURIComponent(localSlug);',
+        '      const htmlDoc = "<!DOCTYPE html><html lang=\\"es\\"><head><meta charset=\\"UTF-8\\"><title>Acceso Admin - " + nombreLocal + "</title><style>body{background:#08080a;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.box{background:#121218;border:1px solid #ff5500;padding:30px;border-radius:12px;text-align:center;}h1{color:#ffea00;font-size:20px;}a{display:inline-block;background:linear-gradient(135deg,#ff5500,#ffea00);color:#000;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:6px;margin-top:15px;}</style></head><body><div class=\\"box\\"><h1>Acceso al Panel Admin</h1><p>Restaurante: <b>" + nombreLocal + "</b></p><a href=\\"" + urlPanelGithub + "\\">🚀 Entrar al Panel</a></div><script>setTimeout(()=>{window.location.href=\\"" + urlPanelGithub + "\\";},1500);<\\/script></body></html>";',
+        '      const blob = new Blob([htmlDoc], { type: "text/html" });',
+        '      const urlBlob = URL.createObjectURL(blob);',
+        '      const a = document.createElement("a");',
+        '      a.href = urlBlob;',
+        '      a.download = "Acceso_Admin_" + localSlug + ".html";',
+        '      document.body.appendChild(a);',
+        '      a.click();',
+        '      document.body.removeChild(a);',
+        '      URL.revokeObjectURL(urlBlob);',
+        '    }',
+        '    async function crearDemo() {',
+        '      const nombre = document.getElementById("demo-nombre").value.trim();',
+        '      if(!nombre) return alert("Ingresa el nombre de tu local.");',
+        '      try {',
+        '        const res = await fetch(BACKEND_URL + "/api/locales", {',
+        '          method: "POST",',
+        '          headers: { "Content-Type": "application/json" },',
+        '          body: JSON.stringify({ nombre })',
+        '        });',
+        '        const data = await res.json();',
+        '        if(res.ok) {',
+        '          const localSlug = data.local || data.localId;',
+        '          descargarAccesoHTMLDirecto(localSlug, nombre);',
+        '          alert("✅ Local Demo Creado. Se ha descargado tu acceso directo. Redirigiendo a tu panel...");',
+        '          window.location.href = "https://cybernovala.github.io/AppMenu/admin.html?local=" + localSlug;',
+        '        } else {',
+        '          alert(data.error);',
+        '        }',
+        '      } catch(e) {',
+        '        alert("Error de conexión al crear el demo.");',
+        '      }',
+        '    }',
+        '    async function crearAlta() {',
+        '      const nombre = document.getElementById("alta-nombre").value.trim();',
+        '      const rut = document.getElementById("alta-rut").value.trim();',
+        '      const correo = document.getElementById("alta-correo").value.trim();',
+        '      const password = document.getElementById("alta-pass").value.trim();',
+        '      if(!nombre || !rut || !correo || !password) return alert("Completa todos los datos.");',
+        '      try {',
+        '        const res = await fetch(BACKEND_URL + "/api/locales/alta", {',
+        '          method: "POST",',
+        '          headers: { "Content-Type": "application/json" },',
+        '          body: JSON.stringify({ nombre, rut, correo, password })',
+        '        });',
+        '        const data = await res.json();',
+        '        if(res.ok) {',
+        '          const localSlug = data.local || data.localId;',
+        '          alert("✅ Alta realizada. Accediendo a tu panel...");',
+        '          window.location.href = "https://cybernovala.github.io/AppMenu/admin.html?local=" + localSlug;',
+        '        } else {',
+        '          alert(data.error);',
+        '        }',
+        '      } catch(e) {',
+        '        alert("Error de conexión al dar de alta.");',
+        '      }',
+        '    }',
+        '    async function recuperarClave() {',
+        '      const correo = document.getElementById("rec-correo").value.trim();',
+        '      if(!correo) return alert("Ingresa tu correo.");',
+        '      try {',
+        '        const res = await fetch(BACKEND_URL + "/api/locales/recuperar", {',
+        '          method: "POST",',
+        '          headers: { "Content-Type": "application/json" },',
+        '          body: JSON.stringify({ correo })',
+        '        });',
+        '        const data = await res.json();',
+        '        if(res.ok) {',
+        '          alert("🔑 Su clave es: " + data.password);',
+        '        } else {',
+        '          alert(data.error);',
+        '        }',
+        '      } catch(e) {',
+        '        alert("Error de conexión al solicitar la clave.");',
+        '      }',
+        '    }',
+        '  <\/script>',
+        '</body>',
+        '</html>'
+      ];
 
-          const scriptTag = doc.createElement('script');
-          scriptTag.textContent = `
-            window.addEventListener('DOMContentLoaded', () => {
-              const url = new URL(window.location.href);
-              if (!url.searchParams.has('local')) {
-                url.searchParams.set('local', '${localSlug}');
-                window.history.replaceState({}, '', url.toString());
-              }
-            });
-          `;
-          doc.head.appendChild(scriptTag);
-
-          const blob = new Blob([doc.documentElement.outerHTML], { type: 'text/html' });
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = `Acceso_admin_${localSlug}.html`;
-          link.click();
-        })
-        .catch(() => alert("Error al generar el archivo HTML personalizado."));
+      const demoHTML = lineasHTML.join('\n');
+      const blob = new Blob([demoHTML], { type: 'text/html' });
+      const urlBlob = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlBlob;
+      a.download = 'appmenudemo.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(urlBlob);
     }
   </script>
 </body>
