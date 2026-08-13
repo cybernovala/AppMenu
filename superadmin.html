@@ -108,6 +108,19 @@
     }
     .badge-active { background: rgba(0, 230, 118, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
     .badge-disabled { background: rgba(255, 51, 51, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
+
+    .info-box {
+      background: rgba(0, 210, 255, 0.1);
+      border: 1px solid var(--neon-blue);
+      color: var(--text-muted);
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+
+    .info-box b { color: var(--neon-blue); }
   </style>
 </head>
 <body>
@@ -140,6 +153,11 @@
         <input type="password" id="alta-password" placeholder="Contraseña Admin">
         <button class="btn btn-success" onclick="darDeAltaLocal()">Dar de Alta</button>
       </div>
+    </div>
+
+    <!-- CUADRO DE MENSAJE INFORMATIVO REUBICADO AQUÍ -->
+    <div class="info-box">
+      ℹ️ <b>Nota importante:</b> Al crear tu demo se generará y descargará un enlace de acceso directo a tu PC con el nombre <b>Acceso_Admin_Nombre del Local.html</b>. Después de ingresar el Nombre del Local y presionar el botón Crear Local Demo, espera a que aparezca el cuadro de diálogo y recuerda dónde lo guardas porque podrás abrirlo en cualquier momento para volver a ingresar a tu sesión. También puedes compartirlo o usarlo en más de un computador de escritorio.
     </div>
 
     <!-- LISTADO DE LOCALES -->
@@ -358,8 +376,6 @@
         '    .tab.active { background: #ff5500; color: #fff; border-color: #ff5500; font-weight: bold; }',
         '    .form-sec { display: none; }',
         '    .form-sec.active { display: block; }',
-        '    .info-box { background: rgba(0, 210, 255, 0.1); border: 1px solid #00d2ff; color: #a0a0b0; padding: 10px; border-radius: 6px; font-size: 12px; margin-top: 15px; margin-bottom: 5px; text-align: left; line-height: 1.4; }',
-        '    .info-box b { color: #00d2ff; }',
         '  </style>',
         '</head>',
         '<body>',
@@ -372,9 +388,6 @@
         '    </div>',
         '    <div id="sec-demo" class="form-sec active">',
         '      <input type="text" id="demo-nombre" placeholder="Nombre del Local">',
-        '      <div class="info-box">',
-        '        ℹ️ <b>Nota importante:</b> Al crear tu demo se generará y descargará un enlace de acceso directo a tu PC con el nombre Acceso_Admin_Nombre del Local.html. Depues de ingresar el Nombre del Local y presionar el botón Crear Local Demo. Espera a que aparezca el cuadro de dialogo y recuerda donde lo guardas porque podrás abrirlo en cualquier momento para volver a ingresar a tu sesión, y también puedes compartirlo o usarlo en más de un computador de escritorio.',
-        '      </div>',
         '      <button onclick="crearDemo()">Crear Local Demo</button>',
         '    </div>',
         '    <div id="sec-alta" class="form-sec">',
