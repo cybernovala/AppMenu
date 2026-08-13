@@ -392,21 +392,31 @@
       } catch (e) { alert("Error de comunicación."); }
     }
 
+    // 🟢 FUNCIÓN CORREGIDA: Descarga con nombre 'Acceso_Admin_...'
     function descargarAccesoHTML(localId) {
-      fetch('admin.html')
+      const archivoOrigen = (localId === 'demo') ? 'appmenudemo.html' : 'admin.html';
+
+      fetch(archivoOrigen)
         .then(res => res.text())
         .then(html => {
-          const blob = new Blob([html], { type: 'text/html' });
+          const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
-          a.download = `appmenu_${localId}.html`;
+          
+          // Cambiado de 'appmenu_' a 'Acceso_Admin_'
+          a.download = `Acceso_Admin_${localId}.html`;
+          
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(a.href);
         })
-        .catch(() => alert("Asegúrate de que 'admin.html' esté en el mismo directorio."));
+        .catch(() => alert(`Asegúrate de que '${archivoOrigen}' esté en la misma carpeta.`));
     }
 
+    // 🟢 FUNCIÓN CORREGIDA: Llamada al botón general
     function descargarDemoHTML() {
-      descargarAccesoHTML('prueba3');
+      descargarAccesoHTML('demo');
     }
   </script>
 </body>
