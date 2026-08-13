@@ -69,11 +69,11 @@
     }
 
     .banner-mensaje {
-      background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 119, 255, 0.3));
+      background: linear-gradient(135deg, rgba(0, 210, 255, 0.25), rgba(0, 119, 255, 0.35));
       border: 1px solid var(--neon-blue);
       color: #ffffff;
       text-align: center;
-      padding: 12px 15px;
+      padding: 10px 15px;
       border-radius: 8px;
       font-size: 14px;
       font-weight: bold;
@@ -476,15 +476,17 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y MENSAJE TOP -->
+    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y MENSAJES DE SUPERADMIN -->
     <div class="banner-container" id="banner-wrapper">
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
       </div>
 
-      <div class="banner-mensaje" id="banner-mensaje-admin">
-        📢 <span id="txt-mensaje-admin">Cargando mensaje...</span>
-      </div>
+      <!-- BANNER DE MENSAJE GENERAL AGREGADO -->
+      <div class="banner-mensaje" id="banner-mensaje-global"></div>
+
+      <!-- BANNER DE MENSAJE ESPECÍFICO AGREGADO -->
+      <div class="banner-mensaje" id="banner-mensaje-especifico" style="border-color: var(--neon-yellow);"></div>
 
       <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
         <span id="txt-estado-bloqueo">✅ Sistema Activo y Desbloqueado</span>
@@ -870,8 +872,8 @@
       const elNumDias = document.getElementById('num-dias-vencimiento');
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
-      const elBannerMensaje = document.getElementById('banner-mensaje-admin');
-      const elTxtMensaje = document.getElementById('txt-mensaje-admin');
+      const elBannerGlobal = document.getElementById('banner-mensaje-global');
+      const elBannerEspecifico = document.getElementById('banner-mensaje-especifico');
 
       let fechaVencimiento = null;
       let estaBloqueado = false;
@@ -886,13 +888,20 @@
           clienteDadoDeAlta = !!data.altaRegistrada;
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
 
-          if (data.mensaje && data.mensaje.trim().length > 0) {
-            if (elBannerMensaje && elTxtMensaje) {
-              elTxtMensaje.innerText = data.mensaje;
-              elBannerMensaje.style.display = 'block';
-            }
+          // Mostrar mensaje general si existe
+          if (data.mensajeGlobal && data.mensajeGlobal.trim() !== '') {
+            elBannerGlobal.innerText = `📢 Comunicado General: ${data.mensajeGlobal}`;
+            elBannerGlobal.style.display = 'block';
           } else {
-            if (elBannerMensaje) elBannerMensaje.style.display = 'none';
+            elBannerGlobal.style.display = 'none';
+          }
+
+          // Mostrar mensaje específico si existe
+          if (data.mensajeEspecifico && data.mensajeEspecifico.trim() !== '') {
+            elBannerEspecifico.innerText = `💬 Mensaje para su local: ${data.mensajeEspecifico}`;
+            elBannerEspecifico.style.display = 'block';
+          } else {
+            elBannerEspecifico.style.display = 'none';
           }
 
         } else if (res.status === 403) {
@@ -1550,14 +1559,12 @@
       };
 
       try {
-        // 1. Guardar en Historial
         await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(docHistorial)
         });
 
-        // 2. Borrar de Pedidos en Mongo (Cocina/Pendientes) con await explícito
         await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}?local=${encodeURIComponent(localId)}`, { 
           method: 'DELETE' 
         });
@@ -1571,7 +1578,6 @@
       const cardEl = document.getElementById(`card-garzon-${idPedido}`);
       if (cardEl) cardEl.remove();
 
-      // Recargar estados de vistas sincronizadamente
       await cargarPedidosGarzon(); 
       await cargarPedidosCocina(); 
       await cargarHistorialGarantizado();
@@ -1601,7 +1607,6 @@
 
       const mapaUnico = new Map();
       entregados.forEach(p => {
-        // Garantizar filtrado por el local activo en memoria
         const localRegistro = (p.local || '').toString().toLowerCase().trim();
         if (!localRegistro || localRegistro === localId) {
           const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.horaEntrega || p.hora}_${p.rutGarzon}`;
