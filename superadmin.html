@@ -51,7 +51,7 @@
       margin-bottom: 15px;
     }
 
-    input, select {
+    input, select, textarea {
       padding: 12px;
       background: #121218;
       border: 1px solid #333;
@@ -108,6 +108,16 @@
     }
     .badge-active { background: rgba(0, 230, 118, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
     .badge-disabled { background: rgba(255, 51, 51, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
+
+    .msg-box-container {
+      width: 100%;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.15);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -142,6 +152,15 @@
       </div>
     </div>
 
+    <!-- CUADRO DE MENSAJE GLOBAL A TODOS LOS CLIENTES -->
+    <div class="card">
+      <h2>📢 Mensaje Global para Todos los Clientes Activos</h2>
+      <div class="form-group">
+        <input type="text" id="input-mensaje-global" placeholder="Escribe aquí un saludo o aviso de ajuste de precios para todos los restaurantes...">
+        <button class="btn btn-download" onclick="guardarMensajeGlobal()">💬 Enviar Mensaje Global</button>
+      </div>
+    </div>
+
     <!-- LISTADO DE LOCALES -->
     <div class="card">
       <h2>🏪 Restaurantes Registrados</h2>
@@ -158,7 +177,38 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       cargarLocales();
+      cargarMensajeGlobal();
     });
+
+    async function cargarMensajeGlobal() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensaje-global`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.mensajeGlobal) {
+            document.getElementById('input-mensaje-global').value = data.mensajeGlobal;
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function guardarMensajeGlobal() {
+      const msg = document.getElementById('input-mensaje-global').value.trim();
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensaje-global`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mensaje: msg })
+        });
+        if (res.ok) {
+          alert("✅ Mensaje global actualizado para todos los locales.");
+        } else {
+          alert("❌ Error al guardar el mensaje global.");
+        }
+      } catch (e) {
+        alert("❌ Error de red.");
+      }
+    }
 
     async function cargarLocales() {
       const cont = document.getElementById('contenedor-locales');
@@ -181,10 +231,11 @@
           const fechaCrea = l.fechaCreacion ? new Date(l.fechaCreacion).toLocaleDateString('es-CL') : 'Sin fecha';
           const fechaVenc = l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString('es-CL') : 'Sin fecha';
           const esAlta = l.altaRegistrada ? 'OFICIAL' : 'DEMO';
+          const msgIndividual = l.mensajeLocal || '';
 
           return `
             <div class="local-card">
-              <div class="local-info">
+              <div class="local-info" style="flex: 1; min-width: 280px;">
                 <b>[ID: ${idNum}] ${l.nombre}</b> (${esAlta})
                 <span>Slug URL: <i>${l.localId}</i></span>
                 <span>📅 Fecha Creación: <b>${fechaCrea}</b> | ⏳ Fecha Vencimiento: <b>${fechaVenc}</b></span>
@@ -193,25 +244,53 @@
                   Estado: <span class="badge ${estaActivo ? 'badge-active' : 'badge-disabled'}">${estaActivo ? 'ACTIVO' : 'BLOQUEADO'}</span>
                 </span>
               </div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                 <button class="btn btn-secondary" onclick="reenviarContrasena('${l.localId}')">🔑 Reenviar Clave</button>
                 <button class="btn btn-download" onclick="descargarAccesoHTML('${l.localId}', '${l.nombre}')">📥 Descargar Acceso HTML</button>
                 <button class="btn ${estaActivo ? 'btn-danger' : 'btn-success'}" onclick="cambiarEstadoLicencia('${l.localId}', ${!estaActivo})">
                   ${estaActivo ? '🚫 Bloquear' : '✅ Desbloquear'}
                 </button>
               </div>
+
+              <!-- CUADRO DE MENSAJE SOLO PARA ESTE LOCAL -->
+              <div class="msg-box-container">
+                <input type="text" id="msg-local-${l.localId}" value="${msgIndividual.replace(/"/g, '&quot;')}" placeholder="Escribir mensaje exclusivo solo para este local...">
+                <button class="btn btn-secondary" onclick="guardarMensajeLocal('${l.localId}')">📩 Enviar Mensaje Local</button>
+              </div>
             </div>
           `;
         }).join('');
-
       } catch (err) {
-        cont.innerHTML = '<p style="color: var(--neon-red);">⚠️ No se pudo conectar con el servidor backend.</p>';
+        cont.innerHTML = '<p style="color: var(--neon-red);">❌ Error al cargar los restaurantes desde el servidor.</p>';
+      }
+    }
+
+    async function guardarMensajeLocal(localId) {
+      const inputEl = document.getElementById(`msg-local-${localId}`);
+      if (!inputEl) return;
+      const mensaje = inputEl.value.trim();
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localId)}/mensaje`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mensaje })
+        });
+        if (res.ok) {
+          alert(`✅ Mensaje enviado exitosamente a ${localId.toUpperCase()}`);
+        } else {
+          alert("❌ Error al guardar el mensaje.");
+        }
+      } catch (e) {
+        alert("❌ Error de comunicación con el servidor.");
       }
     }
 
     async function crearNuevoLocal() {
-      const nombre = document.getElementById('nuevo-nombre-local').value.trim();
-      if (!nombre) return alert("Por favor ingresa el nombre del local.");
+      const nombreInput = document.getElementById('nuevo-nombre-local');
+      const nombre = nombreInput.value.trim();
+
+      if (!nombre) return alert("Por favor ingresa un nombre para el local.");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales`, {
@@ -221,15 +300,16 @@
         });
 
         const data = await res.json();
+
         if (res.ok) {
-          alert(`✅ Restaurante "${data.nombre}" creado exitosamente.`);
-          document.getElementById('nuevo-nombre-local').value = '';
+          alert(`🎉 Restaurante "${data.nombre}" creado con exito.`);
+          nombreInput.value = '';
           cargarLocales();
         } else {
-          alert(`⚠️ Error: ${data.error || 'No se pudo crear el restaurante'}`);
+          alert(`❌ Error: ${data.error || 'No se pudo crear el local'}`);
         }
       } catch (err) {
-        alert("❌ Error de red al comunicarse con el servidor.");
+        alert("❌ Error al intentar conectar con el servidor.");
       }
     }
 
@@ -240,7 +320,7 @@
       const password = document.getElementById('alta-password').value.trim();
 
       if (!nombre || !rut || !correo || !password) {
-        return alert("Todos los campos para dar de alta son obligatorios.");
+        return alert("⚠️ Por favor completa todos los campos para dar de alta.");
       }
 
       try {
@@ -251,18 +331,19 @@
         });
 
         const data = await res.json();
+
         if (res.ok) {
-          alert(`✅ Restaurante "${nombre}" se ha dado de alta con éxito.`);
+          alert("🎉 Local DADO DE ALTA con exito.");
           document.getElementById('alta-nombre').value = '';
           document.getElementById('alta-rut').value = '';
           document.getElementById('alta-correo').value = '';
           document.getElementById('alta-password').value = '';
           cargarLocales();
         } else {
-          alert(`⚠️ Error: ${data.error}`);
+          alert(`❌ Error: ${data.error || 'No se pudo completar el alta'}`);
         }
-      } catch (err) {
-        alert("❌ Error de comunicación con el servidor.");
+      } catch (e) {
+        alert("❌ Error al conectar con el servidor.");
       }
     }
 
@@ -273,224 +354,88 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ local: localId })
         });
+
         const data = await res.json();
-        if (res.ok) alert(data.mensaje);
-        else alert(data.error);
+        if (res.ok) {
+          alert(data.mensaje);
+        } else {
+          alert(`❌ Error: ${data.error || 'No se pudo obtener la clave'}`);
+        }
       } catch (e) {
-        alert("Error al intentar reenviar la clave.");
+        alert("❌ Error de comunicación con el servidor.");
       }
     }
 
-    async function cambiarEstadoLicencia(localId, nuevoEstado) {
+    async function cambiarEstadoLicencia(localId, activar) {
+      const accion = activar ? "activar" : "bloquear";
+      if (!confirm(`¿Estás seguro de que deseas ${accion} el local "${localId}"?`)) return;
+
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localId)}/licencia`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ activo: nuevoEstado })
+          body: JSON.stringify({ activo: activar })
         });
 
         if (res.ok) {
+          alert(`✅ Local ${localId} ${activar ? 'activado' : 'bloqueado'} con éxito.`);
           cargarLocales();
         } else {
-          alert("⚠️ No se pudo actualizar la licencia.");
+          alert("❌ Error al actualizar el estado de la licencia.");
         }
       } catch (err) {
-        alert("❌ Error al procesar cambio de licencia.");
+        alert("❌ Error de red al intentar actualizar el estado.");
       }
     }
 
-    function descargarAccesoHTML(localId, nombreLocal) {
-      const urlPanelGithub = `https://cybernovala.github.io/AppMenu/admin.html?local=${encodeURIComponent(localId)}`;
-      
-      const contenidoHTML = `<!DOCTYPE html>
+    function descargarAppMenuDemo() {
+      const contenidoHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Acceso Admin - ${nombreLocal}</title>
-  <style>
-    body { background-color: #08080a; color: #ffffff; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .box { background: #121218; border: 1px solid #ff5500; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; }
-    h1 { color: #ffea00; font-size: 20px; margin-bottom: 10px; }
-    p { color: #a0a0b0; font-size: 14px; margin-bottom: 20px; }
-    a { display: inline-block; background: linear-gradient(135deg, #ff5500, #ffea00); color: #000; text-decoration: none; font-weight: bold; padding: 12px 24px; border-radius: 6px; }
-  </style>
+  <title>AppMenu Demo</title>
 </head>
 <body>
-  <div class="box">
-    <h1>Acceso al Panel Admin</h1>
-    <p>Restaurante: <b>${nombreLocal}</b></p>
-    <a href="${urlPanelGithub}">🚀 Entrar al Panel de Administración</a>
-  </div>
-  <script>
-    setTimeout(() => { window.location.href = "${urlPanelGithub}"; }, 1500);
-  <\/script>
+  <h1>AppMenu Demo System</h1>
 </body>
 </html>`;
 
-      const blob = new Blob([contenidoHTML], { type: 'text/html' });
-      const urlBlob = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = urlBlob;
-      a.download = `Acceso_Admin_${localId}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(urlBlob);
+      const blob = new Blob([contenidoHtml], { type: 'text/html;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "appmenudemo.html");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
-    function descargarAppMenuDemo() {
-      const lineasHTML = [
-        '<!DOCTYPE html>',
-        '<html lang="es">',
-        '<head>',
-        '  <meta charset="UTF-8">',
-        '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
-        '  <title>AppMenu Demo - AutoRegistro y Alta</title>',
-        '  <style>',
-        '    body { background-color: #08070d; color: #fff; font-family: sans-serif; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }',
-        '    .card { background: #12101c; border: 1px solid #ff5500; border-radius: 12px; padding: 25px; width: 100%; max-width: 450px; text-align: center; }',
-        '    h2 { color: #ffee00; margin-bottom: 15px; }',
-        '    input { width: 100%; padding: 12px; margin-bottom: 10px; background: #181822; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }',
-        '    button { width: 100%; background: linear-gradient(135deg, #ff5500, #ffee00); border: none; color: #000; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 5px; }',
-        '    .tabs { display: flex; gap: 5px; margin-bottom: 15px; }',
-        '    .tab { flex: 1; padding: 10px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; border-radius: 6px; font-size: 12px; }',
-        '    .tab.active { background: #ff5500; color: #fff; border-color: #ff5500; font-weight: bold; }',
-        '    .form-sec { display: none; }',
-        '    .form-sec.active { display: block; }',
-        '    .info-box { background: rgba(0, 210, 255, 0.1); border: 1px solid #00d2ff; color: #a0a0b0; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; text-align: left; line-height: 1.4; }',
-        '    .info-box b { color: #00d2ff; }',
-        '  </style>',
-        '</head>',
-        '<body>',
-        '  <div class="card">',
-        '    <h2>🚀 AppMenu Demo</h2>',
-        '    <div class="tabs">',
-        '      <div class="tab active" onclick="verTab(\'demo\')">Crear Demo</div>',
-        '      <div class="tab" onclick="verTab(\'alta\')">Dar de Alta</div>',
-        '      <div class="tab" onclick="verTab(\'recuperar\')">Recuperar Clave</div>',
-        '    </div>',
-        '    <div id="sec-demo" class="form-sec active">',
-        '      <div class="info-box">',
-        '        ℹ️ <b>Nota importante:</b> Al crear tu demo se generará y descargará un enlace de acceso directo a tu PC con el nombre Acceso_Admin_Nombre del Local.html. Depues de ingresar el Nombre del Local y presionar el botón Crear Local Demo. Espera a que aparezca el cuadro de dialogo y recuerda donde lo guardas porque podrás abrirlo en cualquier momento para volver a ingresar a tu sesión, y también puedes compartirlo o usarlo en más de un computador de escritorio.',
-        '      </div>',
-        '      <input type="text" id="demo-nombre" placeholder="Nombre del Local">',
-        '      <button onclick="crearDemo()">Crear Local Demo</button>',
-        '    </div>',
-        '    <div id="sec-alta" class="form-sec">',
-        '      <input type="text" id="alta-nombre" placeholder="Nombre del Local">',
-        '      <input type="text" id="alta-rut" placeholder="RUT Empresa/Cliente">',
-        '      <input type="email" id="alta-correo" placeholder="Correo Electrónico">',
-        '      <input type="password" id="alta-pass" placeholder="Contraseña Admin">',
-        '      <button onclick="crearAlta()">Registrar y Dar de Alta</button>',
-        '    </div>',
-        '    <div id="sec-recuperar" class="form-sec">',
-        '      <input type="email" id="rec-correo" placeholder="Ingresa tu correo registrado">',
-        '      <button onclick="recuperarClave()">Solicitar Contraseña</button>',
-        '    </div>',
-        '  </div>',
-        '  <script>',
-        '    const BACKEND_URL = "https://appmenu-tavr.onrender.com";',
-        '    function verTab(t) {',
-        '      document.querySelectorAll(".tab").forEach(el => el.classList.remove("active"));',
-        '      document.querySelectorAll(".form-sec").forEach(el => el.classList.remove("active"));',
-        '      if(t==="demo") { document.querySelectorAll(".tab")[0].classList.add("active"); document.getElementById("sec-demo").classList.add("active"); }',
-        '      if(t==="alta") { document.querySelectorAll(".tab")[1].classList.add("active"); document.getElementById("sec-alta").classList.add("active"); }',
-        '      if(t==="recuperar") { document.querySelectorAll(".tab")[2].classList.add("active"); document.getElementById("sec-recuperar").classList.add("active"); }',
-        '    }',
-        '    function descargarAccesoHTMLDirecto(localSlug, nombreLocal) {',
-        '      const urlPanelGithub = "https://cybernovala.github.io/AppMenu/admin.html?local=" + encodeURIComponent(localSlug);',
-        '      const htmlDoc = "<!DOCTYPE html><html lang=\\"es\\"><head><meta charset=\\"UTF-8\\"><title>Acceso Admin - " + nombreLocal + "</title><style>body{background:#08080a;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.box{background:#121218;border:1px solid #ff5500;padding:30px;border-radius:12px;text-align:center;}h1{color:#ffea00;font-size:20px;}a{display:inline-block;background:linear-gradient(135deg,#ff5500,#ffea00);color:#000;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:6px;margin-top:15px;}</style></head><body><div class=\\"box\\"><h1>Acceso al Panel Admin</h1><p>Restaurante: <b>" + nombreLocal + "</b></p><a href=\\"" + urlPanelGithub + "\\">🚀 Entrar al Panel</a></div><script>setTimeout(()=>{window.location.href=\\"" + urlPanelGithub + "\\";},1500);<\\/script></body></html>";',
-        '      const blob = new Blob([htmlDoc], { type: "text/html" });',
-        '      const urlBlob = URL.createObjectURL(blob);',
-        '      const a = document.createElement("a");',
-        '      a.href = urlBlob;',
-        '      a.download = "Acceso_Admin_" + localSlug + ".html";',
-        '      document.body.appendChild(a);',
-        '      a.click();',
-        '      document.body.removeChild(a);',
-        '      URL.revokeObjectURL(urlBlob);',
-        '    }',
-        '    async function crearDemo() {',
-        '      const nombre = document.getElementById("demo-nombre").value.trim();',
-        '      if(!nombre) return alert("Ingresa el nombre de tu local.");',
-        '      try {',
-        '        const res = await fetch(BACKEND_URL + "/api/locales", {',
-        '          method: "POST",',
-        '          headers: { "Content-Type": "application/json" },',
-        '          body: JSON.stringify({ nombre })',
-        '        });',
-        '        const data = await res.json();',
-        '        if(res.ok) {',
-        '          const localSlug = data.local || data.localId;',
-        '          descargarAccesoHTMLDirecto(localSlug, nombre);',
-        '          alert("✅ Local Demo Creado. Se ha descargado tu acceso directo. Redirigiendo a tu panel...");',
-        '          window.location.href = "https://cybernovala.github.io/AppMenu/admin.html?local=" + localSlug;',
-        '        } else {',
-        '          alert(data.error);',
-        '        }',
-        '      } catch(e) {',
-        '        alert("Error de conexión al crear el demo.");',
-        '      }',
-        '    }',
-        '    async function crearAlta() {',
-        '      const nombre = document.getElementById("alta-nombre").value.trim();',
-        '      const rut = document.getElementById("alta-rut").value.trim();',
-        '      const correo = document.getElementById("alta-correo").value.trim();',
-        '      const password = document.getElementById("alta-pass").value.trim();',
-        '      if(!nombre || !rut || !correo || !password) return alert("Completa todos los datos.");',
-        '      try {',
-        '        const res = await fetch(BACKEND_URL + "/api/locales/alta", {',
-        '          method: "POST",',
-        '          headers: { "Content-Type": "application/json" },',
-        '          body: JSON.stringify({ nombre, rut, correo, password })',
-        '        });',
-        '        const data = await res.json();',
-        '        if(res.ok) {',
-        '          const localSlug = data.local || data.localId;',
-        '          alert("✅ Alta realizada. Accediendo a tu panel...");',
-        '          window.location.href = "https://cybernovala.github.io/AppMenu/admin.html?local=" + localSlug;',
-        '        } else {',
-        '          alert(data.error);',
-        '        }',
-        '      } catch(e) {',
-        '        alert("Error de conexión al dar de alta.");',
-        '      }',
-        '    }',
-        '    async function recuperarClave() {',
-        '      const correo = document.getElementById("rec-correo").value.trim();',
-        '      if(!correo) return alert("Ingresa tu correo.");',
-        '      try {',
-        '        const res = await fetch(BACKEND_URL + "/api/locales/recuperar", {',
-        '          method: "POST",',
-        '          headers: { "Content-Type": "application/json" },',
-        '          body: JSON.stringify({ correo })',
-        '        });',
-        '        const data = await res.json();',
-        '        if(res.ok) {',
-        '          alert("🔑 Su clave es: " + data.password);',
-        '        } else {',
-        '          alert(data.error);',
-        '        }',
-        '      } catch(e) {',
-        '        alert("Error de conexión al solicitar la clave.");',
-        '      }',
-        '    }',
-        '  <\/script>',
-        '</body>',
-        '</html>'
-      ];
+    function descargarAccesoHTML(localId, nombre) {
+      const urlAcceso = `https://appmenu-tavr.onrender.com/?local=${localId}`;
+      const contenidoHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Acceso direct - ${nombre}</title>
+  <script>
+    window.location.href = "${urlAcceso}";
+  <\/script>
+</head>
+<body>
+  <p>Redirigiendo a ${nombre}...</p>
+</body>
+</html>`;
 
-      const demoHTML = lineasHTML.join('\n');
-      const blob = new Blob([demoHTML], { type: 'text/html' });
-      const urlBlob = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = urlBlob;
-      a.download = 'appmenudemo.html';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(urlBlob);
+      const blob = new Blob([contenidoHtml], { type: 'text/html;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Acceso_${localId}.html`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   </script>
 </body>
