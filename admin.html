@@ -292,6 +292,27 @@
       border-color: transparent;
     }
 
+    .product-card-client {
+      background: var(--card-bg);
+      border: 1px solid var(--border-neon);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-add {
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
+      border: none;
+      color: #fff;
+      padding: 10px 18px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
     .cart-bar {
       background: rgba(12, 10, 20, 0.95);
       border: 1px solid var(--neon-orange);
@@ -319,6 +340,45 @@
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 15px;
       margin-top: 15px;
+    }
+
+    .card-pedido {
+      background: var(--card-bg);
+      border: 1px solid var(--neon-orange);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-pedido-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+
+    .card-pedido-mesa { font-size: 18px; font-weight: bold; color: var(--neon-yellow); }
+    .card-pedido-time { font-size: 12px; color: var(--text-muted); }
+
+    .pedido-items-list { margin-bottom: 15px; font-size: 14px; }
+    .pedido-item-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .card-pedido-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .stats-grid {
@@ -362,6 +422,20 @@
       width: 90%;
       max-width: 450px;
     }
+
+    .modal-content h3 { color: var(--neon-yellow); margin-bottom: 15px; }
+    .modal-content label { display: block; font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px; }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #222;
+    }
+
+    .qty-controls { display: flex; gap: 10px; align-items: center; }
+    .btn-qty { background: #222; border: 1px solid #444; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
 
     .garzon-top-grid {
       display: grid;
@@ -425,7 +499,7 @@
       <div class="section-card">
         <h3>📝 Registrar y Dar de Alta el Negocio</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Completa este formulario para registrar formalmente el negocio en el sistema backend y proteger el acceso al menú y al historial de garzones para que solo el administrador del negocio pueda acceder mediante contraseña.
+          Completa este formulario para registrar formalmente el negocio en el sistema backend y proteger el acceso al menú y al historial de garzones para que solo el administrador del negocio pueda acceder mediante contraseña. En el modo demo cualquier persona puede ver los datos.
         </p>
         <div style="display: flex; flex-direction: column; gap: 12px; max-width: 500px;">
           <div>
@@ -503,6 +577,7 @@
     <div id="tab-qr" class="tab-content">
       <div class="section-card">
         <h3>🔲 Generar QR Individual para Mesa</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Genera e imprime el código individual para la mesa deseada.</p>
         <div class="form-inline">
           <input type="number" id="qr-num-mesa" placeholder="Número de Mesa" value="1" min="1">
           <button class="btn" onclick="generarQRUnico()">Ver / Generar QR</button>
@@ -517,14 +592,33 @@
           <button class="btn btn-secondary btn-sm" onclick="descargarQRImagen()">📥 Descargar PNG (5x5 cm)</button>
         </div>
       </div>
+
+      <div class="section-card">
+        <h3>📄 Exportar Planilla PDF por Rango de Mesas</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Genera un documento PDF listo para imprimir con etiquetas de 5x5 cm.</p>
+        <div class="form-inline">
+          <input type="number" id="qr-rango-desde" placeholder="Mesa Desde" value="1" min="1">
+          <input type="number" id="qr-rango-hasta" placeholder="Mesa Hasta" value="12" min="1">
+          <button class="btn" onclick="generarPDFMesas()">📥 Descargar PDF Imprimible</button>
+        </div>
+      </div>
     </div>
 
     <!-- PESTAÑA 4: COCINA / PEDIDOS -->
     <div id="tab-cocina" class="tab-content">
       <div class="section-card">
-        <h3>🍳 Pedidos en Preparación</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3>🍳 Pedidos en Preparación</h3>
+            <p style="color: var(--neon-yellow); font-size: 20px; margin-top: 4px;">
+              Ubicar en el lugar designado el pedido de la mesa cuando esté listo, y avisar al encargado de repartir.
+            </p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="cargarPedidosCocina()">🔄 Actualizar Pedidos</button>
+        </div>
+
         <div id="contenedor-pedidos-cocina" class="grid-pedidos" style="margin-top: 20px;">
-          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando pedidos...</p>
+          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando pedidos de la cocina...</p>
         </div>
       </div>
     </div>
@@ -532,39 +626,155 @@
     <!-- PESTAÑA 5: CONTROL DE GARZÓN -->
     <div id="tab-garzon" class="tab-content">
       <div class="garzon-top-grid">
-        <div class="section-card">
-          <h3>🔲 QR Exclusivo Garzones</h3>
+        <div class="section-card" style="border-color: var(--neon-blue); margin-bottom: 0;">
+          <h3>🔲 QR Exclusivo para Garzones</h3>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+            Código permanentemente listo para descargar e imprimir (Etiqueta 5x5 cm).
+          </p>
           <div class="qr-card-container">
             <div class="qr-preview-box">
               <div id="qr-garzon-render"></div>
+              <p style="color: #000; font-weight: bold; margin-top: 8px; font-size: 13px;">ACCESO GARZÓN - ENTREGAS</p>
             </div>
-            <button class="btn btn-blue btn-sm" onclick="descargarQRGarzon()">📥 Descargar QR Garzón</button>
+            <button class="btn btn-blue btn-sm" onclick="descargarQRGarzon()">📥 Descargar QR Garzón (PNG Imprimible)</button>
           </div>
         </div>
 
-        <div class="section-card">
-          <h3>🪪 RUT Garzón</h3>
+        <div class="section-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: center;">
+          <h3>🪪 Activar / Registrar RUT Garzón</h3>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+            Ingresa o modifica el RUT del garzón para asociarlo a las entregas de mesa.
+          </p>
           <div class="form-inline">
-            <input type="text" id="input-rut-directo" placeholder="Ej: 12022962-1">
+            <input type="text" id="input-rut-directo" placeholder="Ej: 12022962-1" oninput="guardarRutAutogestion(this.value)">
             <button class="btn btn-blue" onclick="guardarRutDirecto()">💾 Guardar RUT</button>
           </div>
-          <div style="margin-top: 15px;">RUT Activo: <b id="lbl-rut-activo">Sin RUT</b></div>
+          <div style="margin-top: 15px; font-size: 14px; background: rgba(0, 210, 255, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--neon-blue);">
+            RUT Activo actualmente: <b style="color: var(--neon-blue); font-size: 16px;" id="lbl-rut-activo">Sin RUT activo</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <h3>🤵 Pedidos Pendientes por Llevar a Mesa</h3>
+          <button class="btn btn-secondary btn-sm" onclick="cargarPedidosGarzon()">🔄 Actualizar</button>
+        </div>
+
+        <div id="contenedor-pedidos-garzon" class="grid-pedidos">
+          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando comandas para garzón...</p>
         </div>
       </div>
     </div>
 
-    <!-- PESTAÑA 6: HISTORIAL -->
+    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS -->
     <div id="tab-historial" class="tab-content">
       <div class="section-card">
-        <h3>📊 Historial General</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+          <h3>📊 Historial General & Generador de Informes</h3>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="cargarHistorialGarantizado()">🔄 Actualizar Historial</button>
+          </div>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px;">
+          <h4 style="color: var(--neon-yellow); font-size: 14px; margin-bottom: 10px;">📄 Generar Informe Personalizado</h4>
+          <div class="form-inline">
+            <select id="select-tipo-informe" onchange="cambiarFiltrosInforme()">
+              <option value="todos">📋 Informe General (Todos los Registros)</option>
+              <option value="rut">🪪 Informe por RUT de Garzón</option>
+              <option value="fechas">📅 Informe por Rango de Fechas</option>
+            </select>
+
+            <input type="text" id="filtro-informe-rut" placeholder="Ej: 12022962-1" style="display: none;">
+            <input type="date" id="filtro-informe-desde" style="display: none;">
+            <input type="date" id="filtro-informe-hasta" style="display: none;">
+
+            <button class="btn btn-blue" onclick="aplicarFiltroInforme()">🔍 Generar Informe</button>
+            <button class="btn btn-success" onclick="descargarInformePDF()">📥 Descargar Resumen PDF</button>
+          </div>
+        </div>
+
         <div class="stats-grid">
-          <div class="stat-card">Atendidos: <div class="stat-number" id="lbl-stat-entregados">0</div></div>
-          <div class="stat-card">Monto Total: <div class="stat-number" id="lbl-stat-monto">$0</div></div>
+          <div class="stat-card">
+            <span style="font-size: 12px; color: var(--text-muted);">Total Pedidos Atendidos</span>
+            <div class="stat-number" id="lbl-stat-entregados">0</div>
+          </div>
+          <div class="stat-card">
+            <span style="font-size: 12px; color: var(--text-muted);">Monto Total Atendido</span>
+            <div class="stat-number" id="lbl-stat-monto">$0</div>
+          </div>
+          <div class="stat-card">
+            <span style="font-size: 12px; color: var(--text-muted);">Promedio por Pedido</span>
+            <div class="stat-number" id="lbl-stat-promedio" style="color: var(--neon-blue);">$0</div>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Mesa</th>
+                <th>RUT Garzón</th>
+                <th>Fecha Entrega</th>
+                <th>Hora Entrega</th>
+                <th>Ítems</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-historial-garzon">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando historial...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
   </div>
+
+  <!-- MODAL DE EDICIÓN -->
+  <div class="modal" id="modal-editar">
+    <div class="modal-content">
+      <h3>✏️ Editar Producto</h3>
+      <input type="hidden" id="edit-cat-orig">
+      <input type="hidden" id="edit-index-orig">
+      
+      <label>Nombre del Producto</label>
+      <input type="text" id="edit-nombre">
+
+      <label>Precio ($)</label>
+      <input type="number" id="edit-precio">
+
+      <label>Categoría</label>
+      <input type="text" id="edit-categoria">
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn" style="flex:1;" onclick="guardarEdicion()">Guardar Cambios</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalEdicion()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CARRITO -->
+  <div class="modal" id="modal-cart">
+    <div class="modal-content">
+      <h3 style="color: var(--neon-pink); margin-bottom: 15px;">📋 Revisa tu Orden</h3>
+      <div id="items-carrito"></div>
+
+      <div style="margin-top: 20px; text-align: right; font-size: 18px; font-weight: bold; color: var(--neon-yellow);" id="txt-modal-total">
+        Total: $0
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="cart-btn" style="flex:1;" id="btn-enviar-cocina" onclick="enviarPedidoCocina()">🚀 Enviar a Cocina</button>
+        <button class="cart-btn" style="background:#222; color:#fff; flex:1;" onclick="cerrarModalCarrito()">Añadir Más</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
     const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -573,31 +783,945 @@
 
     const params = new URLSearchParams(window.location.search);
     const localId = (params.get('local') || '1').toLowerCase().trim();
+    const numeroMesa = params.get('mesa') || '1';
+    const vistaModo = params.get('view');
+
+    let productosPlanos = [];
+    let categoriasSet = new Set();
+    let carrito = [];
+    let catSeleccionadaCliente = '';
+    let rutGarzonSesion = localStorage.getItem('rutGarzon') || '12022962-1';
+    let cachePedidos = [];
+    let historialGlobal = [];
+
+    let clienteDadoDeAlta = false;
+    let autenticadoAdmin = false;
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
+      document.getElementById('txt-local-cliente').innerText = localId.toUpperCase();
+      document.getElementById('txt-mesa-cliente').innerText = `MESA N° ${numeroMesa}`;
+      
+      const elNombreAlta = document.getElementById('alta-nombre');
+      if (elNombreAlta) elNombreAlta.value = localId;
+
       obtenerEstadoLicenciaYBloqueo();
+
+      if (rutGarzonSesion) {
+        document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+        document.getElementById('input-rut-directo').value = rutGarzonSesion;
+      }
+
+      if (vistaModo === 'cliente') {
+        document.getElementById('banner-wrapper').style.display = 'none';
+        document.getElementById('admin-header').style.display = 'none';
+        document.getElementById('admin-nav-tabs').style.display = 'none';
+        cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
+      } else if (vistaModo === 'garzon') {
+        document.getElementById('banner-wrapper').style.display = 'none';
+        document.getElementById('admin-header').style.display = 'none';
+        document.getElementById('admin-nav-tabs').style.display = 'none';
+        cambiarPestana('tab-garzon', document.getElementById('btn-tab-garzon'));
+      }
+
+      cargarDatosMenu();
+      generarQRUnico();
+      generarQRGarzon();
+
+      setInterval(() => {
+        obtenerEstadoLicenciaYBloqueo();
+        if (document.getElementById('tab-cocina').classList.contains('active')) {
+          cargarPedidosCocina();
+        }
+        if (document.getElementById('tab-garzon').classList.contains('active')) {
+          cargarPedidosGarzon();
+        }
+        if (document.getElementById('tab-historial').classList.contains('active')) {
+          cargarHistorialGarantizado();
+        }
+      }, 5000); 
     });
 
+    function forzarBloqueoUI() {
+      const elBannerBloqueo = document.getElementById('banner-bloqueo');
+      const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
+      if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
+      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Administrador.";
+    }
+
     async function obtenerEstadoLicenciaYBloqueo() {
+      const elNumDias = document.getElementById('num-dias-vencimiento');
+      const elBannerBloqueo = document.getElementById('banner-bloqueo');
+      const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
+
+      let fechaVencimiento = null;
+      let estaBloqueado = false;
+
       try {
-        const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}`);
+        const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
+
         if (res.ok) {
           const data = await res.json();
           if (data.nombre) document.getElementById('lbl-local-nombre').innerText = data.nombre.toUpperCase();
+          estaBloqueado = (data.activo === false);
+          clienteDadoDeAlta = !!data.altaRegistrada;
+          if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
+        } else if (res.status === 403) {
+          estaBloqueado = true;
+        } else {
+          estaBloqueado = false;
         }
-      } catch (err) {}
+      } catch (err) {
+        estaBloqueado = false;
+      }
+
+      if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
+        const hoy = new Date();
+        fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
+      }
+
+      const ahora = new Date();
+      const diferenciaMs = fechaVencimiento - ahora;
+      const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
+
+      if (elNumDias) elNumDias.innerText = diasRestantes;
+
+      if (estaBloqueado) {
+        forzarBloqueoUI();
+      } else {
+        if (elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
+        if (elTxtBloqueo) elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
+      }
     }
 
-    function cambiarPestana(tabId, element) {
+    async function validarPasswordSeguridad() {
+      if (!clienteDadoDeAlta || autenticadoAdmin) return true;
+
+      const claveIngresada = prompt("🔒 Este local está DADO DE ALTA. Ingresa la contraseña de Administrador:");
+      if (!claveIngresada) return false;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, password: claveIngresada })
+        });
+
+        if (res.ok) {
+          autenticadoAdmin = true;
+          return true;
+        } else {
+          alert("❌ Contraseña incorrecta.");
+          return false;
+        }
+      } catch (e) {
+        alert("Error al verificar la clave.");
+        return false;
+      }
+    }
+
+    async function darDeAltaNegocio() {
+      const nombre = document.getElementById('alta-nombre').value.trim();
+      const rut = document.getElementById('alta-rut').value.trim();
+      const correo = document.getElementById('alta-correo').value.trim();
+      const password = document.getElementById('alta-password').value.trim();
+
+      if (!nombre || !rut || !correo || !password) {
+        return alert("⚠️ Por favor completa todos los campos para dar de alta el negocio.");
+      }
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, rut, correo, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          alert("🎉 ¡Negocio dado de alta con éxito!");
+          clienteDadoDeAlta = true;
+          autenticadoAdmin = true;
+          obtenerEstadoLicenciaYBloqueo();
+          cambiarPestana('tab-admin', document.getElementById('btn-tab-admin'));
+        } else {
+          alert(`❌ Error: ${data.error || 'No se pudo completar el alta.'}`);
+        }
+      } catch (e) {
+        alert("❌ Error de conexión con el servidor backend.");
+      }
+    }
+
+    async function cambiarPestana(tabId, element) {
+      if (clienteDadoDeAlta && (tabId === 'tab-admin' || tabId === 'tab-historial')) {
+        const ok = await validarPasswordSeguridad();
+        if (!ok) return;
+      }
+
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      
       document.getElementById(tabId).classList.add('active');
       if (element) element.classList.add('active');
+
+      if (tabId === 'tab-cocina') cargarPedidosCocina();
+      else if (tabId === 'tab-garzon') { generarQRGarzon(); cargarPedidosGarzon(); }
+      else if (tabId === 'tab-historial') cargarHistorialGarantizado();
     }
 
     function recargarTodo() {
-      location.reload();
+      obtenerEstadoLicenciaYBloqueo();
+      cargarDatosMenu();
+      cargarPedidosCocina();
+      cargarPedidosGarzon();
+      cargarHistorialGarantizado();
+      generarQRGarzon();
+    }
+
+    function guardarRutAutogestion(val) {
+      val = val.trim().toUpperCase();
+      if (val.length >= 7) {
+        rutGarzonSesion = val;
+        localStorage.setItem('rutGarzon', rutGarzonSesion);
+        document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+      }
+    }
+
+    function guardarRutDirecto() {
+      const val = document.getElementById('input-rut-directo').value.trim();
+      if (!val || val.length < 7) return alert("Por favor ingresa un RUT válido.");
+      rutGarzonSesion = val.toUpperCase();
+      localStorage.setItem('rutGarzon', rutGarzonSesion);
+      document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+      alert("✅ RUT de Garzón guardado con éxito.");
+    }
+
+    function construirUrlMesa(mesa) {
+      const baseUrl = window.location.origin + window.location.pathname;
+      return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
+    }
+
+    function construirUrlGarzon() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      return `${baseUrl}?local=${encodeURIComponent(localId)}&view=garzon`;
+    }
+
+    async function cargarDatosMenu() {
+      const contenedorAdmin = document.getElementById('contenedor-categorias');
+      contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú en la base de datos...</p>';
+
+      try {
+        const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}&modo=estructurado`);
+        
+        if (respuesta.status === 403) {
+          forzarBloqueoUI();
+          throw new Error("Licencia desactivada o bloqueada por administrador");
+        }
+        
+        if (!respuesta.ok) {
+          throw new Error(`Error HTTP: ${respuesta.status}`);
+        }
+
+        const data = await respuesta.json();
+        productosPlanos = [];
+        categoriasSet.clear();
+
+        if (Array.isArray(data)) {
+          data.forEach(c => {
+            if (c.categoria) {
+              categoriasSet.add(c.categoria);
+              if (Array.isArray(c.productos)) {
+                c.productos.forEach(p => {
+                  productosPlanos.push({
+                    categoria: c.categoria,
+                    nombre: p.nombre,
+                    precio: p.precio
+                  });
+                });
+              }
+            }
+          });
+        }
+
+      } catch (err) {
+        if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
+          contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
+        } else {
+          contenedorAdmin.innerHTML = '<p style="color: var(--neon-yellow); text-align: center;">⚠️ No se pudo obtener el menú del servidor. Revisa tu conexión.</p>';
+        }
+        return;
+      }
+
+      renderizarAdminCategorias();
+      renderizarClienteCategorias();
+      renderizarClienteProductos();
+    }
+
+    function renderizarAdminCategorias() {
+      const contenedor = document.getElementById('contenedor-categorias');
+      contenedor.innerHTML = '';
+
+      if (categoriasSet.size === 0) {
+        contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay categorías registradas. ¡Crea la primera categoría arriba!</p>';
+        return;
+      }
+
+      categoriasSet.forEach(catNombre => {
+        const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
+        const catCard = document.createElement('div');
+        catCard.className = 'category-card';
+
+        catCard.innerHTML = `
+          <div class="category-header">
+            <span class="category-name">📂 ${catNombre}</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
+              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Cat.</button>
+            </div>
+          </div>
+          <div class="product-list">
+            ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>' : ''}
+            ${productosCat.map((prod, subIndex) => `
+              <div class="product-item">
+                <div class="product-info">
+                  <span class="product-title">${prod.nombre}</span>
+                  <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
+                </div>
+                <div class="product-actions">
+                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
+                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${subIndex})">🗑️ Eliminar</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="add-product-box">
+            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
+            <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
+            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
+          </div>
+        `;
+        contenedor.appendChild(catCard);
+      });
+    }
+
+    async function crearCategoria() {
+      const inputCat = document.getElementById('nueva-categoria');
+      const nombreCat = inputCat.value.trim();
+      if (!nombreCat) return alert("Ingresa un nombre para la categoría.");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/menu/categoria`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, categoria: nombreCat })
+        });
+        if (res.ok) {
+          inputCat.value = '';
+          categoriasSet.add(nombreCat);
+          cargarDatosMenu();
+        } else {
+          const errData = await res.json();
+          alert(errData.error || "Error al crear la categoría");
+        }
+      } catch (err) { alert("Error de red al crear categoría."); }
+    }
+
+    async function eliminarCategoria(categoria) {
+      if (!confirm(`¿Deseas eliminar la categoría "${categoria}" y todos sus productos?`)) return;
+      try {
+        await fetch(`${BACKEND_URL}/api/menu/categoria?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}`, { method: 'DELETE' });
+        cargarDatosMenu();
+      } catch (err) {}
+    }
+
+    async function agregarProducto(categoria) {
+      const inputNombre = document.getElementById(`nuevo-nombre-${categoria}`);
+      const inputPrecio = document.getElementById(`nuevo-precio-${categoria}`);
+      const nombre = inputNombre.value.trim();
+      const precio = parseFloat(inputPrecio.value);
+
+      if (!nombre || isNaN(precio)) return alert("Ingresa un nombre y precio válido.");
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/menu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, categoria, nombre, precio })
+        });
+        if (res.ok) cargarDatosMenu();
+      } catch (err) {}
+    }
+
+    async function eliminarProducto(categoria, index) {
+      if (!confirm("¿Deseas eliminar este producto?")) return;
+      try {
+        await fetch(`${BACKEND_URL}/api/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, { method: 'DELETE' });
+        cargarDatosMenu();
+      } catch (err) {}
+    }
+
+    function abrirModalEdicion(catOrig, indexOrig, nombre, precio) {
+      document.getElementById('edit-cat-orig').value = catOrig;
+      document.getElementById('edit-index-orig').value = indexOrig;
+      document.getElementById('edit-nombre').value = nombre;
+      document.getElementById('edit-precio').value = precio;
+      document.getElementById('edit-categoria').value = catOrig;
+      document.getElementById('modal-editar').style.display = 'flex';
+    }
+
+    function cerrarModalEdicion() {
+      document.getElementById('modal-editar').style.display = 'none';
+    }
+
+    async function guardarEdicion() {
+      const catOrig = document.getElementById('edit-cat-orig').value;
+      const indexOrig = document.getElementById('edit-index-orig').value;
+      const nuevoNombre = document.getElementById('edit-nombre').value.trim();
+      const nuevoPrecio = parseFloat(document.getElementById('edit-precio').value);
+      const nuevaCategoria = document.getElementById('edit-categoria').value.trim();
+
+      try {
+        await fetch(`${BACKEND_URL}/api/menu/edit`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, categoriaOriginal: catOrig, indexOriginal: Number(indexOrig), nuevoNombre, nuevoPrecio, nuevaCategoria })
+        });
+        cerrarModalEdicion();
+        cargarDatosMenu();
+      } catch (err) {}
+    }
+
+    function renderizarClienteCategorias() {
+      const bar = document.getElementById('barra-categorias-cliente');
+      const cats = Array.from(categoriasSet);
+      if (cats.length > 0 && (!catSeleccionadaCliente || !cats.includes(catSeleccionadaCliente))) {
+        catSeleccionadaCliente = cats[0];
+      }
+      bar.innerHTML = cats.map(c => `
+        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c}')">${c}</div>
+      `).join('');
+    }
+
+    function filtrarCatCliente(cat) {
+      catSeleccionadaCliente = cat;
+      renderizarClienteCategorias();
+      renderizarClienteProductos();
+    }
+
+    function renderizarClienteProductos() {
+      const cont = document.getElementById('lista-productos-cliente');
+      const filtrados = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
+
+      if (filtrados.length === 0) {
+        cont.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay productos en esta categoría.</p>';
+        return;
+      }
+
+      cont.innerHTML = filtrados.map(p => `
+        <div class="product-card-client">
+          <div>
+            <div style="font-weight: bold; color: #fff; font-size: 15px;">${p.nombre}</div>
+            <div style="color: var(--neon-yellow); font-weight: bold; font-size: 14px; margin-top: 3px;">$${(p.precio || 0).toLocaleString('es-CL')}</div>
+          </div>
+          <button class="btn-add" onclick="agregarAlCarrito('${(p.categoria || '').replace(/'/g, "\\'")}', '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})">+ Agregar</button>
+        </div>
+      `).join('');
+    }
+
+    function agregarAlCarrito(categoria, nombre, precio) {
+      let nombreCompleto = nombre;
+      if (categoria && !nombre.toLowerCase().startsWith(categoria.toLowerCase())) {
+        nombreCompleto = `${categoria} - ${nombre}`;
+      }
+      const idx = carrito.findIndex(i => i.nombre === nombreCompleto);
+      if (idx > -1) carrito[idx].cantidad++;
+      else carrito.push({ nombre: nombreCompleto, precio, cantidad: 1 });
+      actualizarBarraCarrito();
+    }
+
+    function cambiarCantidadCarrito(nombre, cambio) {
+      const idx = carrito.findIndex(i => i.nombre === nombre);
+      if (idx > -1) {
+        carrito[idx].cantidad += cambio;
+        if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
+      }
+      actualizarBarraCarrito();
+      renderModalCarrito();
+    }
+
+    function actualizarBarraCarrito() {
+      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+      const count = carrito.reduce((sum, item) => sum + item.cantidad, 0);
+      document.getElementById('txt-total-bar').innerText = `$${total.toLocaleString('es-CL')}`;
+      document.getElementById('txt-count-bar').innerText = count;
+    }
+
+    function abrirModalCarrito() {
+      if (carrito.length === 0) return alert("El carrito está vacío.");
+      renderModalCarrito();
+      document.getElementById('modal-cart').style.display = 'flex';
+    }
+
+    function cerrarModalCarrito() {
+      document.getElementById('modal-cart').style.display = 'none';
+    }
+
+    function renderModalCarrito() {
+      const cont = document.getElementById('items-carrito');
+      cont.innerHTML = carrito.map(i => `
+        <div class="cart-item">
+          <div>
+            <b>${i.nombre}</b><br>
+            <span style="color:var(--neon-yellow); font-size:13px;">$${(i.precio * i.cantidad).toLocaleString('es-CL')}</span>
+          </div>
+          <div class="qty-controls">
+            <button class="btn-qty" onclick="cambiarCantidadCarrito('${i.nombre.replace(/'/g, "\\'")}', -1)">-</button>
+            <span>${i.cantidad}</span>
+            <button class="btn-qty" onclick="cambiarCantidadCarrito('${i.nombre.replace(/'/g, "\\'")}', 1)">+</button>
+          </div>
+        </div>
+      `).join('');
+
+      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+      document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
+    }
+
+    async function enviarPedidoCocina() {
+      if (carrito.length === 0) return alert("El carrito está vacío.");
+      const btnEnviar = document.getElementById('btn-enviar-cocina');
+      btnEnviar.disabled = true;
+      btnEnviar.innerText = "Procesando...";
+
+      const totalCalculado = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+      const documentoMongoPedido = {
+        local: String(localId),
+        mesa: String(numeroMesa),
+        items: carrito.map(item => ({ nombre: String(item.nombre), precio: Number(item.precio), cantidad: Number(item.cantidad) })),
+        total: Number(totalCalculado),
+        estado: 'pendiente',
+        fecha: new Date().toISOString()
+      };
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(documentoMongoPedido)
+        });
+
+        if (res.ok || res.status === 201) {
+          alert("✅ ¡Pedido recibido! Registrado con éxito.");
+          carrito = [];
+          actualizarBarraCarrito();
+          cerrarModalCarrito();
+          cargarPedidosCocina();
+          cargarPedidosGarzon();
+        } else {
+          alert(`⚠️ No se pudo registrar el pedido (Estado: ${res.status}).`);
+          if (res.status === 403) forzarBloqueoUI();
+        }
+      } catch (e) {
+        alert(`⚠️ Error de conexión al servidor backend.`);
+      }
+
+      btnEnviar.disabled = false;
+      btnEnviar.innerText = "🚀 Enviar a Cocina";
+    }
+
+    async function cargarPedidosCocina() {
+      const contenedor = document.getElementById('contenedor-pedidos-cocina');
+      if (!contenedor) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
+        if (res.status === 403) {
+          forzarBloqueoUI();
+          throw new Error("Cuenta desactivada");
+        }
+        
+        if (!res.ok) throw new Error("Error al consultar pedidos");
+
+        const pedidos = await res.json();
+        const pendientes = Array.isArray(pedidos) ? pedidos.filter(p => p.estado !== 'entregado') : [];
+
+        if (pendientes.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comandas activas en la cocina.</p>';
+          return;
+        }
+
+        contenedor.innerHTML = pendientes.map((p) => {
+          const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
+          const itemsList = Array.isArray(p.items) ? p.items : [];
+
+          return `
+            <div class="card-pedido">
+              <div>
+                <div class="card-pedido-header">
+                  <span class="card-pedido-mesa">MESA N° ${p.mesa || '--'}</span>
+                  <span class="card-pedido-time">⏰ ${fechaFormateada}</span>
+                </div>
+                <div class="pedido-items-list">
+                  ${itemsList.length === 0 ? '<span style="color:var(--text-muted);">Sin ítems</span>' : ''}
+                  ${itemsList.map(i => `
+                    <div class="pedido-item-row">
+                      <span><b>${i.cantidad || 1}x</b> ${i.nombre || 'Producto'}</span>
+                      <span style="color:var(--text-muted);">$${((i.precio || 0) * (i.cantidad || 1)).toLocaleString('es-CL')}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="card-pedido-footer">
+                <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
+                <span style="font-size: 12px; color: var(--neon-orange); font-weight: bold;">👨‍🍳 En Preparación</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
+          contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
+        } else {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Sin comunicación momentánea con el servidor de pedidos.</p>';
+        }
+      }
+    }
+
+    function generarQRGarzon() {
+      const container = document.getElementById('qr-garzon-render');
+      if (!container) return;
+      container.innerHTML = '';
+      new QRCode(container, { text: construirUrlGarzon(), width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+    }
+
+    function descargarQRGarzon() {
+      generarQRGarzon();
+      setTimeout(() => {
+        const qrCanvas = document.querySelector('#qr-garzon-render canvas');
+        const qrImg = document.querySelector('#qr-garzon-render img');
+        const canvasFinal = document.createElement('canvas');
+        const size = 591;
+        canvasFinal.width = size; canvasFinal.height = size;
+        const ctx = canvasFinal.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
+
+        if (qrCanvas) ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
+        else if (qrImg) ctx.drawImage(qrImg, (size - 420) / 2, 40, 420, 420);
+        else return alert("Error al capturar QR. Intenta nuevamente.");
+
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(localId.toUpperCase(), size / 2, 500);
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText(`ACCESO GARZÓN - ENTREGAS`, size / 2, 550);
+
+        const link = document.createElement('a');
+        link.download = `QR_Garzon_${localId}.png`;
+        link.href = canvasFinal.toDataURL('image/png'); link.click();
+      }, 100);
+    }
+
+    async function cargarPedidosGarzon() {
+      const contenedor = document.getElementById('contenedor-pedidos-garzon');
+      if (!contenedor) return;
+
+      try {
+        const resPedidos = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
+        if (resPedidos.status === 403) {
+          forzarBloqueoUI();
+          throw new Error("Cuenta desactivada");
+        }
+
+        if (!resPedidos.ok) throw new Error("Error al consultar pedidos");
+
+        const pedidos = await resPedidos.json();
+        cachePedidos = Array.isArray(pedidos) ? pedidos.filter(p => p.estado !== 'entregado') : [];
+
+        if (cachePedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">🎉 No hay pedidos pendientes por llevar a mesa.</p>';
+        } else {
+          contenedor.innerHTML = cachePedidos.map((p) => {
+            const idPedido = p._id;
+            const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
+            const itemsList = Array.isArray(p.items) ? p.items : [];
+
+            return `
+              <div class="card-pedido" style="border-color: var(--neon-blue);" id="card-garzon-${idPedido}">
+                <div>
+                  <div class="card-pedido-header">
+                    <span class="card-pedido-mesa" style="color: var(--neon-blue);">MESA N° ${p.mesa || '--'}</span>
+                    <span class="card-pedido-time">⏰ ${fechaFormateada}</span>
+                  </div>
+                  <div class="pedido-items-list">
+                    ${itemsList.map(i => `
+                      <div class="pedido-item-row">
+                        <span><b>${i.cantidad || 1}x</b> ${i.nombre || 'Producto'}</span>
+                        <span style="color:var(--text-muted);">$${((i.precio || 0) * (i.cantidad || 1)).toLocaleString('es-CL')}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+                <div class="card-pedido-footer">
+                  <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
+                  <button class="btn btn-blue btn-sm" onclick="marcarEntregadoGarzon('${idPedido}')">✅ Entregado en Mesa</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      } catch (e) {
+        if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
+          contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
+        } else {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Sin comunicación momentánea con el servidor.</p>';
+        }
+      }
+    }
+
+    async function marcarEntregadoGarzon(idPedido) {
+      if (!rutGarzonSesion) {
+        const inputVal = document.getElementById('input-rut-directo').value.trim();
+        if (inputVal && inputVal.length >= 7) {
+          rutGarzonSesion = inputVal.toUpperCase();
+          localStorage.setItem('rutGarzon', rutGarzonSesion);
+          document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+        } else {
+          alert("⚠️ Ingresa y guarda el RUT del Garzón en la casilla de arriba.");
+          document.getElementById('input-rut-directo').focus();
+          return;
+        }
+      }
+
+      const pedidoObj = cachePedidos.find(p => p._id == idPedido) || { local: localId, mesa: '1', total: 0, items: [] };
+
+      const ahora = new Date();
+      const anio = ahora.getFullYear();
+      const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+      const dia = String(ahora.getDate()).padStart(2, '0');
+      const fechaFormato = `${anio}-${mes}-${dia}`;
+      
+      let horas = ahora.getHours();
+      const minutos = String(ahora.getMinutes()).padStart(2, '0');
+      const ampm = horas >= 12 ? 'p. m.' : 'a. m.';
+      horas = horas % 12; horas = horas ? horas : 12; 
+      const horaFormato = `${String(horas).padStart(2, '0')}:${minutos} ${ampm}`;
+
+      const docHistorial = {
+        local: String(localId),
+        mesa: String(pedidoObj.mesa || '1'),
+        items: pedidoObj.items || [],
+        total: Number(pedidoObj.total || 0),
+        estado: 'entregado',
+        hora: horaFormato,
+        rutGarzon: String(rutGarzonSesion),
+        horaEntrega: horaFormato,
+        fechaEntrega: fechaFormato
+      };
+
+      try {
+        await fetch(`${BACKEND_URL}/api/historials`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(docHistorial)
+        });
+      } catch (e) { console.error("Error al publicar en historial:", e); }
+
+      localStorage.removeItem(`historial_${localId}`);
+
+      try { await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' }); } catch (err) {}
+
+      const cardEl = document.getElementById(`card-garzon-${idPedido}`);
+      if (cardEl) cardEl.remove();
+
+      cargarPedidosGarzon(); cargarPedidosCocina(); cargarHistorialGarantizado();
+    }
+
+    function cambiarFiltrosInforme() {
+      const tipo = document.getElementById('select-tipo-informe').value;
+      const inputRut = document.getElementById('filtro-informe-rut');
+      const inputDesde = document.getElementById('filtro-informe-desde');
+      const inputHasta = document.getElementById('filtro-informe-hasta');
+
+      inputRut.style.display = 'none'; inputDesde.style.display = 'none'; inputHasta.style.display = 'none';
+
+      if (tipo === 'rut') inputRut.style.display = 'inline-block';
+      else if (tipo === 'fechas') { inputDesde.style.display = 'inline-block'; inputHasta.style.display = 'inline-block'; }
+    }
+
+    async function cargarHistorialGarantizado() {
+      let entregados = [];
+      try {
+        const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
+        if (resHistorial.ok) {
+          const apiHist = await resHistorial.json();
+          entregados = Array.isArray(apiHist) ? apiHist : [];
+        }
+      } catch (e) { console.warn("API historial no disponible:", e); }
+
+      const mapaUnico = new Map();
+      entregados.forEach(p => {
+        const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.horaEntrega || p.hora}_${p.rutGarzon}`;
+        mapaUnico.set(clave, p);
+      });
+
+      historialGlobal = Array.from(mapaUnico.values());
+      aplicarFiltroInforme();
+    }
+
+    function aplicarFiltroInforme() {
+      const tipo = document.getElementById('select-tipo-informe').value;
+      const rutBuscado = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
+      const fechaDesde = document.getElementById('filtro-informe-desde').value;
+      const fechaHasta = document.getElementById('filtro-informe-hasta').value;
+
+      let filtrados = [...historialGlobal];
+
+      if (tipo === 'rut' && rutBuscado) {
+        filtrados = filtrados.filter(p => { const r = (p.rutGarzon || '').toUpperCase(); return r.includes(rutBuscado); });
+      } else if (tipo === 'fechas') {
+        if (fechaDesde) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f >= fechaDesde; });
+        if (fechaHasta) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f <= fechaHasta; });
+      }
+      renderizarTablaYMetricas(filtrados);
+    }
+
+    function renderizarTablaYMetricas(lista) {
+      const tablaHistorial = document.getElementById('tabla-historial-garzon');
+      let totalMonto = 0;
+      lista.forEach(p => { totalMonto += Number(p.total || 0); });
+      const promedio = lista.length > 0 ? Math.round(totalMonto / lista.length) : 0;
+
+      document.getElementById('lbl-stat-entregados').innerText = lista.length;
+      document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
+      document.getElementById('lbl-stat-promedio').innerText = `$${promedio.toLocaleString('es-CL')}`;
+
+      if (lista.length === 0) {
+        tablaHistorial.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron entregas para el filtro seleccionado.</td></tr>';
+      } else {
+        tablaHistorial.innerHTML = lista.map(p => {
+          const rutMostrar = p.rutGarzon || 'S/RUT';
+          const fechaMostrar = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : 'Hoy');
+          const horaMostrar = p.horaEntrega || p.hora || 'S/H';
+
+          let itemsTexto = 'Atención en Mesa';
+          if (Array.isArray(p.items) && p.items.length > 0) itemsTexto = p.items.map(i => `${i.cantidad || 1}x ${i.nombre || 'Producto'}`).join(', ');
+
+          return `
+            <tr>
+              <td><b>Mesa ${p.mesa || '1'}</b></td>
+              <td><span style="color: var(--neon-blue); font-weight: bold;">${rutMostrar}</span></td>
+              <td>${fechaMostrar}</td>
+              <td>⏰ ${horaMostrar}</td>
+              <td>${itemsTexto}</td>
+              <td style="color: var(--neon-yellow); font-weight: bold;">$${(p.total || 0).toLocaleString('es-CL')}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    function descargarInformePDF() {
+      const tipo = document.getElementById('select-tipo-informe').value;
+      const totalPedidos = document.getElementById('lbl-stat-entregados').innerText;
+      const totalMonto = document.getElementById('lbl-stat-monto').innerText;
+      const promedio = document.getElementById('lbl-stat-promedio').innerText;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFont("helvetica", "bold"); doc.setFontSize(16);
+      doc.text(`INFORME DE ENTREGAS & MÉTRICAS - ${localId.toUpperCase()}`, 14, 20);
+
+      doc.setFontSize(10); doc.setFont("helvetica", "normal");
+      doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-CL')} ${new Date().toLocaleTimeString('es-CL')}`, 14, 28);
+      doc.text(`Tipo de Informe: ${tipo.toUpperCase()}`, 14, 34);
+
+      doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+      doc.text("RESUMEN DE MÉTRICAS", 14, 46);
+
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+      doc.text(`• Total Pedidos Atendidos: ${totalPedidos}`, 14, 54);
+      doc.text(`• Monto Total Recaudado: ${totalMonto}`, 14, 60);
+      doc.text(`• Venta Promedio por Comanda: ${promedio}`, 14, 66);
+
+      doc.setLineWidth(0.5); doc.line(14, 72, 196, 72);
+      doc.setFont("helvetica", "bold"); doc.text("Mesa   RUT Garzón      Fecha        Hora      Total", 14, 80);
+      doc.setLineWidth(0.2); doc.line(14, 82, 196, 82);
+
+      const filas = document.querySelectorAll('#tabla-historial-garzon tr');
+      let y = 90;
+
+      doc.setFont("helvetica", "normal");
+      filas.forEach(f => {
+        const cols = f.querySelectorAll('td');
+        if (cols.length >= 6) {
+          const mesa = cols[0].innerText.replace('Mesa ', '');
+          const rut = cols[1].innerText; const fecha = cols[2].innerText;
+          const hora = cols[3].innerText.replace('⏰ ', ''); const total = cols[5].innerText;
+
+          if (y > 270) { doc.addPage(); y = 20; }
+          doc.text(`${mesa.padEnd(6)} ${rut.padEnd(15)} ${fecha.padEnd(12)} ${hora.padEnd(9)} ${total}`, 14, y);
+          y += 7;
+        }
+      });
+      doc.save(`Informe_${tipo}_${localId}.pdf`);
+    }
+
+    function generarQRUnico() {
+      const numMesa = document.getElementById('qr-num-mesa').value || '1';
+      const container = document.getElementById('qr-single-render');
+      container.innerHTML = '';
+      new QRCode(container, { text: construirUrlMesa(numMesa), width: 220, height: 220, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+      document.getElementById('lbl-qr-single-mesa').innerText = `${localId.toUpperCase()} - MESA ${numMesa}`;
+    }
+
+    function descargarQRImagen() {
+      const numMesa = document.getElementById('qr-num-mesa').value || '1';
+      const qrCanvas = document.querySelector('#qr-single-render canvas');
+      if (!qrCanvas) return alert("Genera el código QR primero.");
+
+      const canvasFinal = document.createElement('canvas');
+      const size = 591; canvasFinal.width = size; canvasFinal.height = size;
+
+      const ctx = canvasFinal.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
+
+      ctx.fillStyle = '#000000'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(localId.toUpperCase(), size / 2, 500);
+      ctx.font = 'bold 38px sans-serif'; ctx.fillText(`MESA N° ${numMesa}`, size / 2, 550);
+
+      const link = document.createElement('a'); link.download = `QR_Mesa_${numMesa}_${localId}.png`;
+      link.href = canvasFinal.toDataURL('image/png'); link.click();
+    }
+
+    async function generarPDFMesas() {
+      const desde = parseInt(document.getElementById('qr-rango-desde').value);
+      const hasta = parseInt(document.getElementById('qr-rango-hasta').value);
+      if (isNaN(desde) || isNaN(hasta) || desde > hasta) return alert("Rango no válido.");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'p', unit: 'cm', format: 'a4' });
+
+      let count = 0;
+      for (let m = desde; m <= hasta; m++) {
+        if (count > 0 && count % 12 === 0) doc.addPage();
+        const idx = count % 12; const col = idx % 3; const row = Math.floor(idx / 3);
+        const x = 1.8 + col * 6.2; const y = 2.0 + row * 6.2;
+
+        const tempDiv = document.getElementById('qr-hidden-temp'); tempDiv.innerHTML = '';
+        new QRCode(tempDiv, { text: construirUrlMesa(m), width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff" });
+
+        await new Promise(r => setTimeout(r, 50));
+        const imgData = tempDiv.querySelector('canvas').toDataURL('image/png');
+
+        doc.setDrawColor(200, 200, 200); doc.rect(x, y, 5, 5);
+        doc.addImage(imgData, 'PNG', x + 0.6, y + 0.3, 3.8, 3.8);
+
+        doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+        doc.text(localId.toUpperCase(), x + 2.5, y + 4.3, { align: 'center' });
+        doc.setFontSize(9); doc.text(`MESA N° ${m}`, x + 2.5, y + 4.7, { align: 'center' });
+        count++;
+      }
+      doc.save(`Planilla_QR_${localId}.pdf`);
     }
   </script>
 </body>
