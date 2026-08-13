@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>--SuperAdmin - Control de Licencias y Restaurantes</title>
+  <title>SuperAdmin - Control de Licencias y Restaurantes</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -404,24 +404,16 @@
     async function crearDemo() {
       const nombre = document.getElementById('demo-nombre').value.trim();
       if(!nombre) return alert("Ingresa el nombre de tu local.");
-      
-      try {
-        const res = await fetch(\`\${BACKEND_URL}/api/locales\`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre })
-        });
-        const data = await res.json();
-        if(res.ok) {
-          const localSlug = data.localId || data.local;
-          alert("✅ Local Demo Creado. Redirigiendo a tu panel...");
-          window.location.href = \`https://cybernovala.github.io/AppMenu/admin.html?local=\${encodeURIComponent(localSlug)}\`;
-        } else { 
-          alert(data.error || "Error al crear local demo."); 
-        }
-      } catch(e) {
-        alert("Error de conexión al crear el local demo.");
-      }
+      const res = await fetch(\`\${BACKEND_URL}/api/locales\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre })
+      });
+      const data = await res.json();
+      if(res.ok) {
+        alert("✅ Local Demo Creado. Redirigiendo a tu panel...");
+        window.location.href = \`https://cybernovala.github.io/AppMenu/admin.html?local=\${data.local}\`;
+      } else { alert(data.error); }
     }
 
     async function crearAlta() {
@@ -431,42 +423,29 @@
       const password = document.getElementById('alta-pass').value.trim();
 
       if(!nombre || !rut || !correo || !password) return alert("Completa todos los datos.");
-      
-      try {
-        const res = await fetch(\`\${BACKEND_URL}/api/locales/alta\`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, rut, correo, password })
-        });
-        const data = await res.json();
-        if(res.ok) {
-          const localSlug = data.localId || data.local;
-          alert("✅ Alta realizada. Accediendo a tu panel...");
-          window.location.href = \`https://cybernovala.github.io/AppMenu/admin.html?local=\${encodeURIComponent(localSlug)}\`;
-        } else { 
-          alert(data.error || "Error al realizar el alta."); 
-        }
-      } catch(e) {
-        alert("Error de conexión al dar de alta.");
-      }
+      const res = await fetch(\`\${BACKEND_URL}/api/locales/alta\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, rut, correo, password })
+      });
+      const data = await res.json();
+      if(res.ok) {
+        alert("✅ Alta realizada. Accediendo a tu panel...");
+        window.location.href = \`https://cybernovala.github.io/AppMenu/admin.html?local=\${data.local}\`;
+      } else { alert(data.error); }
     }
 
     async function recuperarClave() {
       const correo = document.getElementById('rec-correo').value.trim();
       if(!correo) return alert("Ingresa tu correo.");
-      
-      try {
-        const res = await fetch(\`\${BACKEND_URL}/api/locales/recuperar\`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ correo })
-        });
-        const data = await res.json();
-        if(res.ok) { alert("🔑 Su clave es: " + data.password); }
-        else { alert(data.error); }
-      } catch(e) {
-        alert("Error de conexión al recuperar la clave.");
-      }
+      const res = await fetch(\`\${BACKEND_URL}/api/locales/recuperar\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correo })
+      });
+      const data = await res.json();
+      if(res.ok) { alert("🔑 Su clave es: " + data.password); }
+      else { alert(data.error); }
     }
   <\/script>
 </body>
