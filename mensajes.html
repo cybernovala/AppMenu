@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enviar Mensaje Global a Clientes</title>
+  <style>
+    :root {
+      --bg-dark: #08070d;
+      --card-bg: rgba(18, 16, 28, 0.85);
+      --neon-orange: #ff5500;
+      --neon-pink: #ff007f;
+      --neon-yellow: #ffee00;
+      --neon-green: #00ff66;
+      --neon-blue: #00d2ff;
+      --text-main: #ffffff;
+      --text-muted: #a0a0b0;
+      --border-neon: rgba(0, 210, 255, 0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-neon);
+      border-radius: 12px;
+      padding: 25px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 0 20px rgba(0, 210, 255, 0.15);
+    }
+
+    h2 {
+      color: var(--neon-blue);
+      font-size: 20px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; text-align: center; }
+
+    textarea {
+      width: 100%;
+      height: 140px;
+      background: #14141f;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      resize: vertical;
+      margin-bottom: 15px;
+    }
+
+    .btn-group { display: flex; gap: 10px; }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-send { background: linear-gradient(135deg, var(--neon-blue), #0077ff); color: #fff; }
+    .btn-clear { background: #222; color: #ff3344; border: 1px solid #444; }
+
+    .status-box {
+      margin-top: 20px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px dashed #333;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>📢 Comunicado Masivo a Clientes</h2>
+    <p>Escribe el mensaje que deseas que aparezca publicado de forma visible en el panel de administración de todos los restaurantes creados.</p>
+
+    <textarea id="txt-mensaje" placeholder="Ejemplo: Estimados clientes, el sistema entrará en mantenimiento programado el día domingo a las 02:00 AM..."></textarea>
+
+    <div class="btn-group">
+      <button class="btn btn-send" onclick="publicarMensaje()">🚀 Publicar Mensaje a Todos</button>
+      <button class="btn btn-clear" onclick="limpiarMensaje()">🗑️ Ocultar / Eliminar Mensaje</button>
+    </div>
+
+    <div class="status-box">
+      <b>Estado actual del comunicado publicado:</b>
+      <div id="msg-actual" style="margin-top: 5px; color: var(--neon-yellow);">Cargando...</div>
+    </div>
+  </div>
+
+  <script>
+    const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:3000'
+      : 'https://appmenu-tavr.onrender.com';
+
+    document.addEventListener("DOMContentLoaded", cargarMensajeActual);
+
+    async function cargarMensajeActual() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensajes/global?_t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          const elTxt = document.getElementById('msg-actual');
+          if (data && data.texto) {
+            elTxt.innerText = `"${data.texto}"`;
+            document.getElementById('txt-mensaje').value = data.texto;
+          } else {
+            elTxt.innerText = "(Sin mensajes activos publicados actualmente)";
+          }
+        }
+      } catch (e) {
+        document.getElementById('msg-actual').innerText = "Error al consultar estado.";
+      }
+    }
+
+    async function publicarMensaje() {
+      const texto = document.getElementById('txt-mensaje').value.trim();
+      if (!texto) return alert("Por favor escribe un mensaje para publicar.");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensajes/global`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto })
+        });
+
+        if (res.ok) {
+          alert("✅ Mensaje publicado con éxito para todos los clientes.");
+          cargarMensajeActual();
+        } else {
+          alert("❌ No se pudo publicar el mensaje.");
+        }
+      } catch (e) {
+        alert("Error de conexión con el servidor.");
+      }
+    }
+
+    async function limpiarMensaje() {
+      if (!confirm("¿Deseas eliminar el mensaje publicado actualmente?")) return;
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensajes/global`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto: '' })
+        });
+
+        if (res.ok) {
+          alert("🗑️ Mensaje eliminado.");
+          document.getElementById('txt-mensaje').value = '';
+          cargarMensajeActual();
+        }
+      } catch (e) {
+        alert("Error al intentar eliminar.");
+      }
+    }
+  </script>
+</body>
+</html>
