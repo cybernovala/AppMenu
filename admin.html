@@ -91,6 +91,19 @@
       box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
     }
 
+    .banner-notificacion {
+      background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 119, 255, 0.3));
+      border: 1px solid var(--neon-blue);
+      color: #ffffff;
+      text-align: center;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+      display: none;
+    }
+
     .header-bar {
       background: rgba(18, 18, 24, 0.95);
       border: 1px solid var(--border-neon);
@@ -463,13 +476,9 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y COMUNICADO GLOBAL -->
+    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y NOTIFICACIÓN -->
     <div class="banner-container" id="banner-wrapper">
-      
-      <!-- BANNER MENSAJE GLOBAL DESDE SUPERADMIN -->
-      <div id="banner-mensaje-global" style="display: none; background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 119, 255, 0.25)); border: 1px solid var(--neon-blue); color: #ffffff; padding: 12px 15px; border-radius: 8px; text-align: center; font-size: 14px; box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);">
-        📢 <b style="color: var(--neon-blue);">COMUNICADO OFICIAL DEL SISTEMA:</b> <span id="txt-mensaje-global"></span>
-      </div>
+      <div class="banner-notificacion" id="banner-notificacion"></div>
 
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
@@ -812,7 +821,6 @@
       if (elNombreAlta) elNombreAlta.value = localId;
 
       obtenerEstadoLicenciaYBloqueo();
-      obtenerMensajeGlobal();
 
       if (rutGarzonSesion) {
         document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
@@ -837,7 +845,6 @@
 
       setInterval(() => {
         obtenerEstadoLicenciaYBloqueo();
-        obtenerMensajeGlobal();
         if (document.getElementById('tab-cocina').classList.contains('active')) {
           cargarPedidosCocina();
         }
@@ -850,25 +857,6 @@
       }, 5000); 
     });
 
-    async function obtenerMensajeGlobal() {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/mensajes/global?_t=${Date.now()}`);
-        if (res.ok) {
-          const data = await res.json();
-          const elBanner = document.getElementById('banner-mensaje-global');
-          const elTxt = document.getElementById('txt-mensaje-global');
-          if (data && data.texto && data.texto.trim() !== '') {
-            elTxt.innerText = data.texto;
-            elBanner.style.display = 'block';
-          } else {
-            elBanner.style.display = 'none';
-          }
-        }
-      } catch (e) {
-        console.warn("No se pudo obtener el mensaje global.");
-      }
-    }
-
     function forzarBloqueoUI() {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
@@ -880,6 +868,7 @@
       const elNumDias = document.getElementById('num-dias-vencimiento');
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
+      const elBannerMsg = document.getElementById('banner-notificacion');
 
       let fechaVencimiento = null;
       let estaBloqueado = false;
@@ -893,6 +882,16 @@
           estaBloqueado = (data.activo === false);
           clienteDadoDeAlta = !!data.altaRegistrada;
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
+
+          if (data.mensajeNotificacion && data.mensajeNotificacion.trim() !== '') {
+            if (elBannerMsg) {
+              elBannerMsg.innerText = `📢 NOTIFICACIÓN SUPERADMIN: ${data.mensajeNotificacion}`;
+              elBannerMsg.style.display = 'block';
+            }
+          } else {
+            if (elBannerMsg) elBannerMsg.style.display = 'none';
+          }
+
         } else if (res.status === 403) {
           estaBloqueado = true;
         } else {
@@ -999,7 +998,6 @@
 
     function recargarTodo() {
       obtenerEstadoLicenciaYBloqueo();
-      obtenerMensajeGlobal();
       cargarDatosMenu();
       cargarPedidosCocina();
       cargarPedidosGarzon();
