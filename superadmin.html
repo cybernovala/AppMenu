@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>--SuperAdmin - Control de Licencias y Restaurantes</title>
+  <title>SuperAdmin - Control de Licencias y Restaurantes</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -347,7 +347,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AppMenu Demo - AutoRegistro y Alta</title>
   <style>
-    body { background-color: #08070d; color: #fff; font-family: sans-serif; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    body { background-color: #08070d; color: #fff; font-family: sans-serif; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
     .card { background: #12101c; border: 1px solid #ff5500; border-radius: 12px; padding: 25px; width: 100%; max-width: 450px; text-align: center; }
     h2 { color: #ffee00; margin-bottom: 15px; }
     input { width: 100%; padding: 12px; margin-bottom: 10px; background: #181822; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }
@@ -357,8 +357,6 @@
     .tab.active { background: #ff5500; color: #fff; border-color: #ff5500; font-weight: bold; }
     .form-sec { display: none; }
     .form-sec.active { display: block; }
-    .contact-info { margin-top: 20px; font-size: 13px; color: #a0a0b0; border-top: 1px solid rgba(255,85,0,0.2); padding-top: 15px; }
-    .contact-info a { color: #00d2ff; text-decoration: none; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -390,12 +388,6 @@
       <input type="email" id="rec-correo" placeholder="Ingresa tu correo registrado">
       <button onclick="recuperarClave()">Solicitar Contraseña</button>
     </div>
-
-    <!-- CONTACTO DE SOPORTE -->
-    <div class="contact-info">
-      <p style="margin-bottom: 5px;">💬 WhatsApp: <a href="https://wa.me/56966648485" target="_blank">+56966648485</a></p>
-      <p>✉️ Email: <a href="mailto:appmenunova@gmail.com">appmenunova@gmail.com</a></p>
-    </div>
   </div>
 
   <script>
@@ -415,7 +407,6 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Acceso Admin - \${nombreLocal}</title>
   <style>
     body { background-color: #08080a; color: #ffffff; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
@@ -451,7 +442,6 @@
     async function crearDemo() {
       const nombre = document.getElementById('demo-nombre').value.trim();
       if(!nombre) return alert("Ingresa el nombre de tu local.");
-      
       try {
         const res = await fetch(\`\${BACKEND_URL}/api/locales\`, {
           method: 'POST',
@@ -464,7 +454,9 @@
           descargarAccesoHTMLDirecto(localSlug, nombre);
           alert("✅ Local Demo Creado. Se ha descargado tu acceso directo. Redirigiendo a tu panel...");
           window.location.href = \`https://cybernovala.github.io/AppMenu/admin.html?local=\${localSlug}\`;
-        } else { alert(data.error); }
+        } else { 
+          alert(data.error); 
+        }
       } catch(e) {
         alert("Error de conexión al crear el demo.");
       }
@@ -477,30 +469,43 @@
       const password = document.getElementById('alta-pass').value.trim();
 
       if(!nombre || !rut || !correo || !password) return alert("Completa todos los datos.");
-      const res = await fetch(\`\${BACKEND_URL}/api/locales/alta\`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, rut, correo, password })
-      });
-      const data = await res.json();
-      if(res.ok) {
-        const localSlug = data.local || data.localId;
-        alert("✅ Alta realizada. Accediendo a tu panel...");
-        window.location.href = \`https://cybernovala.github.io/AppMenu/admin.html?local=\${localSlug}\`;
-      } else { alert(data.error); }
+      try {
+        const res = await fetch(\`\${BACKEND_URL}/api/locales/alta\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, rut, correo, password })
+        });
+        const data = await res.json();
+        if(res.ok) {
+          const localSlug = data.local || data.localId;
+          alert("✅ Alta realizada. Accediendo a tu panel...");
+          window.location.href = \`https://cybernovala.github.io/AppMenu/admin.html?local=\${localSlug}\`;
+        } else { 
+          alert(data.error); 
+        }
+      } catch(e) {
+        alert("Error de conexión al dar de alta.");
+      }
     }
 
     async function recuperarClave() {
       const correo = document.getElementById('rec-correo').value.trim();
       if(!correo) return alert("Ingresa tu correo.");
-      const res = await fetch(\`\${BACKEND_URL}/api/locales/recuperar\`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ correo })
-      });
-      const data = await res.json();
-      if(res.ok) { alert("🔑 Su clave es: " + data.password); }
-      else { alert(data.error); }
+      try {
+        const res = await fetch(\`\${BACKEND_URL}/api/locales/recuperar\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ correo })
+        });
+        const data = await res.json();
+        if(res.ok) { 
+          alert("🔑 Su clave es: " + data.password); 
+        } else { 
+          alert(data.error); 
+        }
+      } catch(e) {
+        alert("Error de conexión al solicitar la clave.");
+      }
     }
   <\/script>
 </body>
