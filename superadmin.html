@@ -1,21 +1,401 @@
-{
-  "name": "appmenu-backend",
-  "version": "1.0.0",
-  "description": "Sistema Backend para AppMenu con MongoDB Atlas",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "mongoose": "^8.3.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
-}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel SuperAdmin - Gestión Global de Licencias</title>
+  <style>
+    :root {
+      --bg-dark: #09090e;
+      --card-bg: rgba(18, 18, 26, 0.95);
+      --neon-orange: #ff5500;
+      --neon-pink: #ff007f;
+      --neon-yellow: #ffee00;
+      --neon-green: #00ff66;
+      --neon-blue: #00d2ff;
+      --text-main: #ffffff;
+      --text-muted: #a0a0b0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #222;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 85, 0, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+
+    .card h3 {
+      font-size: 16px;
+      color: var(--neon-yellow);
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      background: #12121a;
+      border: 1px solid #333;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
+      border: none;
+      color: #fff;
+      padding: 10px 18px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn-success { background: var(--neon-green); color: #000; }
+    .btn-danger { background: #ff3344; color: #fff; }
+    .btn-blue { background: linear-gradient(135deg, var(--neon-blue), #0077ff); color: #fff; }
+    .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; vertical-align: middle; }
+    th { background: #12121a; color: var(--neon-yellow); }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .badge-active { background: rgba(0, 255, 102, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .badge-blocked { background: rgba(255, 0, 51, 0.2); color: #ff3344; border: 1px solid #ff3344; }
+
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <div class="header">
+      <div class="title">⚡ CyberNovala / SuperAdmin AppMenu</div>
+      <button class="btn btn-secondary" onclick="cargarLocales()">🔄 Recargar Lista</button>
+    </div>
+
+    <!-- RECUADRO SUPERADMIN PARA MENSAJE GLOBAL -->
+    <div class="card" style="border-color: var(--neon-blue);">
+      <h3 style="color: var(--neon-blue);">📢 Enviar Mensaje Banner a TODOS los Clientes Activos</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+        Este mensaje se mostrará inmediatamente en el banner superior del frontend de todos los negocios activos (ej. avisos de ajuste de precios, saludos, mantenimientos, etc.). Déjalo en blanco y envía para borrar el mensaje actual.
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <textarea id="msg-global-texto" placeholder="Escribe aquí el mensaje general para todos los locales..."></textarea>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="btn btn-secondary" onclick="document.getElementById('msg-global-texto').value=''">Limpiar Texto</button>
+          <button class="btn btn-blue" onclick="enviarMensajeGlobal()">🚀 Enviar Mensaje a Todos</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORMULARIO DE REGISTRO / EDICIÓN -->
+    <div class="card">
+      <h3>➕ Registrar Nuevo Cliente / Local</h3>
+      <div class="form-grid">
+        <div>
+          <label style="font-size: 12px; color: var(--text-muted);">Nombre Restaurante</label>
+          <input type="text" id="reg-nombre" placeholder="Ej: Restaurant Central">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: var(--text-muted);">RUT Empresa</label>
+          <input type="text" id="reg-rut" placeholder="Ej: 76123456-7">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: var(--text-muted);">Correo Contacto</label>
+          <input type="email" id="reg-correo" placeholder="ejemplo@correo.com">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: var(--text-muted);">Contraseña Acceso</label>
+          <input type="text" id="reg-password" placeholder="Clave de admin" value="1234">
+        </div>
+      </div>
+      <button class="btn btn-success" onclick="registrarNuevoLocal()">✅ Crear Cliente</button>
+    </div>
+
+    <!-- TABLA DE LOCALES REGISTRADOS -->
+    <div class="card">
+      <h3>📋 Locales Registrados en la Plataforma</h3>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Local Slug</th>
+              <th>Nombre</th>
+              <th>RUT</th>
+              <th>Correo</th>
+              <th>Alta</th>
+              <th>Estado</th>
+              <th>Vencimiento</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-locales">
+            <tr>
+              <td colspan="9" style="text-align: center; color: var(--text-muted);">Cargando lista de locales...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:3000'
+      : 'https://appmenu-tavr.onrender.com';
+
+    document.addEventListener("DOMContentLoaded", () => {
+      cargarLocales();
+    });
+
+    async function cargarLocales() {
+      const tbody = document.getElementById('tabla-locales');
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Consultando backend...</td></tr>';
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales?_t=${Date.now()}`);
+        if (!res.ok) throw new Error("Error al obtener locales");
+
+        const data = await res.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">No hay restaurantes registrados.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(l => {
+          const estaActivo = l.activo !== false;
+          const fechaVenc = l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString('es-CL') : 'Sin fecha';
+          const localSlug = (l.localId || l.local || '').toLowerCase().trim();
+
+          return `
+            <tr>
+              <td><b>#${l.id || '--'}</b></td>
+              <td><span style="color: var(--neon-blue); font-family: monospace;">${localSlug}</span></td>
+              <td><b>${l.nombre || 'Sin Nombre'}</b></td>
+              <td>${l.rut || 'N/A'}</td>
+              <td>${l.correo || 'N/A'}</td>
+              <td>${l.altaRegistrada ? '✅ Sí' : '❌ No'}</td>
+              <td>
+                <span class="badge ${estaActivo ? 'badge-active' : 'badge-blocked'}">
+                  ${estaActivo ? 'ACTIVO' : 'BLOQUEADO'}
+                </span>
+              </td>
+              <td>${fechaVenc}</td>
+              <td>
+                <div class="action-btns">
+                  <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="reenviarClave('${localSlug}')">🔑 Reenviar Clave</button>
+                  <button class="btn btn-blue" style="padding:4px 8px; font-size:11px;" onclick="descargarHTMLAcceso('${localSlug}')">📥 Descargar Acceso HTML</button>
+                  <button class="btn btn-blue" style="padding:4px 8px; font-size:11px;" onclick="enviarMensajeEspecifico('${localSlug}', '${(l.nombre || '').replace(/'/g, "\\'")}')">✉️ Enviar Mensaje</button>
+                  ${estaActivo 
+                    ? `<button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="cambiarEstadoLicencia('${localSlug}', false)">🚫 Bloquear</button>`
+                    : `<button class="btn btn-success" style="padding:4px 8px; font-size:11px;" onclick="cambiarEstadoLicencia('${localSlug}', true)">✅ Activar</button>`
+                  }
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #ff3344;">Error al conectar con el servidor backend.</td></tr>';
+      }
+    }
+
+    async function registrarNuevoLocal() {
+      const nombre = document.getElementById('reg-nombre').value.trim();
+      const rut = document.getElementById('reg-rut').value.trim();
+      const correo = document.getElementById('reg-correo').value.trim();
+      const password = document.getElementById('reg-password').value.trim();
+
+      if (!nombre) return alert("Ingresa el nombre del restaurante.");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, rut, correo, password, altaRegistrada: true })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert("🎉 Cliente registrado con éxito.");
+          document.getElementById('reg-nombre').value = '';
+          document.getElementById('reg-rut').value = '';
+          document.getElementById('reg-correo').value = '';
+          cargarLocales();
+        } else {
+          alert(`❌ Error: ${data.error || 'No se pudo crear'}`);
+        }
+      } catch (e) {
+        alert("Error de red al registrar el local.");
+      }
+    }
+
+    async function cambiarEstadoLicencia(localSlug, nuevoEstado) {
+      const accionText = nuevoEstado ? "ACTIVAR" : "BLOQUEAR";
+      if (!confirm(`¿Estás seguro de que deseas ${accionText} el local "${localSlug}"?`)) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/${encodeURIComponent(localSlug)}/licencia`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activo: nuevoEstado })
+        });
+
+        if (res.ok) {
+          alert(`✅ Local ${accionText}DO con éxito.`);
+          cargarLocales();
+        } else {
+          alert("❌ Error al modificar la licencia.");
+        }
+      } catch (e) {
+        alert("Error de conexión al servidor.");
+      }
+    }
+
+    async function reenviarClave(localSlug) {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/reenviar-clave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localSlug })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert(`🔑 ${data.mensaje}`);
+        } else {
+          alert(`❌ ${data.error || 'No se pudo recuperar la clave.'}`);
+        }
+      } catch (e) {
+        alert("Error al conectar con el servidor.");
+      }
+    }
+
+    async function enviarMensajeGlobal() {
+      const texto = document.getElementById('msg-global-texto').value.trim();
+      if (!confirm("¿Deseas enviar/actualizar este mensaje en el banner TOP de TODOS los locales activos?")) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/mensaje`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo: 'general', mensaje: texto })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert("📢 Mensaje global publicado con éxito en todos los locales activos.");
+        } else {
+          alert(`❌ Error: ${data.error || 'No se pudo enviar el mensaje'}`);
+        }
+      } catch (e) {
+        alert("Error al conectar con el servidor backend.");
+      }
+    }
+
+    async function enviarMensajeEspecifico(localSlug, nombreLocal) {
+      const mensaje = prompt(`✉️ Ingresa el mensaje para mostrar en el banner de "${nombreLocal}" (Déjalo en blanco para eliminar el mensaje actual):`);
+      if (mensaje === null) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/mensaje`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo: 'especifico', local: localSlug, mensaje: mensaje.trim() })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert(`✅ Mensaje enviado a ${nombreLocal}.`);
+        } else {
+          alert(`❌ Error: ${data.error || 'No se pudo actualizar el mensaje'}`);
+        }
+      } catch (e) {
+        alert("Error al conectar con el servidor.");
+      }
+    }
+
+    function descargarHTMLAcceso(localSlug) {
+      const contenidoHTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso Directo - ${localSlug.toUpperCase()}</title>
+  <script>
+    window.location.href = "https://appmenu-tavr.onrender.com/admin.html?local=${encodeURIComponent(localSlug)}";
+  <\/script>
+</head>
+<body>
+  <p>Redirigiendo a la administración de ${localSlug.toUpperCase()}...</p>
+</body>
+</html>`;
+
+      const blob = new Blob([contenidoHTML], { type: 'text/html' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Descargar_AppMenuDemo_${localSlug}.html`;
+      link.click();
+    }
+  </script>
+</body>
+</html>
