@@ -56,6 +56,19 @@
       margin-bottom: 15px;
     }
 
+    .banner-anuncio {
+      background: linear-gradient(135deg, rgba(0, 210, 255, 0.25), rgba(255, 0, 127, 0.25));
+      border: 1px solid var(--neon-blue);
+      color: #ffffff;
+      text-align: center;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+      display: none;
+    }
+
     .banner-licencia {
       background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(255, 85, 0, 0.25));
       border: 1px solid var(--neon-yellow);
@@ -463,8 +476,12 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS DE LICENCIA -->
+    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y MENSAJES -->
     <div class="banner-container" id="banner-wrapper">
+      <div class="banner-anuncio" id="banner-anuncio-top">
+        📢 <span id="txt-mensaje-anuncio"></span>
+      </div>
+
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
       </div>
@@ -853,6 +870,8 @@
       const elNumDias = document.getElementById('num-dias-vencimiento');
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
+      const bannerAnuncio = document.getElementById('banner-anuncio-top');
+      const txtAnuncio = document.getElementById('txt-mensaje-anuncio');
 
       let fechaVencimiento = null;
       let estaBloqueado = false;
@@ -866,6 +885,14 @@
           estaBloqueado = (data.activo === false);
           clienteDadoDeAlta = !!data.altaRegistrada;
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
+
+          const msjMostrar = data.mensajeIndividual || data.mensajeGlobal || '';
+          if (msjMostrar && bannerAnuncio && txtAnuncio) {
+            txtAnuncio.innerText = msjMostrar;
+            bannerAnuncio.style.display = 'block';
+          } else if (bannerAnuncio) {
+            bannerAnuncio.style.display = 'none';
+          }
         } else if (res.status === 403) {
           estaBloqueado = true;
         } else {
