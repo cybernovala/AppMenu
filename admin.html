@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>+--Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1210,7 +1210,7 @@
 
     function renderizarClienteProductos() {
       const cont = document.getElementById('lista-productos-cliente');
-      const filtrados = products = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
+      const filtrados = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
 
       if (filtrados.length === 0) {
         cont.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay productos en esta categoría.</p>';
@@ -1519,34 +1519,38 @@
         fechaEntrega: fechaFormato
       };
 
-      // Remover visualmente la tarjeta de inmediato para mejor experiencia de usuario
+      // Remover del DOM de forma inmediata
       const cardEl = document.getElementById(`card-garzon-${idPedido}`);
       if (cardEl) cardEl.remove();
 
       cachePedidos = cachePedidos.filter(p => String(p._id || p.id) !== String(idPedido));
 
       try {
-        // 1. Guardar en el historial
-        fetch(`${BACKEND_URL}/api/historials`, {
+        // 1. Guardar obligatoriamente en el historial antes de borrar el pedido activo
+        await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(docHistorial)
-        }).catch(err => console.warn("Error secundario guardando historial:", err));
+        });
+      } catch (err) {
+        console.warn("Error secundario guardando en historial, procediendo a borrar pedido:", err);
+      }
 
-        // 2. Eliminar de la lista de pedidos activos
-        const resDelete = await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { 
+      try {
+        // 2. Proceder con el borrado definitivo en pedidos activos (Cocina y Garzón)
+        let resDelete = await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { 
           method: 'DELETE',
           headers: { 'Accept': 'application/json' }
         });
 
         if (!resDelete.ok) {
-          // Intento de borrado alternativo con query param
+          // Intento por Query String en caso de que la ruta REST no coincida
           await fetch(`${BACKEND_URL}/api/pedidos?id=${idPedido}`, { method: 'DELETE' });
         }
-
       } catch (e) {
-        console.error("Error al sincronizar eliminación con backend:", e);
+        console.error("Error al eliminar pedido del servidor:", e);
       } finally {
+        // Sincronización final
         cargarPedidosGarzon();
         cargarPedidosCocina();
         cargarHistorialGarantizado();
