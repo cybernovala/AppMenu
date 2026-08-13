@@ -57,22 +57,16 @@
     }
 
     .banner-anuncio {
-      display: none;
-      background: linear-gradient(135deg, rgba(0, 210, 255, 0.25), rgba(255, 0, 127, 0.25));
+      background: linear-gradient(135deg, rgba(0, 210, 255, 0.3), rgba(0, 119, 255, 0.4));
       border: 1px solid var(--neon-blue);
       color: #ffffff;
       text-align: center;
       padding: 12px 15px;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: bold;
-      box-shadow: 0 0 12px rgba(0, 210, 255, 0.3);
-      animation: pulseMsg 2s infinite alternate;
-    }
-
-    @keyframes pulseMsg {
-      from { border-color: var(--neon-blue); }
-      to { border-color: var(--neon-pink); }
+      box-shadow: 0 0 12px rgba(0, 210, 255, 0.4);
+      display: none;
     }
 
     .banner-licencia {
@@ -482,10 +476,10 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y MENSAJES DE SUPERADMIN -->
+    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y ANUNCIOS -->
     <div class="banner-container" id="banner-wrapper">
       <div class="banner-anuncio" id="banner-anuncio">
-        📢 <span id="txt-mensaje-anuncio">Aviso del Sistema</span>
+        📢 <span id="txt-mensaje-anuncio"></span>
       </div>
 
       <div class="banner-licencia" id="banner-vencimiento">
@@ -892,13 +886,13 @@
           clienteDadoDeAlta = !!data.altaRegistrada;
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
 
-          // Mostrar mensaje específico del local o mensaje global de SuperAdmin
-          const mensajeMostrar = data.anuncio || data.anuncioGlobal || '';
-          if (mensajeMostrar && elBannerAnuncio && elTxtAnuncio) {
-            elTxtAnuncio.innerText = mensajeMostrar;
-            elBannerAnuncio.style.display = 'block';
-          } else if (elBannerAnuncio) {
-            elBannerAnuncio.style.display = 'none';
+          if (data.anuncio && data.anuncio.trim() !== '') {
+            if (elBannerAnuncio && elTxtAnuncio) {
+              elTxtAnuncio.innerText = data.anuncio;
+              elBannerAnuncio.style.display = 'block';
+            }
+          } else {
+            if (elBannerAnuncio) elBannerAnuncio.style.display = 'none';
           }
 
         } else if (res.status === 403) {
