@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración & Menú Digital</title>
+  <title>-Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1509,13 +1509,13 @@
 
       const docHistorial = {
         id: idUnicoStr,
-        local: String(localId),
+        local: String(localId).toLowerCase().trim(),
         mesa: String(pedidoObj.mesa || '1'),
         items: pedidoObj.items || [],
         total: Number(pedidoObj.total || 0),
         estado: 'entregado',
         hora: horaFormato,
-        rutGarzon: String(rutGarzonSesion),
+        rutGarzon: String(rutGarzonSesion).trim(),
         horaEntrega: horaFormato,
         fechaEntrega: fechaFormato
       };
@@ -1563,7 +1563,7 @@
     async function cargarHistorialGarantizado() {
       let entregados = [];
       try {
-        const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
+        const resHistorial = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
         if (resHistorial.ok) {
           const apiHist = await resHistorial.json();
           entregados = Array.isArray(apiHist) ? apiHist : [];
@@ -1572,8 +1572,12 @@
 
       const mapaUnico = new Map();
       entregados.forEach(p => {
-        const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.horaEntrega || p.hora}_${p.rutGarzon}`;
-        mapaUnico.set(clave, p);
+        // Garantizar filtrado por el local activo en memoria
+        const localRegistro = (p.local || '').toString().toLowerCase().trim();
+        if (!localRegistro || localRegistro === localId) {
+          const clave = p._id || p.id || `${p.mesa}_${p.total}_${p.horaEntrega || p.hora}_${p.rutGarzon}`;
+          mapaUnico.set(clave, p);
+        }
       });
 
       historialGlobal = Array.from(mapaUnico.values());
@@ -1582,14 +1586,17 @@
 
     function aplicarFiltroInforme() {
       const tipo = document.getElementById('select-tipo-informe').value;
-      const rutBuscado = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
+      const rutBuscado = document.getElementById('filtro-informe-rut').value.trim().toUpperCase().replace(/[^0-9K]/g, '');
       const fechaDesde = document.getElementById('filtro-informe-desde').value;
       const fechaHasta = document.getElementById('filtro-informe-hasta').value;
 
       let filtrados = [...historialGlobal];
 
       if (tipo === 'rut' && rutBuscado) {
-        filtrados = filtrados.filter(p => { const r = (p.rutGarzon || '').toUpperCase(); return r.includes(rutBuscado); });
+        filtrados = filtrados.filter(p => { 
+          const r = (p.rutGarzon || '').toUpperCase().replace(/[^0-9K]/g, ''); 
+          return r.includes(rutBuscado); 
+        });
       } else if (tipo === 'fechas') {
         if (fechaDesde) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f >= fechaDesde; });
         if (fechaHasta) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f <= fechaHasta; });
