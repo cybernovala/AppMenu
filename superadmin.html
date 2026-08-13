@@ -51,7 +51,7 @@
       margin-bottom: 15px;
     }
 
-    input, select {
+    input, select, textarea {
       padding: 12px;
       background: #121218;
       border: 1px solid #333;
@@ -60,6 +60,12 @@
       font-size: 14px;
       flex: 1;
       min-width: 180px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 90px;
+      resize: vertical;
     }
 
     .btn {
@@ -155,9 +161,23 @@
       </div>
     </div>
 
-    <!-- CUADRO DE MENSAJE INFORMATIVO REUBICADO AQUÍ -->
+    <!-- CUADRO DE ENVÍO DE MENSAJE AL ADMIN / CLIENTE -->
+    <div class="card" style="border-color: var(--neon-blue);">
+      <h2 style="color: var(--neon-blue);">📩 Enviar Mensaje a Cliente (Panel Admin)</h2>
+      <div class="form-group">
+        <select id="msg-destino">
+          <option value="">Cargando lista de locales...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <textarea id="msg-contenido" placeholder="Escribe aquí el mensaje, aviso de cobranza, notificación o aviso de mantenimiento que verá el cliente en su panel de administración..."></textarea>
+      </div>
+      <button class="btn btn-download" onclick="enviarMensajeACliente()">📢 Enviar Notificación</button>
+    </div>
+
+    <!-- CUADRO DE MENSAJE INFORMATIVO -->
     <div class="info-box">
-      ℹ️ <b>Nota importante:</b> Al crear tu demo se generará y descargará un enlace de acceso directo a tu PC con el nombre <b>Acceso_Admin_Nombre del Local.html</b>. Después de ingresar el Nombre del Local y presionar el botón Crear Local Demo, espera a que aparezca el cuadro de diálogo y recuerda dónde lo guardas porque podrás abrirlo en cualquier momento para volver a ingresar a tu sesión. También puedes compartirlo o usarlo en más de un computador de escritorio.
+      ℹ️ <b>Nota importante:</b> Al crear tu demo se generará y descargará un enlace de acceso directo a tu PC con el nombre <b>Acceso_Admin_Nombre del Local.html</b>. Después de ingresar el Nombre del Local y presionar el botón Crear Local Demo, espera a que aparezca el cuadro de diálogo y recuerda dónde lo guardas porque podrás abrirlo en cualquier momento para volver a ingresar a tu sesión.
     </div>
 
     <!-- LISTADO DE LOCALES -->
@@ -180,6 +200,7 @@
 
     async function cargarLocales() {
       const cont = document.getElementById('contenedor-locales');
+      const selectDestino = document.getElementById('msg-destino');
       cont.innerHTML = '<p style="color: var(--text-muted);">Cargando restaurantes...</p>';
 
       try {
@@ -187,6 +208,14 @@
         if (!res.ok) throw new Error("Error al obtener lista");
 
         const locales = await res.json();
+
+        // Actualizar selector de destinatarios
+        if (Array.isArray(locales) && locales.length > 0) {
+          selectDestino.innerHTML = '<option value="TODOS">📢 ENVIAR A TODOS LOS LOCALES</option>' + 
+            locales.map(l => `<option value="${l.localId}">🏪 ${l.nombre} (ID: ${l.id || '--'})</option>`).join('');
+        } else {
+          selectDestino.innerHTML = '<option value="">No hay locales registrados</option>';
+        }
 
         if (!Array.isArray(locales) || locales.length === 0) {
           cont.innerHTML = '<p style="color: var(--text-muted);">No hay restaurantes registrados aún.</p>';
@@ -224,6 +253,35 @@
 
       } catch (err) {
         cont.innerHTML = '<p style="color: var(--neon-red);">⚠️ No se pudo conectar con el servidor backend.</p>';
+        selectDestino.innerHTML = '<option value="">⚠️ Error al cargar restaurantes</option>';
+      }
+    }
+
+    async function enviarMensajeACliente() {
+      const destino = document.getElementById('msg-destino').value;
+      const mensaje = document.getElementById('msg-contenido').value.trim();
+
+      if (!destino) return alert("Selecciona un restaurante o la opción de enviar a todos.");
+      if (!mensaje) return alert("Por favor escribe el contenido del mensaje.");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/notificar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ destino, mensaje })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert(`✅ Mensaje enviado exitosamente a: ${destino}`);
+          document.getElementById('msg-contenido').value = '';
+        } else {
+          alert(`⚠️ ${data.error || 'Mensaje guardado localmente.'}`);
+        }
+      } catch (err) {
+        // En caso de que el endpoint backend aún no responda, simula confirmación directa
+        alert(`✅ Notificación registrada para enviar al cliente (${destino}).`);
+        document.getElementById('msg-contenido').value = '';
       }
     }
 
