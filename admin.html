@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>--Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1210,7 +1210,7 @@
 
     function renderizarClienteProductos() {
       const cont = document.getElementById('lista-productos-cliente');
-      const filtrados = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
+      const filtrados = products = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
 
       if (filtrados.length === 0) {
         cont.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay productos en esta categoría.</p>';
@@ -1440,7 +1440,7 @@
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">🎉 No hay pedidos pendientes por llevar a mesa.</p>';
         } else {
           contenedor.innerHTML = cachePedidos.map((p) => {
-            const idPedido = p._id;
+            const idPedido = p._id || p.id;
             const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
             const itemsList = Array.isArray(p.items) ? p.items : [];
 
@@ -1491,7 +1491,7 @@
         }
       }
 
-      const pedidoObj = cachePedidos.find(p => String(p._id) === String(idPedido)) || { local: localId, mesa: '1', total: 0, items: [] };
+      const pedidoObj = cachePedidos.find(p => String(p._id || p.id) === String(idPedido)) || { local: localId, mesa: '1', total: 0, items: [] };
 
       const ahora = new Date();
       const anio = ahora.getFullYear();
@@ -1507,6 +1507,7 @@
 
       const docHistorial = {
         id: String(idPedido),
+        _id: String(idPedido),
         local: String(localId),
         mesa: String(pedidoObj.mesa || '1'),
         items: pedidoObj.items || [],
@@ -1518,33 +1519,37 @@
         fechaEntrega: fechaFormato
       };
 
+      // Remover visualmente la tarjeta de inmediato para mejor experiencia de usuario
+      const cardEl = document.getElementById(`card-garzon-${idPedido}`);
+      if (cardEl) cardEl.remove();
+
+      cachePedidos = cachePedidos.filter(p => String(p._id || p.id) !== String(idPedido));
+
       try {
-        // 1. Guardar en el historial de entregas de MongoDB
-        await fetch(`${BACKEND_URL}/api/historials`, {
+        // 1. Guardar en el historial
+        fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(docHistorial)
-        });
+        }).catch(err => console.warn("Error secundario guardando historial:", err));
 
-        // 2. Eliminar el pedido activo de la cocina y garzón
-        await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { 
+        // 2. Eliminar de la lista de pedidos activos
+        const resDelete = await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { 
           method: 'DELETE',
           headers: { 'Accept': 'application/json' }
         });
 
-        // 3. Remover el elemento visualmente y actualizar vistas
-        const cardEl = document.getElementById(`card-garzon-${idPedido}`);
-        if (cardEl) cardEl.remove();
-
-        cachePedidos = cachePedidos.filter(p => String(p._id) !== String(idPedido));
-
-        await cargarPedidosGarzon();
-        await cargarPedidosCocina();
-        await cargarHistorialGarantizado();
+        if (!resDelete.ok) {
+          // Intento de borrado alternativo con query param
+          await fetch(`${BACKEND_URL}/api/pedidos?id=${idPedido}`, { method: 'DELETE' });
+        }
 
       } catch (e) {
-        console.error("Error al procesar la entrega:", e);
-        alert("⚠️ Ocurrió un inconveniente al actualizar el pedido. Reintenta.");
+        console.error("Error al sincronizar eliminación con backend:", e);
+      } finally {
+        cargarPedidosGarzon();
+        cargarPedidosCocina();
+        cargarHistorialGarantizado();
       }
     }
 
