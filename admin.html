@@ -91,6 +91,20 @@
       box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
     }
 
+    /* ESTILO PARA MENSAJES RECIBIDOS DE SUPERADMIN */
+    .banner-mensaje-admin {
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      display: none;
+    }
+    .banner-mensaje-admin.info { background: rgba(0, 210, 255, 0.2); border: 1px solid var(--neon-blue); color: #fff; }
+    .banner-mensaje-admin.warning { background: rgba(255, 238, 0, 0.2); border: 1px solid var(--neon-yellow); color: #fff; }
+    .banner-mensaje-admin.danger { background: rgba(255, 51, 51, 0.25); border: 1px solid #ff3333; color: #fff; }
+    .banner-mensaje-admin.success { background: rgba(0, 255, 102, 0.2); border: 1px solid var(--neon-green); color: #fff; }
+
     .header-bar {
       background: rgba(18, 18, 24, 0.95);
       border: 1px solid var(--border-neon);
@@ -463,8 +477,10 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS DE LICENCIA -->
+    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y MENSAJES -->
     <div class="banner-container" id="banner-wrapper">
+      <div id="contenedor-mensajes-superadmin"></div>
+
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
       </div>
@@ -806,6 +822,7 @@
       if (elNombreAlta) elNombreAlta.value = localId;
 
       obtenerEstadoLicenciaYBloqueo();
+      cargarMensajesSuperAdmin();
 
       if (rutGarzonSesion) {
         document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
@@ -830,6 +847,7 @@
 
       setInterval(() => {
         obtenerEstadoLicenciaYBloqueo();
+        cargarMensajesSuperAdmin();
         if (document.getElementById('tab-cocina').classList.contains('active')) {
           cargarPedidosCocina();
         }
@@ -841,6 +859,27 @@
         }
       }, 5000); 
     });
+
+    async function cargarMensajesSuperAdmin() {
+      const cont = document.getElementById('contenedor-mensajes-superadmin');
+      if (!cont) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensajes?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
+        if (res.ok) {
+          const mensajes = await res.json();
+          if (Array.isArray(mensajes) && mensajes.length > 0) {
+            cont.innerHTML = mensajes.map(m => `
+              <div class="banner-mensaje-admin ${m.tipo || 'info'}" style="display: block;">
+                <b>💬 ${m.asunto || 'Aviso del Sistema'}:</b> ${m.texto}
+              </div>
+            `).join('');
+          } else {
+            cont.innerHTML = '';
+          }
+        }
+      } catch (e) {}
+    }
 
     function forzarBloqueoUI() {
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
@@ -972,6 +1011,7 @@
 
     function recargarTodo() {
       obtenerEstadoLicenciaYBloqueo();
+      cargarMensajesSuperAdmin();
       cargarDatosMenu();
       cargarPedidosCocina();
       cargarPedidosGarzon();
