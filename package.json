@@ -1,7 +1,7 @@
 {
   "name": "appmenu-backend",
   "version": "1.0.0",
-  "description": "Backend API para AppMenu Nova con MongoDB Atlas",
+  "description": "Sistema Backend para AppMenu con MongoDB Atlas",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
