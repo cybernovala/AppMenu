@@ -91,6 +91,16 @@
       box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
     }
 
+    .banner-aviso {
+      background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 119, 255, 0.25));
+      border: 1px solid var(--neon-blue);
+      color: #ffffff;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+    }
+
     .header-bar {
       background: rgba(18, 18, 24, 0.95);
       border: 1px solid var(--border-neon);
@@ -457,29 +467,16 @@
       align-items: center;
       gap: 12px;
     }
-
-    .aviso-banner {
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      font-size: 14px;
-      font-weight: 600;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .aviso-info { background: rgba(0, 210, 255, 0.15); border: 1px solid var(--neon-blue); color: #fff; }
-    .aviso-warning { background: rgba(255, 238, 0, 0.15); border: 1px solid var(--neon-yellow); color: #fff; }
-    .aviso-success { background: rgba(0, 255, 102, 0.15); border: 1px solid var(--neon-green); color: #fff; }
-    .aviso-danger { background: rgba(255, 51, 68, 0.2); border: 1px solid #ff3344; color: #fff; }
   </style>
 </head>
 <body>
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS DE LICENCIA -->
+    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y AVISOS -->
     <div class="banner-container" id="banner-wrapper">
+      <div id="contenedor-avisos-superadmin"></div>
+
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
       </div>
@@ -572,9 +569,6 @@
         <div class="brand-title" id="txt-local-cliente">MENÚ DIGITAL</div>
         <div class="mesa-badge" id="txt-mesa-cliente">Mesa N° --</div>
       </div>
-
-      <!-- CONTENEDOR DE AVISOS DEL SUPERADMIN PARA CLIENTES -->
-      <div id="contenedor-avisos-cliente" style="margin-top: 15px;"></div>
 
       <div class="categories-bar" id="barra-categorias-cliente"></div>
 
@@ -824,7 +818,7 @@
       if (elNombreAlta) elNombreAlta.value = localId;
 
       obtenerEstadoLicenciaYBloqueo();
-      cargarAvisosCliente();
+      cargarAvisosSuperAdmin();
 
       if (rutGarzonSesion) {
         document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
@@ -849,7 +843,7 @@
 
       setInterval(() => {
         obtenerEstadoLicenciaYBloqueo();
-        cargarAvisosCliente();
+        cargarAvisosSuperAdmin();
         if (document.getElementById('tab-cocina').classList.contains('active')) {
           cargarPedidosCocina();
         }
@@ -862,27 +856,24 @@
       }, 5000); 
     });
 
-    async function cargarAvisosCliente() {
-      const cont = document.getElementById('contenedor-avisos-cliente');
+    async function cargarAvisosSuperAdmin() {
+      const cont = document.getElementById('contenedor-avisos-superadmin');
       if (!cont) return;
-
       try {
         const res = await fetch(`${BACKEND_URL}/api/avisos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-        if (!res.ok) return;
-
-        const avisos = await res.json();
-        if (!Array.isArray(avisos) || avisos.length === 0) {
-          cont.innerHTML = '';
-          return;
+        if (res.ok) {
+          const avisos = await res.json();
+          if (Array.isArray(avisos) && avisos.length > 0) {
+            cont.innerHTML = avisos.map(a => `
+              <div class="banner-aviso" style="margin-bottom:10px;">
+                📢 <b>${a.asunto || 'Aviso del Sistema'}:</b> ${a.texto}
+              </div>
+            `).join('');
+          } else {
+            cont.innerHTML = '';
+          }
         }
-
-        cont.innerHTML = avisos.map(a => `
-          <div class="aviso-banner aviso-${a.tipo}">
-            <span><b>${a.asunto}</b></span>
-            <span>${a.texto}</span>
-          </div>
-        `).join('');
-      } catch (e) { }
+      } catch (e) {}
     }
 
     function forzarBloqueoUI() {
@@ -1015,7 +1006,7 @@
 
     function recargarTodo() {
       obtenerEstadoLicenciaYBloqueo();
-      cargarAvisosCliente();
+      cargarAvisosSuperAdmin();
       cargarDatosMenu();
       cargarPedidosCocina();
       cargarPedidosGarzon();
@@ -1430,112 +1421,6 @@
       }
     }
 
-    function generarQRUnico() {
-      const numMesa = document.getElementById('qr-num-mesa').value || '1';
-      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${numMesa}`;
-      const cont = document.getElementById('qr-single-render');
-      cont.innerHTML = '';
-      new QRCode(cont, {
-        text: construirUrlMesa(numMesa),
-        width: 180,
-        height: 180,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
-    }
-
-    function descargarQRImagen() {
-      const numMesa = document.getElementById('qr-num-mesa').value || '1';
-      setTimeout(() => {
-        const qrCanvas = document.querySelector('#qr-single-render canvas');
-        const qrImg = document.querySelector('#qr-single-render img');
-        const canvasFinal = document.createElement('canvas');
-        const size = 591;
-        canvasFinal.width = size; canvasFinal.height = size;
-        const ctx = canvasFinal.getContext('2d');
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
-
-        if (qrCanvas) ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
-        else if (qrImg) ctx.drawImage(qrImg, (size - 420) / 2, 40, 420, 420);
-        else return alert("Error al capturar QR.");
-
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(localId.toUpperCase(), size / 2, 500);
-        ctx.font = 'bold 36px sans-serif';
-        ctx.fillText(`MESA N° ${numMesa}`, size / 2, 550);
-
-        const link = document.createElement('a');
-        link.download = `QR_Mesa_${numMesa}_${localId}.png`;
-        link.href = canvasFinal.toDataURL('image/png'); link.click();
-      }, 100);
-    }
-
-    function generarPDFMesas() {
-      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
-      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 1;
-
-      if (desde > hasta) return alert("El rango inicial debe ser menor o igual al rango final.");
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const tempDiv = document.getElementById('qr-hidden-temp');
-
-      let col = 0, row = 0;
-      const marginX = 15, marginY = 15;
-      const boxSize = 50;
-      const gapX = 15, gapY = 15;
-
-      let promises = [];
-
-      for (let m = desde; m <= hasta; m++) {
-        promises.push(new Promise((resolve) => {
-          tempDiv.innerHTML = '';
-          const qr = new QRCode(tempDiv, {
-            text: construirUrlMesa(m),
-            width: 150, height: 150,
-            colorDark: "#000000", colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-          });
-
-          setTimeout(() => {
-            const canvas = tempDiv.querySelector('canvas');
-            const imgData = canvas ? canvas.toDataURL('image/png') : tempDiv.querySelector('img').src;
-            resolve({ mesa: m, img: imgData });
-          }, 50);
-        }));
-      }
-
-      Promise.all(promises).then(items => {
-        items.forEach((item, index) => {
-          if (index > 0 && index % 12 === 0) {
-            doc.addPage();
-            col = 0; row = 0;
-          }
-
-          const x = marginX + col * (boxSize + gapX);
-          const y = marginY + row * (boxSize + gapY);
-
-          doc.setDrawColor(200, 200, 200);
-          doc.rect(x, y, boxSize, boxSize);
-          doc.addImage(item.img, 'PNG', x + 5, y + 3, 40, 40);
-
-          doc.setFontSize(8);
-          doc.setTextColor(0, 0, 0);
-          doc.text(localId.toUpperCase(), x + 25, y + 45, { align: 'center' });
-          doc.setFontSize(10);
-          doc.setFont(undefined, 'bold');
-          doc.text(`MESA N° ${item.mesa}`, x + 25, y + 48.5, { align: 'center' });
-
-          col++;
-          if (col >= 3) { col = 0; row++; }
-        });
-
-        doc.save(`QRs_Mesas_${desde}_al_${hasta}_${localId}.pdf`);
-      });
-    }
-
     function generarQRGarzon() {
       const container = document.getElementById('qr-garzon-render');
       if (!container) return;
@@ -1741,98 +1626,153 @@
       if (tipo === 'rut' && rutBuscado) {
         filtrados = filtrados.filter(p => { 
           const r = (p.rutGarzon || '').toUpperCase().replace(/[^0-9K]/g, ''); 
-          return r.includes(rutBuscado);
+          return r.includes(rutBuscado); 
         });
       } else if (tipo === 'fechas') {
-        if (fechaDesde) filtrados = filtrados.filter(p => (p.fechaEntrega || '') >= fechaDesde);
-        if (fechaHasta) filtrados = filtrados.filter(p => (p.fechaEntrega || '') <= fechaHasta);
+        if (fechaDesde) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f >= fechaDesde; });
+        if (fechaHasta) filtrados = filtrados.filter(p => { const f = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : ''); return f <= fechaHasta; });
       }
-
-      renderizarTablaHistorial(filtrados);
+      renderizarTablaYMetricas(filtrados);
     }
 
-    function renderizarTablaHistorial(lista) {
-      const tbody = document.getElementById('tabla-historial-garzon');
-      const lblEntregados = document.getElementById('lbl-stat-entregados');
-      const lblMonto = document.getElementById('lbl-stat-monto');
-      const lblPromedio = document.getElementById('lbl-stat-promedio');
-
-      if (!lista || lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron registros.</td></tr>';
-        lblEntregados.innerText = '0';
-        lblMonto.innerText = '$0';
-        lblPromedio.innerText = '$0';
-        return;
-      }
-
+    function renderizarTablaYMetricas(lista) {
+      const tablaHistorial = document.getElementById('tabla-historial-garzon');
       let totalMonto = 0;
-      tbody.innerHTML = lista.map(p => {
-        totalMonto += (p.total || 0);
-        const itemsTxt = Array.isArray(p.items) ? p.items.map(i => `${i.cantidad || 1}x ${i.nombre}`).join(', ') : 'Sin ítems';
-
-        return `
-          <tr>
-            <td><b>Mesa ${p.mesa || '--'}</b></td>
-            <td>${p.rutGarzon || 'S/RUT'}</td>
-            <td>${p.fechaEntrega || '--'}</td>
-            <td>${p.horaEntrega || p.hora || '--'}</td>
-            <td style="font-size: 12px; color: var(--text-muted);">${itemsTxt}</td>
-            <td style="font-weight: bold; color: var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</td>
-          </tr>
-        `;
-      }).join('');
-
-      lblEntregados.innerText = lista.length;
-      lblMonto.innerText = `$${totalMonto.toLocaleString('es-CL')}`;
+      lista.forEach(p => { totalMonto += Number(p.total || 0); });
       const promedio = lista.length > 0 ? Math.round(totalMonto / lista.length) : 0;
-      lblPromedio.innerText = `$${promedio.toLocaleString('es-CL')}`;
+
+      document.getElementById('lbl-stat-entregados').innerText = lista.length;
+      document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
+      document.getElementById('lbl-stat-promedio').innerText = `$${promedio.toLocaleString('es-CL')}`;
+
+      if (lista.length === 0) {
+        tablaHistorial.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron entregas para el filtro seleccionado.</td></tr>';
+      } else {
+        tablaHistorial.innerHTML = lista.map(p => {
+          const rutMostrar = p.rutGarzon || 'S/RUT';
+          const fechaMostrar = p.fechaEntrega || (p.createdAt ? p.createdAt.split('T')[0] : 'Hoy');
+          const horaMostrar = p.horaEntrega || p.hora || 'S/H';
+
+          let itemsTexto = 'Atención en Mesa';
+          if (Array.isArray(p.items) && p.items.length > 0) itemsTexto = p.items.map(i => `${i.cantidad || 1}x ${i.nombre || 'Producto'}`).join(', ');
+
+          return `
+            <tr>
+              <td><b>Mesa ${p.mesa || '1'}</b></td>
+              <td><span style="color: var(--neon-blue); font-weight: bold;">${rutMostrar}</span></td>
+              <td>${fechaMostrar}</td>
+              <td>⏰ ${horaMostrar}</td>
+              <td>${itemsTexto}</td>
+              <td style="color: var(--neon-yellow); font-weight: bold;">$${(p.total || 0).toLocaleString('es-CL')}</td>
+            </tr>
+          `;
+        }).join('');
+      }
     }
 
     function descargarInformePDF() {
-      if (historialGlobal.length === 0) return alert("No hay datos en el historial para exportar.");
+      const tipo = document.getElementById('select-tipo-informe').value;
+      const totalPedidos = document.getElementById('lbl-stat-entregados').innerText;
+      const totalMonto = document.getElementById('lbl-stat-monto').innerText;
+      const promedio = document.getElementById('lbl-stat-promedio').innerText;
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
+      doc.setFont("helvetica", "bold"); doc.setFontSize(16);
+      doc.text(`INFORME DE ENTREGAS & MÉTRICAS - ${localId.toUpperCase()}`, 14, 20);
 
-      doc.setFontSize(16);
-      doc.text(`Informe de Ventas - ${localId.toUpperCase()}`, 14, 20);
-      doc.setFontSize(10);
-      doc.text(`Fecha de emisión: ${new Date().toLocaleDateString()}`, 14, 27);
+      doc.setFontSize(10); doc.setFont("helvetica", "normal");
+      doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-CL')} ${new Date().toLocaleTimeString('es-CL')}`, 14, 28);
+      doc.text(`Tipo de Informe: ${tipo.toUpperCase()}`, 14, 34);
 
-      let y = 35;
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'bold');
-      doc.text("Mesa", 14, y);
-      doc.text("Garzón", 35, y);
-      doc.text("Fecha", 75, y);
-      doc.text("Hora", 105, y);
-      doc.text("Total", 140, y);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+      doc.text("RESUMEN DE MÉTRICAS", 14, 46);
 
-      doc.setFont(undefined, 'normal');
-      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+      doc.text(`• Total Pedidos Atendidos: ${totalPedidos}`, 14, 54);
+      doc.text(`• Monto Total Recaudado: ${totalMonto}`, 14, 60);
+      doc.text(`• Venta Promedio por Comanda: ${promedio}`, 14, 66);
 
-      let totalVentas = 0;
+      doc.setLineWidth(0.5); doc.line(14, 72, 196, 72);
+      doc.setFont("helvetica", "bold"); doc.text("Mesa   RUT Garzón      Fecha        Hora      Total", 14, 80);
+      doc.setLineWidth(0.2); doc.line(14, 82, 196, 82);
 
-      historialGlobal.forEach(p => {
-        y += 7;
-        if (y > 280) {
-          doc.addPage();
-          y = 20;
+      const filas = document.querySelectorAll('#tabla-historial-garzon tr');
+      let y = 90;
+
+      doc.setFont("helvetica", "normal");
+      filas.forEach(f => {
+        const cols = f.querySelectorAll('td');
+        if (cols.length >= 6) {
+          const mesa = cols[0].innerText.replace('Mesa ', '');
+          const rut = cols[1].innerText; const fecha = cols[2].innerText;
+          const hora = cols[3].innerText.replace('⏰ ', ''); const total = cols[5].innerText;
+
+          if (y > 270) { doc.addPage(); y = 20; }
+          doc.text(`${mesa.padEnd(6)} ${rut.padEnd(15)} ${fecha.padEnd(12)} ${hora.padEnd(9)} ${total}`, 14, y);
+          y += 7;
         }
-        totalVentas += (p.total || 0);
-        doc.text(String(p.mesa || '--'), 14, y);
-        doc.text(String(p.rutGarzon || 'S/RUT'), 35, y);
-        doc.text(String(p.fechaEntrega || '--'), 75, y);
-        doc.text(String(p.horaEntrega || p.hora || '--'), 105, y);
-        doc.text(`$${(p.total || 0).toLocaleString('es-CL')}`, 140, y);
       });
+      doc.save(`Informe_${tipo}_${localId}.pdf`);
+    }
 
-      y += 10;
-      doc.setFont(undefined, 'bold');
-      doc.setFontSize(12);
-      doc.text(`Total Atendido: $${totalVentas.toLocaleString('es-CL')}`, 14, y);
+    function generarQRUnico() {
+      const numMesa = document.getElementById('qr-num-mesa').value || '1';
+      const container = document.getElementById('qr-single-render');
+      container.innerHTML = '';
+      new QRCode(container, { text: construirUrlMesa(numMesa), width: 220, height: 220, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+      document.getElementById('lbl-qr-single-mesa').innerText = `${localId.toUpperCase()} - MESA ${numMesa}`;
+    }
 
-      doc.save(`Informe_Ventas_${localId}.pdf`);
+    function descargarQRImagen() {
+      const numMesa = document.getElementById('qr-num-mesa').value || '1';
+      const qrCanvas = document.querySelector('#qr-single-render canvas');
+      if (!qrCanvas) return alert("Genera el código QR primero.");
+
+      const canvasFinal = document.createElement('canvas');
+      const size = 591; canvasFinal.width = size; canvasFinal.height = size;
+
+      const ctx = canvasFinal.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(qrCanvas, (size - 420) / 2, 40, 420, 420);
+
+      ctx.fillStyle = '#000000'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(localId.toUpperCase(), size / 2, 500);
+      ctx.font = 'bold 38px sans-serif'; ctx.fillText(`MESA N° ${numMesa}`, size / 2, 550);
+
+      const link = document.createElement('a'); link.download = `QR_Mesa_${numMesa}_${localId}.png`;
+      link.href = canvasFinal.toDataURL('image/png'); link.click();
+    }
+
+    async function generarPDFMesas() {
+      const desde = parseInt(document.getElementById('qr-rango-desde').value);
+      const hasta = parseInt(document.getElementById('qr-rango-hasta').value);
+      if (isNaN(desde) || isNaN(hasta) || desde > hasta) return alert("Rango no válido.");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'p', unit: 'cm', format: 'a4' });
+
+      let count = 0;
+      for (let m = desde; m <= hasta; m++) {
+        if (count > 0 && count % 12 === 0) doc.addPage();
+        const idx = count % 12; const col = idx % 3; const row = Math.floor(idx / 3);
+        const x = 1.8 + col * 6.2; const y = 2.0 + row * 6.2;
+
+        const tempDiv = document.getElementById('qr-hidden-temp'); tempDiv.innerHTML = '';
+        new QRCode(tempDiv, { text: construirUrlMesa(m), width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff" });
+
+        await new Promise(r => setTimeout(r, 50));
+        const imgData = tempDiv.querySelector('canvas').toDataURL('image/png');
+
+        doc.setDrawColor(200, 200, 200); doc.rect(x, y, 5, 5);
+        doc.addImage(imgData, 'PNG', x + 0.6, y + 0.3, 3.8, 3.8);
+
+        doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+        doc.text(localId.toUpperCase(), x + 2.5, y + 4.3, { align: 'center' });
+        doc.setFontSize(9); doc.text(`MESA N° ${m}`, x + 2.5, y + 4.7, { align: 'center' });
+        count++;
+      }
+      doc.save(`Planilla_QR_${localId}.pdf`);
     }
   </script>
 </body>
