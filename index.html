@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso & Menú Digital | AppMenu</title>
+  <style>
+    :root {
+      --bg-dark: #08070d;
+      --card-bg: rgba(18, 16, 28, 0.85);
+      --neon-orange: #ff5500;
+      --neon-pink: #ff007f;
+      --neon-yellow: #ffee00;
+      --neon-green: #00ff66;
+      --neon-blue: #00d2ff;
+      --text-main: #ffffff;
+      --text-muted: #a0a0b0;
+      --border-neon: rgba(255, 0, 127, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: -50%; width: 200%; height: 200%;
+      background-image: 
+        linear-gradient(rgba(255, 85, 0, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 0, 127, 0.1) 1px, transparent 1px);
+      background-size: 40px 40px;
+      transform: perspective(500px) rotateX(60deg) translateY(-100px);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .login-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border-neon);
+      border-radius: 16px;
+      padding: 30px 25px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 0 20px rgba(255, 0, 127, 0.2);
+      backdrop-filter: blur(10px);
+      text-align: center;
+    }
+
+    .brand-title {
+      font-size: 28px;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .brand-subtitle {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 25px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #181822;
+      border: 1px solid #333;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--neon-pink);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      border: none;
+      transition: all 0.2s ease;
+      margin-top: 8px;
+      display: block;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
+      color: #fff;
+      box-shadow: 0 0 12px rgba(255, 85, 0, 0.4);
+    }
+
+    .btn-secondary {
+      background: #14141c;
+      border: 1px solid #333;
+      color: var(--text-muted);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--neon-blue);
+      color: #fff;
+    }
+
+    .btn-demo {
+      background: linear-gradient(135deg, var(--neon-green), #00bb44);
+      color: #000;
+      font-weight: 800;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 20px 0;
+    }
+
+    .error-msg {
+      color: #ff3344;
+      font-size: 13px;
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="brand-title">APPMENU</div>
+    <div class="brand-subtitle">Plataforma de Menú Digital & Administración</div>
+
+    <form onsubmit="validarAcceso(event)">
+      <div class="form-group">
+        <label>Nombre del Local</label>
+        <input type="text" id="input-local" placeholder="Ej: mensajes o demo" value="mensajes" required>
+      </div>
+
+      <div class="form-group">
+        <label>Contraseña de Acceso</label>
+        <input type="password" id="input-password" placeholder="Ingrese su contraseña" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary">🔓 Iniciar Sesión / Entrar</button>
+      <div id="error-msg" class="error-msg">❌ Contraseña incorrecta o local no encontrado.</div>
+    </form>
+
+    <div class="divider"></div>
+
+    <button type="button" class="btn btn-demo" onclick="probarDemoGratis()">🎁 Probar Demo Gratis por 30 Días</button>
+    <button type="button" class="btn btn-secondary" onclick="ingresarDirectoDemo()">📱 Ingresar a Local Demo</button>
+  </div>
+
+  <script>
+    const PASSWORD_ADMIN = "@Juan20737373";
+
+    function validarAcceso(event) {
+      event.preventDefault();
+      const local = document.getElementById('input-local').value.trim().toLowerCase();
+      const pass = document.getElementById('input-password').value.trim();
+      const errorMsg = document.getElementById('error-msg');
+
+      if (pass === PASSWORD_ADMIN) {
+        window.location.href = `admin.html?local=${encodeURIComponent(local)}`;
+      } else {
+        errorMsg.style.display = 'block';
+      }
+    }
+
+    function ingresarDirectoDemo() {
+      window.location.href = "admin.html?local=demo";
+    }
+
+    function probarDemoGratis() {
+      window.location.href = "admin.html?local=demo&view=alta";
+    }
+  </script>
+</body>
+</html>
