@@ -73,6 +73,17 @@ const HistorialSchema = new mongoose.Schema({
 
 const Historial = mongoose.models.Historial || mongoose.model('Historial', HistorialSchema, 'historials');
 
+// NUEVO ESQUEMA DE MENSAJES PARA COMUNICACIÓN SUPERADMIN -> CLIENTE
+const MensajeSchema = new mongoose.Schema({
+  destinatario: { type: String, required: true }, // slug del local o 'TODOS'
+  asunto: { type: String, default: 'Aviso del Sistema' },
+  texto: { type: String, required: true },
+  tipo: { type: String, default: 'info' }, // info, warning, danger, success
+  activo: { type: Boolean, default: true }
+}, { timestamps: true });
+
+const Mensaje = mongoose.models.Mensaje || mongoose.model('Mensaje', MensajeSchema, 'mensajes');
+
 async function getNextSequenceValue(sequenceName) {
   const sequenceDocument = await Counter.findByIdAndUpdate(
     sequenceName,
@@ -364,6 +375,48 @@ app.patch('/api/locales/:id/licencia', async (req, res) => {
   } catch (err) {
     console.error("❌ Error en PATCH /api/locales/:id/licencia:", err.message);
     return res.status(500).json({ error: 'Error al actualizar licencia' });
+  }
+});
+
+// --- ENPOINTS DE MENSAJES PARA SUPERADMIN ---
+app.post('/api/mensajes', async (req, res) => {
+  try {
+    const { destinatario, asunto, texto, tipo } = req.body;
+    if (!destinatario || !texto) {
+      return res.status(400).json({ error: 'Destinatario y texto son obligatorios' });
+    }
+
+    const nuevoMensaje = new Mensaje({
+      destinatario: destinatario.toLowerCase().trim(),
+      asunto: asunto || 'Aviso del Sistema',
+      texto: texto.trim(),
+      tipo: tipo || 'info',
+      activo: true
+    });
+
+    await nuevoMensaje.save();
+    return res.status(201).json({ mensaje: 'Mensaje enviado con éxito', data: nuevoMensaje });
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al enviar mensaje' });
+  }
+});
+
+app.get('/api/mensajes', async (req, res) => {
+  try {
+    const localQuery = (req.query.local || '').toLowerCase().trim();
+    if (!localQuery) return res.status(200).json([]);
+
+    const mensajes = await Mensaje.find({
+      $or: [
+        { destinatario: localQuery },
+        { destinatario: 'todos' }
+      ],
+      activo: true
+    }).sort({ createdAt: -1 }).lean();
+
+    return res.status(200).json(mensajes);
+  } catch (err) {
+    return res.status(500).json([]);
   }
 });
 
