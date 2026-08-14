@@ -9,7 +9,6 @@ app.use(cors());
 app.use(express.json());
 
 // --- CONEXIÓN A MONGODB ATLAS ---
-// Si tienes tu URL de MongoDB Atlas la puedes pegar directamente reemplazando este valor
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/appmenu';
 
 mongoose.connect(MONGO_URI)
@@ -18,7 +17,7 @@ mongoose.connect(MONGO_URI)
 
 // --- ESQUEMAS Y MODELOS DE MONGOOSE ---
 
-// Esquema para la configuración global del SuperAdmin en MongoDB
+// Configuración Global (SuperAdmin)
 const configGlobalSchema = new mongoose.Schema({
   tipo: { type: String, required: true, unique: true },
   password: { type: String, required: true }
@@ -26,7 +25,7 @@ const configGlobalSchema = new mongoose.Schema({
 
 const ConfigGlobal = mongoose.model('ConfigGlobal', configGlobalSchema);
 
-// Esquema para los Locales (Negocios / Demos)
+// Locales (Restaurantes / Demos)
 const localSchema = new mongoose.Schema({
   id: Number,
   local: { type: String, required: true, unique: true },
@@ -43,26 +42,30 @@ const localSchema = new mongoose.Schema({
 
 const Local = mongoose.model('Local', localSchema);
 
-// Función auxiliar para escapar caracteres en expresiones regulares
+// Avisos / Mensajes Globales (Colección 'avisos')
+const avisoSchema = new mongoose.Schema({
+  destinatario: { type: String, default: 'todos' },
+  asunto: { type: String, default: 'Aviso del Sistema' },
+  texto: { type: String, required: true },
+  fecha: { type: Date, default: Date.now }
+}, { collection: 'avisos' });
+
+const Aviso = mongoose.model('Aviso', avisoSchema);
+
+// Auxiliar Regex
 function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
 
 // --- RUTAS DE LA API ---
 
-// 1. LOGIN DE ADMINISTRADOR GENERAL (Consulta primero a MongoDB en 'configglobals')
+// 1. LOGIN DE ADMINISTRADOR GENERAL
 app.post('/api/admin/login', async (req, res) => {
   try {
     const { password } = req.body;
+    if (!password) return res.status(400).json({ ok: false, error: 'Debe ingresar una contraseña' });
 
-    if (!password) {
-      return res.status(400).json({ ok: false, error: 'Debe ingresar una contraseña' });
-    }
-
-    // Buscar en la colección 'configglobals' la clave del SuperAdmin
     const configAdmin = await ConfigGlobal.findOne({ tipo: 'superadmin' });
-    
-    // Si la BD no tiene registro aún, usa la contraseña por defecto
     const claveCorrecta = configAdmin ? configAdmin.password : "@Juan20737373";
 
     if (password === claveCorrecta) {
@@ -76,90 +79,185 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
-// 2. VERIFICAR SI UN LOCAL EXISTE
-app.get('/api/locales/verificar/:busqueda', async (req, res) => {
+// 2. OBTENER TODOS LOS LOCALES (Para demo.html)
+app.get('/api/locales', async (req, res) => {
   try {
-    const termino = req.params.busqueda.trim();
-    const localSlug = termino.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const terminoEscaped = escapeRegex(termino);
-
-    const local = await Local.findOne({
-      $or: [
-        { local: localSlug },
-        { nombre: { $regex: new RegExp(`^${terminoEscaped}$`, 'i') } }
-      ]
-    });
-
-    if (local) {
-      return res.json({ existe: true, local: local.local, nombre: local.nombre });
-    } else {
-      return res.status(404).json({ existe: false, error: 'El local no existe' });
-    }
+    const locales = await Local.find().sort({ fechaCreacion: -1 });
+    // Adaptar la estructura devolviendo 'localId' para compatibilidad con demo.html
+    const localesFormateados = locales.map(l => ({
+      _id: l._id,
+      id: l.id,
+      localId: l.local,
+      local: l.local,
+      nombre: l.nombre,
+      rut: l.rut,
+      correo: l.correo,
+      activo: l.activo,
+      fechaCreacion: l.fechaCreacion,
+      fechaVencimiento: l.fechaVencimiento
+    }));
+    res.json(localesFormateados);
   } catch (error) {
-    console.error("Error al verificar local:", error);
+    console.error("Error al obtener locales:", error);
     res.status(500).json({ error: 'Error interno en el servidor' });
   }
 });
 
-// 3. CREAR UN NUEVO LOCAL DEMO (30 DÍAS)
-app.post('/api/locales/alta', async (req, res) => {
+// 3. CREAR LOCAL DEMO RÁPIDO (Ruta POST /api/locales)
+app.post('/api/locales', async (req, res) => {
   try {
-    const { nombre, rut, correo, password } = req.body;
-
-    if (!nombre || !nombre.trim()) {
-      return res.status(400).json({ error: 'El nombre del local es obligatorio' });
-    }
+    const { nombre } = req.body;
+    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
 
     const nombreLimpio = nombre.trim();
     const localSlug = nombreLimpio.toLowerCase().replace(/[^a-z0-9]/g, '');
     const nombreEscaped = escapeRegex(nombreLimpio);
 
-    // Verificar en MongoDB si ya existe un local registrado con ese nombre
     const existe = await Local.findOne({
-      $or: [
-        { local: localSlug },
-        { nombre: { $regex: new RegExp(`^${nombreEscaped}$`, 'i') } }
-      ]
+      $or: [{ local: localSlug }, { nombre: { $regex: new RegExp(`^${nombreEscaped}$`, 'i') } }]
     });
 
-    if (existe) {
-      return res.status(400).json({ error: 'El nombre de este local ya está registrado. Intenta con otro.' });
-    }
+    if (existe) return res.status(400).json({ error: 'El nombre de este local ya está registrado' });
 
     const ahora = new Date();
     const fechaVencimiento = new Date();
-    fechaVencimiento.setDate(ahora.getDate() + 30); // 30 días de prueba
+    fechaVencimiento.setDate(ahora.getDate() + 30);
 
     const nuevoLocal = new Local({
       id: Date.now(),
       local: localSlug,
       nombre: nombreLimpio,
-      rut: rut || 'DEMO-30DIAS',
-      correo: correo || 'demo@appmenu.cl',
-      password: password || '123',
+      rut: 'DEMO-30DIAS',
+      correo: 'demo@appmenu.cl',
+      password: '123',
       activo: true,
       fechaCreacion: ahora,
       fechaVencimiento: fechaVencimiento,
-      menu: [
-        {
-          categoria: "Entradas",
-          productos: [{ nombre: "Empanada Demo", precio: 2500 }]
-        }
-      ],
+      menu: [],
       anuncio: "ok"
     });
 
     await nuevoLocal.save();
+    res.status(201).json({ mensaje: 'Local creado con éxito', local: localSlug, localId: localSlug, nombre: nombreLimpio });
+  } catch (error) {
+    console.error("Error al crear local demo:", error);
+    res.status(500).json({ error: 'Error interno en el servidor' });
+  }
+});
 
-    res.status(201).json({
-      mensaje: 'Local creado exitosamente con 30 días de prueba',
-      local: localSlug,
-      fechaVencimiento: fechaVencimiento
+// 4. DAR DE ALTA UN RESTAURANTE
+app.post('/api/locales/alta', async (req, res) => {
+  try {
+    const { nombre, rut, correo, password } = req.body;
+    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
+
+    const nombreLimpio = nombre.trim();
+    const localSlug = nombreLimpio.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const nombreEscaped = escapeRegex(nombreLimpio);
+
+    const existe = await Local.findOne({
+      $or: [{ local: localSlug }, { nombre: { $regex: new RegExp(`^${nombreEscaped}$`, 'i') } }]
     });
 
+    if (existe) return res.status(400).json({ error: 'Este local ya existe' });
+
+    const ahora = new Date();
+    const fechaVencimiento = new Date();
+    fechaVencimiento.setDate(ahora.getDate() + 365); // 1 año de licencia oficial
+
+    const nuevoLocal = new Local({
+      id: Date.now(),
+      local: localSlug,
+      nombre: nombreLimpio,
+      rut: rut || 'SIN-RUT',
+      correo: correo || 'contacto@local.cl',
+      password: password || '123456',
+      activo: true,
+      fechaCreacion: ahora,
+      fechaVencimiento: fechaVencimiento,
+      menu: [],
+      anuncio: "ok"
+    });
+
+    await nuevoLocal.save();
+    res.status(201).json({ mensaje: 'Alta realizada con éxito', local: localSlug, localId: localSlug, nombre: nombreLimpio });
   } catch (error) {
-    console.error("Error al crear local:", error);
-    res.status(500).json({ error: 'Error interno en el servidor al crear la demo' });
+    console.error("Error al dar de alta:", error);
+    res.status(500).json({ error: 'Error interno al procesar el alta' });
+  }
+});
+
+// 5. CAMBIAR ESTADO DE LICENCIA (Bloquear / Desbloquear)
+app.patch('/api/locales/:localId/licencia', async (req, res) => {
+  try {
+    const { localId } = req.params;
+    const { activo } = req.body;
+
+    const local = await Local.findOneAndUpdate({ local: localId }, { activo }, { new: true });
+    if (!local) return res.status(404).json({ error: 'Local no encontrado' });
+
+    res.json({ ok: true, mensaje: 'Estado actualizado correctamente', local });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cambiar licencia' });
+  }
+});
+
+// 6. RECUPERAR / REENVIAR CLAVE
+app.post('/api/locales/recuperar', async (req, res) => {
+  try {
+    const { correo } = req.body;
+    const local = await Local.findOne({ correo: correo.trim() });
+    if (!local) return res.status(404).json({ error: 'No existe un local registrado con ese correo' });
+
+    res.json({ ok: true, password: local.password });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al buscar credenciales' });
+  }
+});
+
+app.post('/api/locales/reenviar-clave', async (req, res) => {
+  try {
+    const { local } = req.body;
+    const reg = await Local.findOne({ local });
+    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
+
+    res.json({ ok: true, mensaje: `La clave del local "${reg.nombre}" es: ${reg.password}` });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener la clave' });
+  }
+});
+
+// 7. OBTENER AVISOS (Para mensajes.html)
+app.get('/api/avisos', async (req, res) => {
+  try {
+    const avisos = await Aviso.find().sort({ fecha: -1 });
+    res.json(avisos);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener los avisos' });
+  }
+});
+
+// 8. PUBLICAR AVISO
+app.post('/api/avisos', async (req, res) => {
+  try {
+    const { destinatario, asunto, texto } = req.body;
+    if (!texto) return res.status(400).json({ error: 'El contenido del aviso es requerido' });
+
+    const nuevoAviso = new Aviso({ destinatario, asunto, texto });
+    await nuevoAviso.save();
+    res.status(201).json({ ok: true, aviso: nuevoAviso });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al guardar el aviso' });
+  }
+});
+
+// 9. ELIMINAR AVISO
+app.delete('/api/avisos/:id', async (req, res) => {
+  try {
+    await Aviso.findByIdAndDelete(req.params.id);
+    res.json({ ok: true, mensaje: 'Aviso eliminado' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar el aviso' });
   }
 });
 
