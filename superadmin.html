@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - Control de Licencias y Restaurantes</title>
+  <title>SuperAdmin - Control de Mensajes y Restaurantes</title>
   <style>
     :root {
       --bg-dark: #08080a;
@@ -79,6 +79,8 @@
       cursor: pointer;
       font-size: 14px;
       transition: opacity 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
     }
 
     .btn:hover { opacity: 0.9; }
@@ -120,36 +122,15 @@
 <body>
 
   <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h1>🛡️ Panel SuperAdmin - Gestión de Locales</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+      <h1>🛡️ Panel SuperAdmin</h1>
       <div style="display: flex; gap: 10px;">
-        <button class="btn btn-download" onclick="descargarAppMenuDemo()">📥 Descargar appmenudemo.html</button>
+        <a href="https://cybernovala.github.io/AppMenu/demo.html" target="_blank" class="btn btn-download">🚀 Ver Demo AppMenu</a>
         <button class="btn btn-secondary" onclick="cargarLocales()">🔄 Recargar Lista</button>
       </div>
     </div>
 
-    <!-- CREAR NUEVO LOCAL DIRECTO (DEMO SIN REGISTRARSE) -->
-    <div class="card">
-      <h2>⚡ Crear Local Demo (Sin Registro)</h2>
-      <div class="form-group">
-        <input type="text" id="nuevo-nombre-local" placeholder="Nombre del Local (Ej: Resto Bar Mongo)">
-        <button class="btn" onclick="crearNuevoLocal()">Crear Local</button>
-      </div>
-    </div>
-
-    <!-- DAR DE ALTA UN LOCAL (CON NOMBRE, RUT, CORREO Y CLAVE) -->
-    <div class="card">
-      <h2>📝 Dar de Alta Restaurante (Cliente Oficial)</h2>
-      <div class="form-group">
-        <input type="text" id="alta-nombre" placeholder="Nombre del Local">
-        <input type="text" id="alta-rut" placeholder="RUT Empresa/Cliente">
-        <input type="email" id="alta-correo" placeholder="Correo Electrónico">
-        <input type="password" id="alta-password" placeholder="Contraseña Admin">
-        <button class="btn btn-success" onclick="darDeAltaLocal()">Dar de Alta</button>
-      </div>
-    </div>
-
-    <!-- SECCIÓN DE ENVÍO DE MENSAJES AL CLIENTE EN EL PANEL ADMIN -->
+    <!-- SECCIÓN DE ENVÍO DE MENSAJES AL CLIENTE -->
     <div class="card" style="border-color: var(--neon-blue);">
       <h2>💬 Enviar Mensaje Notificación a Cliente</h2>
       <div class="form-group">
@@ -249,55 +230,6 @@
       }
     }
 
-    async function crearNuevoLocal() {
-      const nombre = document.getElementById('nuevo-nombre-local').value.trim();
-      if (!nombre) return alert("Por favor ingresa el nombre del local.");
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre })
-        });
-        if (res.ok) {
-          document.getElementById('nuevo-nombre-local').value = '';
-          cargarLocales();
-        } else {
-          const err = await res.json();
-          alert(err.error || "Error al crear local.");
-        }
-      } catch (e) { alert("Error al conectar con el servidor."); }
-    }
-
-    async function darDeAltaLocal() {
-      const nombre = document.getElementById('alta-nombre').value.trim();
-      const rut = document.getElementById('alta-rut').value.trim();
-      const correo = document.getElementById('alta-correo').value.trim();
-      const password = document.getElementById('alta-password').value.trim();
-
-      if (!nombre || !rut || !correo || !password) {
-        return alert("Por favor completa todos los campos del alta.");
-      }
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, rut, correo, password })
-        });
-        if (res.ok) {
-          document.getElementById('alta-nombre').value = '';
-          document.getElementById('alta-rut').value = '';
-          document.getElementById('alta-correo').value = '';
-          document.getElementById('alta-password').value = '';
-          cargarLocales();
-        } else {
-          const err = await res.json();
-          alert(err.error || "Error al dar de alta.");
-        }
-      } catch (e) { alert("Error al conectar con el servidor."); }
-    }
-
     async function enviarMensajeCliente() {
       const destinatario = document.getElementById('msg-destinatario').value;
       const asunto = document.getElementById('msg-asunto').value.trim();
@@ -357,10 +289,6 @@
       link.href = URL.createObjectURL(blob);
       link.download = `Acceso_${localId}.html`;
       link.click();
-    }
-
-    function descargarAppMenuDemo() {
-      alert("Función para descargar plantilla demo.");
     }
   </script>
 </body>
