@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Acceso & Control | AppMenu</title>
+  <title>Plataforma de Administración & Menús Digitales</title>
   <style>
     :root {
       --bg-dark: #08070d;
@@ -11,7 +11,6 @@
       --neon-orange: #ff5500;
       --neon-pink: #ff007f;
       --neon-yellow: #ffee00;
-      --neon-green: #00ff66;
       --neon-blue: #00d2ff;
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
@@ -28,20 +27,6 @@
       justify-content: center;
       align-items: center;
       padding: 20px;
-      position: relative;
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      top: 0; left: -50%; width: 200%; height: 200%;
-      background-image: 
-        linear-gradient(rgba(255, 85, 0, 0.1) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 0, 127, 0.1) 1px, transparent 1px);
-      background-size: 40px 40px;
-      transform: perspective(500px) rotateX(60deg) translateY(-100px);
-      z-index: -1;
-      pointer-events: none;
     }
 
     .login-container {
@@ -52,12 +37,11 @@
       max-width: 440px;
       width: 100%;
       box-shadow: 0 0 25px rgba(255, 0, 127, 0.25);
-      backdrop-filter: blur(10px);
       text-align: center;
     }
 
     .brand-title {
-      font-size: 30px;
+      font-size: 22px;
       font-weight: 900;
       background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
       -webkit-background-clip: text;
@@ -117,226 +101,138 @@
     .btn {
       width: 100%;
       padding: 12px;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
       border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
       transition: all 0.2s ease;
-      display: block;
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
+    .btn-admin {
+      background: linear-gradient(135deg, var(--neon-pink), #9900ff);
       color: #fff;
-      box-shadow: 0 0 10px rgba(255, 85, 0, 0.4);
     }
 
     .btn-demo {
-      background: linear-gradient(135deg, var(--neon-green), #00bb44);
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
       color: #000;
-      font-weight: 800;
     }
 
-    .btn-blue {
-      background: linear-gradient(135deg, var(--neon-blue), #0077ff);
+    .btn-existente {
+      background: linear-gradient(135deg, var(--neon-blue), #0055ff);
       color: #fff;
     }
 
-    .msg-feedback {
-      font-size: 12px;
-      margin-top: 8px;
-      display: none;
-    }
-    .msg-error { color: #ff3344; }
-    .msg-success { color: var(--neon-green); }
+    .btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
 
   <div class="login-container">
-    <div class="brand-title">APPMENU</div>
-    <div class="brand-subtitle">Plataforma de Administración & Menús Digitales</div>
+    <div class="brand-title">Plataforma de Administración</div>
+    <div class="brand-subtitle">Gestión centralizada de restaurantes y demostraciones</div>
 
-    <!-- BLOQUE 1: ACCESO ADMINISTRADOR GENERAL -->
+    <!-- SECCIÓN 1: ACCESO ADMIN GENERAL -->
     <div class="section-box">
       <h3>🔑 Acceso Administrador General</h3>
       <div class="form-group">
         <label>Contraseña Administrador</label>
-        <input type="password" id="pass-admin" placeholder="Ingresar contraseña">
+        <input type="password" id="admin-password" placeholder="Ingresa clave superadmin">
       </div>
-      <button class="btn btn-primary" id="btn-admin" onclick="accesoAdmin()">Ingresar a Mensajes (Admin)</button>
-      <div id="err-admin" class="msg-feedback msg-error"></div>
+      <button class="btn btn-admin" onclick="ingresarMensajesAdmin()">Ingresar a Mensajes (Admin)</button>
     </div>
 
-    <!-- BLOQUE 2: CREAR DEMO GRATIS (30 DÍAS) -->
+    <!-- SECCIÓN 2: CREAR DEMO GRATIS -->
     <div class="section-box">
       <h3>🎁 Crear y Probar Demo Gratis (30 Días)</h3>
       <div class="form-group">
         <label>Nombre de tu Local / Negocio</label>
-        <input type="text" id="nombre-demo" placeholder="Ej: MiRestobar">
+        <input type="text" id="demo-local-nombre" placeholder="Ej: Resto Bar Demo">
       </div>
-      <button class="btn btn-demo" id="btn-crear-demo" onclick="crearDemoGratis()">🚀 Crear y Probar Demo</button>
-      <div id="msg-demo" class="msg-feedback"></div>
+      <button class="btn btn-demo" onclick="crearProbarDemo()">🚀 Crear y Probar Demo</button>
     </div>
 
-    <!-- BLOQUE 3: INGRESO A LOCAL EXISTENTE -->
+    <!-- SECCIÓN 3: LOCAL EXISTENTE -->
     <div class="section-box">
       <h3>🏪 Ingreso a Local Existente</h3>
       <div class="form-group">
         <label>Nombre de tu Local Registrado</label>
-        <input type="text" id="nombre-local-existente" placeholder="Ej: opi">
+        <input type="text" id="existente-local-nombre" placeholder="Ej: Pizzería Central">
       </div>
-      <button class="btn btn-blue" id="btn-ingresar-existente" onclick="ingresarLocalExistente()">📱 Entrar al Admin del Local</button>
-      <div id="msg-existente" class="msg-feedback"></div>
+      <button class="btn btn-existente" onclick="entrarAdminLocal()">📱 Entrar al Admin del Local</button>
     </div>
-
   </div>
 
   <script>
-    const BACKEND_URL = 'https://appmenu-tavr.onrender.com';
+    const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:3000'
+      : 'https://appmenu-tavr.onrender.com';
 
-    // 1. Acceso Administrador -> Validado contra backend
-    async function accesoAdmin() {
-      const pass = document.getElementById('pass-admin').value.trim();
-      const err = document.getElementById('err-admin');
-      const btn = document.getElementById('btn-admin');
-
-      if (!pass) {
-        err.innerText = "⚠️ Por favor ingresa la contraseña.";
-        err.style.display = 'block';
-        return;
-      }
-
-      btn.disabled = true;
-      err.style.display = 'none';
+    // 1. Validar la contraseña contra MongoDB e ingresar
+    async function ingresarMensajesAdmin() {
+      const password = document.getElementById('admin-password').value.trim();
+      if (!password) return alert("⚠️ Ingresa la contraseña de Administrador.");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/admin/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: pass })
+          body: JSON.stringify({ password })
         });
 
         const data = await res.json();
-
         if (res.ok && data.ok) {
-          window.location.href = "mensajes.html";
+          // Redirigir si la contraseña en MongoDB es correcta
+          window.location.href = 'https://appmenu-990c3.web.app/mensajes.html';
         } else {
-          err.innerText = "❌ Contraseña incorrecta.";
-          err.style.display = 'block';
-          btn.disabled = false;
+          alert(`❌ ${data.error || 'Contraseña incorrecta'}`);
         }
-      } catch (e) {
-        err.innerText = "❌ Error de conexión con el servidor.";
-        err.style.display = 'block';
-        btn.disabled = false;
+      } catch (err) {
+        alert("❌ Error de comunicación con el servidor");
       }
     }
 
-    // 2. Crear local Demo Gratis
-    async function crearDemoGratis() {
-      const inputNombre = document.getElementById('nombre-demo');
-      const btn = document.getElementById('btn-crear-demo');
-      const msg = document.getElementById('msg-demo');
-      const nombreRaw = inputNombre.value.trim();
-
-      if (!nombreRaw) {
-        msg.className = "msg-feedback msg-error";
-        msg.innerText = "⚠️ Por favor escribe el nombre de tu local.";
-        msg.style.display = 'block';
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerText = "Creando local...";
-      msg.style.display = 'none';
+    // 2. Crear una nueva demo en MongoDB y redirigir
+    async function crearProbarDemo() {
+      const nombre = document.getElementById('demo-local-nombre').value.trim();
+      if (!nombre) return alert("⚠️ Ingresa el nombre para tu local");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nombre: nombreRaw,
-            rut: "DEMO-30DIAS",
-            correo: "demo@appmenu.cl",
-            password: "123"
-          })
+          body: JSON.stringify({ nombre })
         });
 
         const data = await res.json();
-
-        if (res.ok || res.status === 201) {
-          msg.className = "msg-feedback msg-success";
-          msg.innerText = "✅ ¡Local Demo creado exitosamente! Redirigiendo...";
-          msg.style.display = 'block';
-          
-          setTimeout(() => {
-            const localSlug = data.local || nombreRaw.toLowerCase().replace(/[^a-z0-9]/g, '');
-            window.location.href = `admin.html?local=${encodeURIComponent(localSlug)}`;
-          }, 1000);
+        if (res.ok) {
+          alert("🎉 Local demo creado con éxito.");
+          window.location.href = `https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(data.local)}`;
         } else {
-          msg.className = "msg-feedback msg-error";
-          msg.innerText = `❌ ${data.error || 'No se pudo crear el local.'}`;
-          msg.style.display = 'block';
-          btn.disabled = false;
-          btn.innerText = "🚀 Crear y Probar Demo";
+          alert(`❌ ${data.error || 'No se pudo crear el local'}`);
         }
-
       } catch (err) {
-        msg.className = "msg-feedback msg-error";
-        msg.innerText = "❌ Error de conexión con el servidor.";
-        msg.style.display = 'block';
-        btn.disabled = false;
-        btn.innerText = "🚀 Crear y Probar Demo";
+        alert("❌ Error al crear el local demo");
       }
     }
 
-    // 3. Ingreso Validado a Local Existente
-    async function ingresarLocalExistente() {
-      const input = document.getElementById('nombre-local-existente');
-      const btn = document.getElementById('btn-ingresar-existente');
-      const msg = document.getElementById('msg-existente');
-      const nombreRaw = input.value.trim();
-
-      if (!nombreRaw) {
-        msg.className = "msg-feedback msg-error";
-        msg.innerText = "⚠️ Escribe el nombre de un local registrado.";
-        msg.style.display = 'block';
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerText = "Verificando local...";
-      msg.style.display = 'none';
+    // 3. Verificar en MongoDB si el local existe y redirigir
+    async function entrarAdminLocal() {
+      const busqueda = document.getElementById('existente-local-nombre').value.trim();
+      if (!busqueda) return alert("⚠️ Ingresa el nombre de tu local");
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/verificar/${encodeURIComponent(nombreRaw)}`);
+        const res = await fetch(`${BACKEND_URL}/api/locales/verificar/${encodeURIComponent(busqueda)}`);
         const data = await res.json();
 
         if (res.ok && data.existe) {
-          msg.className = "msg-feedback msg-success";
-          msg.innerText = "✅ Local verificado. Redirigiendo...";
-          msg.style.display = 'block';
-
-          setTimeout(() => {
-            window.location.href = `admin.html?local=${encodeURIComponent(data.local)}`;
-          }, 600);
-          return;
+          window.location.href = `https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(data.local)}`;
+        } else {
+          alert("❌ El local ingresado no se encuentra registrado.");
         }
-
-        msg.className = "msg-feedback msg-error";
-        msg.innerText = "❌ El local ingresado no existe.";
-        msg.style.display = 'block';
-        btn.disabled = false;
-        btn.innerText = "📱 Entrar al Admin del Local";
-
       } catch (err) {
-        msg.className = "msg-feedback msg-error";
-        msg.innerText = "❌ Error de conexión con el servidor.";
-        msg.style.display = 'block';
-        btn.disabled = false;
-        btn.innerText = "📱 Entrar al Admin del Local";
+        alert("❌ Error al consultar la existencia del local");
       }
     }
   </script>
