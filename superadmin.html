@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SuperAdmin - AppMenu Nova</title>
+  <title>SuperAdmin - Panel Central</title>
   <style>
     :root {
-      --bg-dark: #090a0f;
-      --card-bg: #12131c;
+      --bg-dark: #08070d;
+      --card-bg: rgba(18, 16, 28, 0.85);
       --neon-orange: #ff5500;
       --neon-pink: #ff007f;
       --neon-yellow: #ffee00;
@@ -15,247 +15,148 @@
       --neon-blue: #00d2ff;
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
-      --border-color: rgba(255, 255, 255, 0.1);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
 
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
-      padding: 20px;
       min-height: 100vh;
+      padding: 20px;
     }
 
-    .container { max-width: 1200px; margin: 0 auto; }
+    .container { max-width: 900px; margin: 0 auto; }
 
     .header-bar {
+      background: rgba(18, 18, 24, 0.95);
+      border: 1px solid rgba(255, 0, 127, 0.3);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: var(--card-bg);
-      border: 1px solid var(--neon-orange);
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 25px;
       flex-wrap: wrap;
       gap: 15px;
     }
 
     .title {
       font-size: 22px;
-      font-weight: 900;
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--neon-yellow);
+      font-weight: 800;
       text-transform: uppercase;
     }
 
-    .grid-layout {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 25px;
+    .btn {
+      background: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
+      border: none;
+      color: #000;
+      padding: 12px 20px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      display: inline-block;
     }
 
-    @media (min-width: 900px) {
-      .grid-layout {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
+    .btn-blue { background: linear-gradient(135deg, var(--neon-blue), #0077ff); color: #fff; }
+    .btn-danger { background: #ff3344; color: #fff; padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; }
 
-    .section-card {
+    .card {
       background: var(--card-bg);
-      border: 1px solid var(--border-color);
+      border: 1px solid rgba(255, 85, 0, 0.25);
       border-radius: 12px;
       padding: 20px;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
 
-    .section-title {
-      font-size: 16px;
-      color: var(--neon-yellow);
+    .card h3 {
+      font-size: 18px;
+      color: var(--neon-orange);
       margin-bottom: 15px;
       text-transform: uppercase;
-      font-weight: bold;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      margin-bottom: 12px;
+      gap: 12px;
     }
 
-    label { font-size: 12px; color: var(--text-muted); }
-
-    input, select, textarea {
-      padding: 10px 14px;
-      background: #1a1b26;
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      background: #181822;
       border: 1px solid #333;
       color: #fff;
       border-radius: 6px;
       font-size: 14px;
-      width: 100%;
     }
 
     textarea { resize: vertical; min-height: 80px; }
 
-    .btn {
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
-      border: none;
-      color: #fff;
-      padding: 10px 16px;
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: opacity 0.2s;
-      text-decoration: none;
-      display: inline-flex;
+    .aviso-item {
+      background: #14141c;
+      border: 1px solid #282838;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
     }
 
-    .btn:hover { opacity: 0.9; }
-    .btn-green { background: linear-gradient(135deg, var(--neon-green), #00aa44); color: #000; }
-    .btn-blue { background: linear-gradient(135deg, var(--neon-blue), #0066ff); color: #fff; }
-    .btn-danger { background: #ff3344; color: #fff; }
-    .btn-sm { padding: 6px 10px; font-size: 12px; }
-
-    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #222; }
-    th { background: #161722; color: var(--neon-yellow); }
-
-    .badge {
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: bold;
-    }
-    .badge-active { background: rgba(0, 255, 102, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
-    .badge-inactive { background: rgba(255, 51, 68, 0.2); color: #ff3344; border: 1px solid #ff3344; }
-
-    .badge-info { background: rgba(0, 210, 255, 0.2); color: var(--neon-blue); }
-    .badge-warning { background: rgba(255, 238, 0, 0.2); color: var(--neon-yellow); }
-    .badge-success { background: rgba(0, 255, 102, 0.2); color: var(--neon-green); }
-    .badge-danger { background: rgba(255, 51, 68, 0.2); color: #ff3344; }
+    .aviso-info { display: flex; flex-direction: column; gap: 4px; }
+    .aviso-dest { font-size: 12px; color: var(--neon-blue); font-weight: bold; }
+    .aviso-asunto { font-size: 15px; font-weight: bold; color: var(--neon-yellow); }
+    .aviso-texto { font-size: 14px; color: #ddd; }
   </style>
 </head>
 <body>
 
   <div class="container">
+    
+    <!-- HEADER GENERAL CON BOTÓN ACCESO DEMO -->
     <div class="header-bar">
-      <div>
-        <div class="title">⚡ Control SuperAdmin AppMenu</div>
-        <span style="font-size: 12px; color: var(--text-muted);">Administración Centralizada de Licencias y Mensajes</span>
-      </div>
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <!-- Botón de acceso directo solicitado -->
-        <a href="https://cybernovala.github.io/AppMenu/demo.html" target="_blank" class="btn btn-blue">
-          🌐 Ir a Demo AppMenu
-        </a>
-        <button class="btn btn-green" onclick="cargarTodo()">🔄 Actualizar Datos</button>
+      <div class="title">⚡ SuperAdmin - Panel Central</div>
+      <a href="https://cybernovala.github.io/AppMenu/demo.html" target="_blank" class="btn btn-blue">
+        🌐 Acceder a AppMenu Demo
+      </a>
+    </div>
+
+    <!-- RECUADRO PARA ENVÍO DE MENSAJES -->
+    <div class="card">
+      <h3>📢 Enviar Aviso o Mensaje al Panel Admin</h3>
+      <div class="form-group">
+        <div>
+          <label style="font-size: 12px; color: var(--text-muted);">Destinatario (Local ID o "todos")</label>
+          <input type="text" id="msg-destinatario" value="todos" placeholder="Ej: todos o prueba3">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: var(--text-muted);">Asunto / Título</label>
+          <input type="text" id="msg-asunto" value="Aviso del Sistema" placeholder="Ej: Mantenimiento Programado">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: var(--text-muted);">Contenido del Mensaje</label>
+          <textarea id="msg-texto" placeholder="Escribe el mensaje que aparecerá en el banner superior de admin.html..."></textarea>
+        </div>
+        <button class="btn" onclick="publicarAviso()">🚀 Publicar Mensaje</button>
       </div>
     </div>
 
-    <div class="grid-layout">
-      <!-- COLUMNA IZQUIERDA: GESTIÓN DE AVISOS Y MENSAJES -->
-      <div>
-        <div class="section-card">
-          <div class="section-title">📢 Publicar Mensaje para Clientes</div>
-          <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 12px;">
-            Escribe un mensaje para que se muestre en los paneles de menú del cliente.
-          </p>
-          
-          <div class="form-group">
-            <label>Destinatario (Local específico o Todos)</label>
-            <select id="aviso-destinatario">
-              <option value="todos">🌐 Todos los Negocios (Global)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Asunto / Título del Mensaje</label>
-            <input type="text" id="aviso-asunto" placeholder="Ej: Aviso del Sistema / Mantenimiento" value="Aviso del Sistema">
-          </div>
-
-          <div class="form-group">
-            <label>Texto del Mensaje / Contenido</label>
-            <textarea id="aviso-texto" placeholder="Escribe el mensaje para los clientes aquí..."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Tipo de Mensaje</label>
-            <select id="aviso-tipo">
-              <option value="info">ℹ️ Información (Azul)</option>
-              <option value="warning">⚠️ Advertencia (Amarillo)</option>
-              <option value="success">✅ Éxito / Promoción (Verde)</option>
-              <option value="danger">🚨 Importante / Urgente (Rojo)</option>
-            </select>
-          </div>
-
-          <button class="btn btn-green" style="width: 100%; margin-top: 5px;" onclick="publicarAviso()">🚀 Publicar Mensaje</button>
-        </div>
-
-        <div class="section-card">
-          <div class="section-title">💬 Mensajes Activos en MongoDB</div>
-          <div style="overflow-x: auto;">
-            <table>
-              <thead>
-                <tr>
-                  <th>Destinatario</th>
-                  <th>Asunto / Texto</th>
-                  <th>Tipo</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tabla-avisos">
-                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Cargando avisos...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+    <!-- LISTADO DE MENSAJES PUBLICADOS -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3>📋 Mensajes Activos</h3>
+        <button class="btn btn-blue" style="padding: 6px 12px; font-size: 12px;" onclick="cargarAvisos()">🔄 Recargar</button>
       </div>
-
-      <!-- COLUMNA DERECHA: GESTIÓN DE LOCALES Y LICENCIAS -->
-      <div>
-        <div class="section-card">
-          <div class="section-title">➕ Crear Nuevo Local / Restaurante</div>
-          <div class="form-group">
-            <label>Nombre del Restaurante</label>
-            <input type="text" id="nuevo-local-nombre" placeholder="Ej: Sushi Roll">
-          </div>
-          <div class="form-group">
-            <label>Contraseña Administrador</label>
-            <input type="text" id="nuevo-local-pass" placeholder="1234" value="1234">
-          </div>
-          <button class="btn" style="width: 100%; margin-top: 5px;" onclick="crearNuevoLocal()">✨ Crear Local</button>
-        </div>
-
-        <div class="section-card">
-          <div class="section-title">🏪 Locales Registrados y Estado de Licencia</div>
-          <div style="overflow-x: auto;">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID / Local</th>
-                  <th>Nombre</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tabla-locales">
-                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Cargando locales...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div id="lista-avisos">
+        <p style="color: var(--text-muted); text-align: center;">Cargando avisos...</p>
       </div>
     </div>
+
   </div>
 
   <script>
@@ -264,160 +165,74 @@
       : 'https://appmenu-tavr.onrender.com';
 
     document.addEventListener("DOMContentLoaded", () => {
-      cargarTodo();
+      cargarAvisos();
     });
 
-    function cargarTodo() {
-      cargarLocales();
-      cargarAvisos();
-    }
-
-    async function cargarLocales() {
-      const tbody = document.getElementById('tabla-locales');
-      const selectDestino = document.getElementById('aviso-destinatario');
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Cargando locales...</td></tr>';
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales`);
-        if (!res.ok) throw new Error("Error al consultar locales");
-        const locales = await res.json();
-
-        selectDestino.innerHTML = '<option value="todos">🌐 Todos los Negocios (Global)</option>';
-
-        if (locales.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No hay locales registrados.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = locales.map(l => {
-          selectDestino.innerHTML += `<option value="${l.localId}">${l.nombre} (${l.localId})</option>`;
-          const activo = l.activo;
-
-          return `
-            <tr>
-              <td><b>${l.id}</b><br><small style="color:var(--text-muted);">${l.localId}</small></td>
-              <td>${l.nombre}</td>
-              <td>
-                <span class="badge ${activo ? 'badge-active' : 'badge-inactive'}">
-                  ${activo ? 'ACTIVO' : 'BLOQUEADO'}
-                </span>
-              </td>
-              <td>
-                <button class="btn btn-sm ${activo ? 'btn-danger' : 'btn-green'}" onclick="toggleLicencia('${l.localId}', ${!activo})">
-                  ${activo ? '🔒 Desactivar' : '🔓 Activar'}
-                </button>
-              </td>
-            </tr>
-          `;
-        }).join('');
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #ff3344;">Error al conectar con la base de datos.</td></tr>';
-      }
-    }
-
-    async function toggleLicencia(localId, nuevoEstado) {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/${localId}/licencia`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ activo: nuevoEstado })
-        });
-        if (res.ok) cargarLocales();
-        else alert("Error al cambiar estado de licencia");
-      } catch (e) { alert("Error de conexión"); }
-    }
-
-    async function crearNuevoLocal() {
-      const nombre = document.getElementById('nuevo-local-nombre').value.trim();
-      const password = document.getElementById('nuevo-local-pass').value.trim();
-
-      if (!nombre) return alert("Ingresa el nombre del restaurante.");
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, password })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          alert("✅ Restaurante creado con éxito.");
-          document.getElementById('nuevo-local-nombre').value = '';
-          cargarLocales();
-        } else {
-          alert(`❌ Error: ${data.error || 'No se pudo crear'}`);
-        }
-      } catch (e) { alert("Error al conectar con servidor"); }
-    }
-
     async function cargarAvisos() {
-      const tbody = document.getElementById('tabla-avisos');
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Cargando mensajes...</td></tr>';
-
+      const cont = document.getElementById('lista-avisos');
       try {
-        const res = await fetch(`${BACKEND_URL}/api/avisos/admin`);
-        if (!res.ok) throw new Error("Error al obtener avisos");
-        const avisos = await res.json();
+        const res = await fetch(`${BACKEND_URL}/api/avisos?_t=${Date.now()}`);
+        if (!res.ok) throw new Error("Error al obtener mensajes");
 
+        const avisos = await res.json();
         if (avisos.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No hay avisos activos.</td></tr>';
+          cont.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay mensajes activos actualmente.</p>';
           return;
         }
 
-        tbody.innerHTML = avisos.map(a => `
-          <tr>
-            <td><b style="color:var(--neon-yellow);">${a.destinatario}</b></td>
-            <td>
-              <b>${a.asunto}</b><br>
-              <span style="font-size:12px; color: var(--text-muted);">${a.texto}</span>
-            </td>
-            <td><span class="badge badge-${a.tipo}">${a.tipo.toUpperCase()}</span></td>
-            <td>
-              <button class="btn btn-danger btn-sm" onclick="eliminarAviso('${a._id}')">🗑️ Eliminar</button>
-            </td>
-          </tr>
+        cont.innerHTML = avisos.map(a => `
+          <div class="aviso-item">
+            <div class="aviso-info">
+              <span class="aviso-dest">🎯 Destinatario: ${a.destinatario || 'todos'}</span>
+              <span class="aviso-asunto">${a.asunto || 'Aviso del Sistema'}</span>
+              <span class="aviso-texto">${a.texto}</span>
+            </div>
+            <button class="btn-danger" onclick="eliminarAviso('${a._id}')">🗑️ Eliminar</button>
+          </div>
         `).join('');
       } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #ff3344;">Error al cargar mensajes.</td></tr>';
+        cont.innerHTML = '<p style="color: #ff3344; text-align: center;">Error de conexión con el servidor.</p>';
       }
     }
 
     async function publicarAviso() {
-      const destinatario = document.getElementById('aviso-destinatario').value;
-      const asunto = document.getElementById('aviso-asunto').value.trim();
-      const texto = document.getElementById('aviso-texto').value.trim();
-      const tipo = document.getElementById('aviso-tipo').value;
+      const destinatario = document.getElementById('msg-destinatario').value.trim();
+      const asunto = document.getElementById('msg-asunto').value.trim();
+      const texto = document.getElementById('msg-texto').value.trim();
 
-      if (!texto) return alert("Por favor escribe el contenido del mensaje.");
+      if (!texto) return alert("Por favor ingresa el texto del mensaje.");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/avisos`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ destinatario, asunto, texto, tipo })
+          body: JSON.stringify({ destinatario, asunto, texto })
         });
 
         if (res.ok) {
-          alert("📢 Mensaje publicado con éxito.");
-          document.getElementById('aviso-texto').value = '';
+          alert("✅ Mensaje publicado con éxito.");
+          document.getElementById('msg-texto').value = '';
           cargarAvisos();
         } else {
-          alert("Error al publicar mensaje");
+          alert("❌ Error al publicar el mensaje.");
         }
-      } catch (e) { alert("Error de red"); }
+      } catch (e) {
+        alert("❌ Error de red con el servidor backend.");
+      }
     }
 
     async function eliminarAviso(id) {
-      if (!confirm("¿Deseas eliminar este mensaje para que ya no aparezca en el menú del cliente?")) return;
-
+      if (!confirm("¿Deseas eliminar este mensaje? Ya no aparecerá en el panel de los clientes.")) return;
       try {
         const res = await fetch(`${BACKEND_URL}/api/avisos/${id}`, { method: 'DELETE' });
         if (res.ok) {
           cargarAvisos();
         } else {
-          alert("Error al eliminar mensaje");
+          alert("❌ Error al eliminar el mensaje.");
         }
-      } catch (e) { alert("Error de conexión"); }
+      } catch (e) {
+        alert("❌ Error de red.");
+      }
     }
   </script>
 </body>
