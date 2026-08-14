@@ -92,7 +92,7 @@
     .btn-success { background: var(--neon-green); color: #000; }
     .btn-download { background: var(--neon-blue); color: #000; }
 
-    .local-card {
+    .local-card, .msg-card {
       background: #121218;
       border: 1px solid #2a2a36;
       border-radius: 8px;
@@ -105,8 +105,8 @@
       gap: 15px;
     }
 
-    .local-info b { font-size: 16px; color: var(--neon-blue); }
-    .local-info span { font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px; }
+    .local-info b, .msg-info b { font-size: 16px; color: var(--neon-blue); }
+    .local-info span, .msg-info span { font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px; }
 
     .badge {
       display: inline-block;
@@ -126,7 +126,7 @@
       <h1>🛡️ Panel SuperAdmin</h1>
       <div style="display: flex; gap: 10px;">
         <a href="https://cybernovala.github.io/AppMenu/demo.html" target="_blank" class="btn btn-download">🚀 Ver Demo AppMenu</a>
-        <button class="btn btn-secondary" onclick="cargarLocales()">🔄 Recargar Lista</button>
+        <button class="btn btn-secondary" onclick="cargarTodo()">🔄 Recargar Todo</button>
       </div>
     </div>
 
@@ -148,7 +148,21 @@
       <div style="margin-bottom: 12px;">
         <textarea id="msg-texto" placeholder="Escribe el mensaje que aparecerá en el panel del restaurante..."></textarea>
       </div>
-      <button class="btn btn-download" onclick="enviarMensajeCliente()">🚀 Enviar Mensaje al Panel del Cliente</button>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-download" onclick="enviarMensajeCliente()">🚀 Enviar Mensaje</button>
+        <button class="btn btn-secondary" onclick="limpiarFormularioMensaje()">🧹 Limpiar Campos</button>
+      </div>
+    </div>
+
+    <!-- SECCIÓN DE MENSAJES ACTIVOS / BORRADO DE MENSAJES -->
+    <div class="card" style="border-color: var(--neon-red);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="color: var(--neon-red); margin-bottom: 0;">🗑️ Mensajes Activos en Pantalla</h2>
+        <button class="btn btn-danger" onclick="borrarTodosLosMensajes()">💥 Limpiar Todos los Mensajes</button>
+      </div>
+      <div id="contenedor-mensajes">
+        <p style="color: var(--text-muted);">Cargando mensajes activos...</p>
+      </div>
     </div>
 
     <!-- LISTADO DE LOCALES -->
@@ -166,8 +180,13 @@
       : 'https://appmenu-tavr.onrender.com';
 
     document.addEventListener("DOMContentLoaded", () => {
-      cargarLocales();
+      cargarTodo();
     });
+
+    function cargarTodo() {
+      cargarLocales();
+      cargarMensajesActivos();
+    }
 
     async function cargarLocales() {
       const cont = document.getElementById('contenedor-locales');
@@ -180,7 +199,6 @@
 
         const locales = await res.json();
 
-        // Actualizar selector de destinatarios
         if (selectDest) {
           selectDest.innerHTML = '<option value="todos">📢 Todos los Restaurantes (Global)</option>';
           locales.forEach(l => {
@@ -230,6 +248,46 @@
       }
     }
 
+    async function cargarMensajesActivos() {
+      const cont = document.getElementById('contenedor-mensajes');
+      cont.innerHTML = '<p style="color: var(--text-muted);">Cargando mensajes activos...</p>';
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensajes?_t=${Date.now()}`);
+        if (!res.ok) throw new Error("Error al consultar mensajes");
+
+        const mensajes = await res.json();
+
+        if (!Array.isArray(mensajes) || mensajes.length === 0) {
+          cont.innerHTML = '<p style="color: var(--neon-green);">✅ No hay mensajes activos mostrándose en los clientes.</p>';
+          return;
+        }
+
+        cont.innerHTML = mensajes.map(m => `
+          <div class="msg-card">
+            <div class="msg-info">
+              <b>[${m.tipo ? m.tipo.toUpperCase() : 'INFO'}] ${m.asunto || 'Sin Asunto'}</b>
+              <span>Destinatario: <b>${m.destinatario}</b></span>
+              <span>Mensaje: "${m.texto}"</span>
+            </div>
+            <div>
+              <button class="btn btn-danger" onclick="borrarMensaje('${m.id}')">🗑️ Eliminar</button>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        cont.innerHTML = '<p style="color: var(--text-muted);">Sin mensajes o endpoint de consulta no configurado aún.</p>';
+      }
+    }
+
+    function limpiarFormularioMensaje() {
+      document.getElementById('msg-asunto').value = '';
+      document.getElementById('msg-texto').value = '';
+      document.getElementById('msg-tipo').value = 'info';
+      document.getElementById('msg-destinatario').value = 'todos';
+    }
+
     async function enviarMensajeCliente() {
       const destinatario = document.getElementById('msg-destinatario').value;
       const asunto = document.getElementById('msg-asunto').value.trim();
@@ -248,14 +306,52 @@
         });
 
         if (res.ok) {
-          alert("🎉 ¡Mensaje enviado con éxito al panel del cliente!");
-          document.getElementById('msg-asunto').value = '';
-          document.getElementById('msg-texto').value = '';
+          alert("🎉 ¡Mensaje enviado con éxito!");
+          limpiarFormularioMensaje();
+          cargarMensajesActivos();
         } else {
           alert("❌ No se pudo enviar el mensaje.");
         }
       } catch (e) {
         alert("❌ Error de red al enviar el mensaje.");
+      }
+    }
+
+    async function borrarMensaje(id) {
+      if (!confirm("¿Deseas quitar este mensaje de la pantalla del cliente?")) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensajes/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (res.ok) {
+          alert("🗑️ Mensaje eliminado correctamente.");
+          cargarMensajesActivos();
+        } else {
+          alert("❌ No se pudo eliminar el mensaje.");
+        }
+      } catch (e) {
+        alert("❌ Error de red al intentar eliminar.");
+      }
+    }
+
+    async function borrarTodosLosMensajes() {
+      if (!confirm("⚠️ ¿Estás seguro de que quieres BORRAR TODOS los mensajes activos?")) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/mensajes`, {
+          method: 'DELETE'
+        });
+
+        if (res.ok) {
+          alert("💥 Todos los mensajes han sido eliminados.");
+          cargarMensajesActivos();
+        } else {
+          alert("❌ No se pudieron eliminar los mensajes.");
+        }
+      } catch (e) {
+        alert("❌ Error de red al eliminar mensajes.");
       }
     }
 
