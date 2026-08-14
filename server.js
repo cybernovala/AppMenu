@@ -73,16 +73,16 @@ const HistorialSchema = new mongoose.Schema({
 
 const Historial = mongoose.models.Historial || mongoose.model('Historial', HistorialSchema, 'historials');
 
-// NUEVO ESQUEMA DE MENSAJES PARA COMUNICACIÓN SUPERADMIN -> CLIENTE
-const MensajeSchema = new mongoose.Schema({
-  destinatario: { type: String, required: true }, // slug del local o 'TODOS'
+// Esquema y Modelo para Avisos / Mensajes a Clientes
+const AvisoSchema = new mongoose.Schema({
+  destinatario: { type: String, default: 'todos' },
   asunto: { type: String, default: 'Aviso del Sistema' },
   texto: { type: String, required: true },
-  tipo: { type: String, default: 'info' }, // info, warning, danger, success
+  tipo: { type: String, default: 'info' },
   activo: { type: Boolean, default: true }
-}, { timestamps: true });
+}, { strict: false, timestamps: true });
 
-const Mensaje = mongoose.models.Mensaje || mongoose.model('Mensaje', MensajeSchema, 'mensajes');
+const Aviso = mongoose.models.Aviso || mongoose.model('Aviso', AvisoSchema, 'avisos');
 
 async function getNextSequenceValue(sequenceName) {
   const sequenceDocument = await Counter.findByIdAndUpdate(
@@ -134,7 +134,77 @@ const verificarLicencia = async (req, res, next) => {
   }
 };
 
-// --- 5. RUTAS DE LICENCIA Y SUPERADMIN ---
+// --- 5. RUTAS DE AVISOS Y MENSAJES DE SUPERADMIN ---
+
+app.get('/api/avisos', async (req, res) => {
+  try {
+    const { local } = req.query;
+    let filter = { activo: true };
+
+    if (local) {
+      const localSlug = String(local).toLowerCase().trim();
+      filter = {
+        activo: true,
+        $or: [
+          { destinatario: 'todos' },
+          { destinatario: localSlug }
+        ]
+      };
+    }
+
+    const avisos = await Aviso.find(filter).sort({ createdAt: -1 }).lean();
+    return res.status(200).json(avisos);
+  } catch (err) {
+    console.error("❌ Error en GET /api/avisos:", err.message);
+    return res.status(500).json([]);
+  }
+});
+
+app.get('/api/avisos/admin', async (req, res) => {
+  try {
+    const avisos = await Aviso.find({}).sort({ createdAt: -1 }).lean();
+    return res.status(200).json(avisos);
+  } catch (err) {
+    console.error("❌ Error en GET /api/avisos/admin:", err.message);
+    return res.status(500).json([]);
+  }
+});
+
+app.post('/api/avisos', async (req, res) => {
+  try {
+    const { destinatario, asunto, texto, tipo } = req.body;
+    if (!texto) {
+      return res.status(400).json({ error: 'El texto del mensaje es obligatorio' });
+    }
+
+    const nuevoAviso = new Aviso({
+      destinatario: destinatario ? destinatario.toLowerCase().trim() : 'todos',
+      asunto: asunto || 'Aviso del Sistema',
+      texto: texto.trim(),
+      tipo: tipo || 'info',
+      activo: true
+    });
+
+    await nuevoAviso.save();
+    return res.status(201).json({ mensaje: 'Aviso publicado exitosamente', aviso: nuevoAviso });
+  } catch (err) {
+    console.error("❌ Error en POST /api/avisos:", err.message);
+    return res.status(500).json({ error: 'Error al publicar aviso' });
+  }
+});
+
+app.delete('/api/avisos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Aviso.findByIdAndDelete(id);
+    return res.status(200).json({ mensaje: 'Aviso eliminado correctamente' });
+  } catch (err) {
+    console.error("❌ Error en DELETE /api/avisos/:id:", err.message);
+    return res.status(500).json({ error: 'Error al eliminar aviso' });
+  }
+});
+
+// --- 6. RUTAS DE LICENCIA Y SUPERADMIN ---
 
 app.get('/api/licencia', async (req, res) => {
   try {
@@ -378,49 +448,18 @@ app.patch('/api/locales/:id/licencia', async (req, res) => {
   }
 });
 
-// --- ENPOINTS DE MENSAJES PARA SUPERADMIN ---
-app.post('/api/mensajes', async (req, res) => {
+app.delete('/api/locales/:id', async (req, res) => {
   try {
-    const { destinatario, asunto, texto, tipo } = req.body;
-    if (!destinatario || !texto) {
-      return res.status(400).json({ error: 'Destinatario y texto son obligatorios' });
-    }
-
-    const nuevoMensaje = new Mensaje({
-      destinatario: destinatario.toLowerCase().trim(),
-      asunto: asunto || 'Aviso del Sistema',
-      texto: texto.trim(),
-      tipo: tipo || 'info',
-      activo: true
-    });
-
-    await nuevoMensaje.save();
-    return res.status(201).json({ mensaje: 'Mensaje enviado con éxito', data: nuevoMensaje });
+    const localQuery = req.params.id.toLowerCase().trim();
+    const doc = await Local.findOneAndDelete(buildLocalFilter(localQuery));
+    if (!doc) return res.status(404).json({ error: 'Local no encontrado' });
+    return res.status(200).json({ mensaje: 'Local eliminado correctamente de MongoDB' });
   } catch (err) {
-    return res.status(500).json({ error: 'Error al enviar mensaje' });
+    return res.status(500).json({ error: 'Error al eliminar el local' });
   }
 });
 
-app.get('/api/mensajes', async (req, res) => {
-  try {
-    const localQuery = (req.query.local || '').toLowerCase().trim();
-    if (!localQuery) return res.status(200).json([]);
-
-    const mensajes = await Mensaje.find({
-      $or: [
-        { destinatario: localQuery },
-        { destinatario: 'todos' }
-      ],
-      activo: true
-    }).sort({ createdAt: -1 }).lean();
-
-    return res.status(200).json(mensajes);
-  } catch (err) {
-    return res.status(500).json([]);
-  }
-});
-
-// --- 6. RUTAS DEL MENÚ Y CATEGORÍAS ---
+// --- 7. RUTAS DEL MENÚ Y CATEGORÍAS ---
 
 app.get('/api/menu', verificarLicencia, async (req, res) => {
   try {
@@ -579,7 +618,7 @@ app.put('/api/menu/edit', verificarLicencia, async (req, res) => {
   }
 });
 
-// --- 7. RUTAS DE PEDIDOS Y HISTORIAL ---
+// --- 8. RUTAS DE PEDIDOS Y HISTORIAL ---
 
 app.get('/api/pedidos', verificarLicencia, async (req, res) => {
   try {
@@ -659,7 +698,7 @@ app.post('/api/historials', verificarLicencia, async (req, res) => {
   }
 });
 
-// --- 8. INICIO DEL SERVIDOR ---
+// --- 9. INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
