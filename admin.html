@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración & Menú Digital</title>
+  <title>----Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -521,7 +521,7 @@
       <div class="section-card">
         <h3>📝 Registrar y Dar de Alta el Negocio</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Completa este formulario para registrar formalmente el negocio en el sistema backend y proteger el acceso al menú y al historial de garzones para que solo el administrador del negocio pueda acceder mediante contraseña. En el modo demo cualquier persona puede ver los datos.
+          Completa este formulario para registrar formalmente el negocio en el sistema backend y proteger el acceso al menú y al historial de garzones.
         </p>
         <div style="display: flex; flex-direction: column; gap: 12px; max-width: 500px;">
           <div>
@@ -623,7 +623,7 @@
       <div class="section-card" style="border-color: var(--neon-blue);">
         <h3>🔲 QR Exclusivo para Garzones</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Código permanentemente listo para descargar e imprimir (Etiqueta 5x5 cm).(pegar en lugar visible para garzones)
+          Código permanentemente listo para descargar e imprimir (Etiqueta 5x5 cm).
         </p>
         <div class="qr-card-container">
           <div class="qr-preview-box">
@@ -829,7 +829,7 @@
       : 'https://appmenu-tavr.onrender.com';
 
     const params = new URLSearchParams(window.location.search);
-    const localId = (params.get('local') || '1').toLowerCase().trim();
+    const localId = (params.get('local') || 't').toLowerCase().trim();
     const numeroMesa = params.get('mesa') || '1';
     const vistaModo = params.get('view');
 
@@ -892,7 +892,7 @@
         if (document.getElementById('tab-historial').classList.contains('active')) {
           cargarHistorialGarantizado();
         }
-      }, 5000); 
+      }, 4000); 
     });
 
     function forzarBloqueoUI() {
@@ -907,6 +907,7 @@
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
 
+      let fechaCreacion = null;
       let fechaVencimiento = null;
       let estaBloqueado = false;
 
@@ -916,21 +917,23 @@
         if (res.ok) {
           const data = await res.json();
           if (data.nombre) document.getElementById('lbl-local-nombre').innerText = data.nombre.toUpperCase();
+          
           estaBloqueado = (data.activo === false);
           clienteDadoDeAlta = !!data.altaRegistrada;
+
+          if (data.fechaCreacion) fechaCreacion = new Date(data.fechaCreacion);
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         } else if (res.status === 403) {
           estaBloqueado = true;
-        } else {
-          estaBloqueado = false;
         }
       } catch (err) {
         estaBloqueado = false;
       }
 
+      // Si no existe fecha de vencimiento explícita, calcular 30 días a partir de la fecha de creación
       if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
-        const hoy = new Date();
-        fechaVencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
+        const baseFecha = (fechaCreacion && !isNaN(fechaCreacion.getTime())) ? new Date(fechaCreacion) : new Date();
+        fechaVencimiento = new Date(baseFecha.setDate(baseFecha.getDate() + 30));
       }
 
       const ahora = new Date();
@@ -965,9 +968,7 @@
             contAvisos.innerHTML = '';
           }
         }
-      } catch (e) {
-        console.error("Error al cargar avisos:", e);
-      }
+      } catch (e) {}
     }
 
     async function validarPasswordSeguridad() {
@@ -1016,11 +1017,22 @@
         return alert("⚠️ La contraseña y su confirmación no coinciden.");
       }
 
+      const hoy = new Date();
+      const vencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
+
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, rut, correo, password })
+          body: JSON.stringify({ 
+            nombre, 
+            rut, 
+            correo, 
+            password,
+            activo: true,
+            fechaCreacion: new Date().toISOString(),
+            fechaVencimiento: vencimiento.toISOString()
+          })
         });
 
         const data = await res.json();
@@ -1369,370 +1381,202 @@
           </div>
         </div>
       `).join('');
-
       const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
       document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
     }
 
     async function enviarPedidoCocina() {
-      if (carrito.length === 0) return alert("El carrito está vacío.");
-      const btnEnviar = document.getElementById('btn-enviar-cocina');
-      btnEnviar.disabled = true;
-      btnEnviar.innerText = "Procesando...";
-
-      const totalCalculado = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-      const documentoMongoPedido = {
-        local: String(localId),
-        mesa: String(numeroMesa),
-        items: carrito.map(item => ({ nombre: String(item.nombre), precio: Number(item.precio), cantidad: Number(item.cantidad) })),
-        total: Number(totalCalculado),
-        estado: 'pendiente',
-        fecha: new Date().toISOString()
-      };
+      if (carrito.length === 0) return;
+      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(documentoMongoPedido)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, mesa: numeroMesa, items: carrito, total })
         });
 
-        if (res.ok || res.status === 201) {
-          const resData = await res.json();
-          alert("✅ ¡Pedido recibido! Registrado con éxito.");
-          
-          if (resData.pedido && resData.pedido._id) {
-            pedidoClienteActivoId = resData.pedido._id;
-            localStorage.setItem(`ultimoPedidoId_${localId}_${numeroMesa}`, pedidoClienteActivoId);
+        if (res.ok) {
+          const data = await res.json();
+          const pId = data.pedido?._id || data.pedido?.id;
+          if (pId) {
+            pedidoClienteActivoId = pId;
+            localStorage.setItem(`ultimoPedidoId_${localId}_${numeroMesa}`, pId);
           }
-
+          alert("🚀 ¡Tu pedido ha sido enviado a la cocina!");
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalCarrito();
           verificarEstadoPedidoCliente();
-          cargarPedidosCocina();
-          cargarPedidosGarzon();
         } else {
-          alert(`⚠️ No se pudo registrar el pedido (Estado: ${res.status}).`);
-          if (res.status === 403) forzarBloqueoUI();
+          alert("Error al enviar el pedido.");
         }
-      } catch (e) {
-        alert(`⚠️ Error de conexión al servidor backend.`);
-      }
-
-      btnEnviar.disabled = false;
-      btnEnviar.innerText = "🚀 Enviar a Cocina";
+      } catch (err) { alert("Error de conexión con el servidor."); }
     }
 
     async function verificarEstadoPedidoCliente() {
-      const boxResumen = document.getElementById('resumen-pedido-activo');
-      if (!boxResumen) return;
-
-      if (!pedidoClienteActivoId) {
-        boxResumen.style.display = 'none';
-        return;
-      }
+      const elResumen = document.getElementById('resumen-pedido-activo');
+      if (!elResumen || !pedidoClienteActivoId) return;
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
         if (res.ok) {
           const pedidos = await res.json();
-          const miPedido = Array.isArray(pedidos) ? pedidos.find(p => String(p._id) === String(pedidoClienteActivoId) || String(p.id) === String(pedidoClienteActivoId)) : null;
+          const encontrado = pedidos.find(p => String(p._id) === String(pedidoClienteActivoId) || String(p.id) === String(pedidoClienteActivoId));
 
-          if (miPedido && miPedido.estado !== 'entregado') {
-            boxResumen.style.display = 'block';
-            document.getElementById('resumen-pedido-hora').innerText = miPedido.fecha ? new Date(miPedido.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Reciente';
-            
-            const itemsCont = document.getElementById('resumen-pedido-items');
-            itemsCont.innerHTML = (miPedido.items || []).map(i => `
-              <div style="display:flex; justify-content:space-between; padding:3px 0;">
-                <span><b>${i.cantidad || 1}x</b> ${i.nombre || 'Producto'}</span>
-                <span>$${((i.precio || 0) * (i.cantidad || 1)).toLocaleString('es-CL')}</span>
+          if (encontrado) {
+            elResumen.style.display = 'block';
+            document.getElementById('resumen-pedido-hora').innerText = new Date(encontrado.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('resumen-pedido-items').innerHTML = (encontrado.items || []).map(i => `
+              <div style="display:flex; justify-content:space-between; padding:4px 0;">
+                <span>${i.cantidad}x ${i.nombre}</span>
+                <span>$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
               </div>
             `).join('');
-
-            document.getElementById('resumen-pedido-total').innerText = `Total: $${(miPedido.total || 0).toLocaleString('es-CL')}`;
+            document.getElementById('resumen-pedido-total').innerText = `Total: $${(encontrado.total || 0).toLocaleString('es-CL')}`;
           } else {
+            elResumen.style.display = 'none';
             localStorage.removeItem(`ultimoPedidoId_${localId}_${numeroMesa}`);
             pedidoClienteActivoId = null;
-            boxResumen.style.display = 'none';
           }
         }
-      } catch (e) {
-      }
+      } catch (e) {}
     }
 
     async function cargarPedidosCocina() {
-      const contenedor = document.getElementById('contenedor-pedidos-cocina');
-      if (!contenedor) return;
-
+      const cont = document.getElementById('contenedor-pedidos-cocina');
       try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
-        if (res.status === 403) {
-          forzarBloqueoUI();
-          throw new Error("Cuenta desactivada");
-        }
-        
-        if (!res.ok) throw new Error("Error al consultar pedidos");
-
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
+        if (!res.ok) throw new Error();
         const pedidos = await res.json();
-        const pendientes = Array.isArray(pedidos) ? pedidos.filter(p => p.estado !== 'entregado') : [];
 
-        if (pendientes.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comandas activas en la cocina.</p>';
+        if (!Array.isArray(pedidos) || pedidos.length === 0) {
+          cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en la cocina.</p>';
           return;
         }
 
-        contenedor.innerHTML = pendientes.map((p) => {
-          const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
-          const itemsList = Array.isArray(p.items) ? p.items : [];
-
-          return `
-            <div class="card-pedido">
-              <div>
-                <div class="card-pedido-header">
-                  <span class="card-pedido-mesa">MESA N° ${p.mesa || '--'}</span>
-                  <span class="card-pedido-time">⏰ ${fechaFormateada}</span>
-                </div>
-                <div class="pedido-items-list">
-                  ${itemsList.length === 0 ? '<span style="color:var(--text-muted);">Sin ítems</span>' : ''}
-                  ${itemsList.map(i => `
-                    <div class="pedido-item-row">
-                      <span><b>${i.cantidad || 1}x</b> ${i.nombre || 'Producto'}</span>
-                      <span style="color:var(--text-muted);">$${((i.precio || 0) * (i.cantidad || 1)).toLocaleString('es-CL')}</span>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-              <div class="card-pedido-footer">
-                <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
-                <span style="font-size: 12px; color: var(--neon-orange); font-weight: bold;">👨‍🍳 En Preparación</span>
-              </div>
+        cont.innerHTML = pedidos.map(p => `
+          <div class="card-pedido">
+            <div class="card-pedido-header">
+              <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
+              <span class="card-pedido-time">🕒 ${new Date(p.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
-          `;
-        }).join('');
+            <div class="pedido-items-list">
+              ${(p.items || []).map(i => `
+                <div class="pedido-item-row">
+                  <span><b>${i.cantidad}x</b> ${i.nombre}</span>
+                  <span>$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
+                </div>
+              `).join('')}
+            </div>
+            <div class="card-pedido-footer">
+              <span style="font-weight: bold; color: var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
+              <button class="btn btn-danger btn-sm" onclick="eliminarPedido('${p._id || p.id}')">🗑️ Cancelar</button>
+            </div>
+          </div>
+        `).join('');
       } catch (e) {
-        if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
-          contenedor.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
-        } else {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Sin comunicación momentánea con el servidor de pedidos.</p>';
-        }
+        cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No se pudieron cargar los pedidos.</p>';
       }
+    }
+
+    async function eliminarPedido(id) {
+      if (!confirm("¿Deseas cancelar/eliminar este pedido?")) return;
+      try {
+        await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
+        cargarPedidosCocina();
+      } catch (e) {}
     }
 
     async function cargarPedidosGarzon() {
-      const contenedor = document.getElementById('contenedor-pedidos-garzon');
-      if (!contenedor) return;
-
+      const cont = document.getElementById('contenedor-pedidos-garzon');
       try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}`);
-        if (!res.ok) throw new Error("Error al obtener pedidos");
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
+        if (!res.ok) throw new Error();
+        cachePedidos = await res.json();
 
-        const pedidos = await res.json();
-        const pendientes = Array.isArray(pedidos) ? pedidos.filter(p => p.estado !== 'entregado') : [];
-        cachePedidos = pendientes;
-
-        if (pendientes.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes de entrega.</p>';
+        if (!Array.isArray(cachePedidos) || cachePedidos.length === 0) {
+          cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comandas para llevar a mesa.</p>';
           return;
         }
 
-        contenedor.innerHTML = pendientes.map((p) => {
-          const fechaFormateada = p.fecha ? new Date(p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora';
-          const itemsList = Array.isArray(p.items) ? p.items : [];
-
-          return `
-            <div class="card-pedido">
-              <div>
-                <div class="card-pedido-header">
-                  <span class="card-pedido-mesa">MESA N° ${p.mesa || '--'}</span>
-                  <span class="card-pedido-time">⏰ ${fechaFormateada}</span>
-                </div>
-                <div class="pedido-items-list">
-                  ${itemsList.map(i => `
-                    <div class="pedido-item-row">
-                      <span><b>${i.cantidad || 1}x</b> ${i.nombre || 'Producto'}</span>
-                      <span style="color:var(--text-muted);">$${((i.precio || 0) * (i.cantidad || 1)).toLocaleString('es-CL')}</span>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-              <div class="card-pedido-footer">
-                <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
-                <button class="btn btn-success btn-sm" onclick="entregarPedidoMesa('${p._id || p.id}')">✅ Entregado</button>
-              </div>
+        cont.innerHTML = cachePedidos.map(p => `
+          <div class="card-pedido">
+            <div class="card-pedido-header">
+              <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
+              <span class="card-pedido-time">🕒 ${new Date(p.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
-          `;
-        }).join('');
+            <div class="pedido-items-list">
+              ${(p.items || []).map(i => `
+                <div class="pedido-item-row">
+                  <span><b>${i.cantidad}x</b> ${i.nombre}</span>
+                  <span>$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
+                </div>
+              `).join('')}
+            </div>
+            <div class="card-pedido-footer">
+              <span style="font-weight: bold; color: var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
+              <button class="btn btn-success btn-sm" onclick="entregarPedidoEnMesa('${p._id || p.id}')">✅ Entregado en Mesa</button>
+            </div>
+          </div>
+        `).join('');
       } catch (e) {
-        contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Error al cargar pedidos del garzón.</p>';
+        cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Error al cargar comandas.</p>';
       }
     }
 
-    async function entregarPedidoMesa(pedidoId) {
-      if (!rutGarzonSesion || rutGarzonSesion.length < 7) {
-        return alert("⚠️ Debes registrar un RUT de Garzón activo antes de entregar pedidos.");
+    async function entregarPedidoEnMesa(id) {
+      if (!rutGarzonSesion) {
+        rutGarzonSesion = prompt("Por favor ingresa tu RUT de Garzón para confirmar:");
+        if (!rutGarzonSesion) return;
+        localStorage.setItem('rutGarzon', rutGarzonSesion);
+        document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
       }
 
-      const pedidoTarget = cachePedidos.find(p => String(p._id) === String(pedidoId) || String(p.id) === String(pedidoId));
-      if (!pedidoTarget) return alert("Pedido no encontrado.");
+      const pedido = cachePedidos.find(p => String(p._id) === String(id) || String(p.id) === String(id));
+      if (!pedido) return;
 
       const ahora = new Date();
-      const fechaEntrega = ahora.toLocaleDateString('es-CL');
-      const horaEntrega = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      const historialData = {
-        id: String(Date.now()),
-        local: String(localId),
-        mesa: String(pedidoTarget.mesa || '--'),
-        items: pedidoTarget.items || [],
-        total: Number(pedidoTarget.total || 0),
+      const payloadHistorial = {
+        local: localId,
+        mesa: String(pedido.mesa),
+        items: pedido.items || [],
+        total: Number(pedido.total || 0),
         estado: 'entregado',
-        hora: horaEntrega,
-        rutGarzon: String(rutGarzonSesion),
-        horaEntrega: horaEntrega,
-        fechaEntrega: fechaEntrega
+        rutGarzon: rutGarzonSesion,
+        fechaEntrega: ahora.toLocaleDateString('es-CL'),
+        horaEntrega: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
       try {
         await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(historialData)
+          body: JSON.stringify(payloadHistorial)
         });
 
-        await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}`, { method: 'DELETE' });
+        await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
 
-        alert(`✅ Pedido de Mesa ${pedidoTarget.mesa} entregado y registrado en historial con RUT ${rutGarzonSesion}.`);
+        alert(`✅ Pedido de Mesa ${pedido.mesa} entregado correctamente.`);
         cargarPedidosGarzon();
-        cargarPedidosCocina();
-      } catch (e) {
-        alert("Error al procesar la entrega en el servidor.");
-      }
-    }
-
-    function generarQRUnico() {
-      const numMesa = document.getElementById('qr-num-mesa').value || '1';
-      document.getElementById('lbl-qr-single-mesa').innerText = `Mesa N° ${numMesa}`;
-      const url = construirUrlMesa(numMesa);
-      const render = document.getElementById('qr-single-render');
-      render.innerHTML = '';
-      new QRCode(render, { text: url, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
-    }
-
-    function descargarQRImagen() {
-      const numMesa = document.getElementById('qr-num-mesa').value || '1';
-      const canvasQR = document.querySelector('#qr-single-render canvas');
-      const imgQR = document.querySelector('#qr-single-render img');
-
-      const canvasFinal = document.createElement('canvas');
-      const size = 591;
-      canvasFinal.width = size; canvasFinal.height = size;
-      const ctx = canvasFinal.getContext('2d');
-
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
-      ctx.strokeStyle = '#000000'; ctx.lineWidth = 10; ctx.strokeRect(10, 10, size - 20, size - 20);
-
-      ctx.fillStyle = '#000000'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(localId.toUpperCase(), size / 2, 60);
-
-      if (canvasQR) ctx.drawImage(canvasQR, (size - 380) / 2, 90, 380, 380);
-      else if (imgQR) ctx.drawImage(imgQR, (size - 380) / 2, 90, 380, 380);
-
-      ctx.fillStyle = '#ff5500'; ctx.font = 'bold 42px sans-serif';
-      ctx.fillText(`MESA N° ${numMesa}`, size / 2, size - 40);
-
-      const a = document.createElement('a');
-      a.download = `QR_Mesa_${numMesa}_${localId}.png`;
-      a.href = canvasFinal.toDataURL('image/png');
-      a.click();
-    }
-
-    function generarQRGarzon() {
-      const container = document.getElementById('qr-garzon-render');
-      if (!container) return;
-      container.innerHTML = '';
-      new QRCode(container, { text: construirUrlGarzon(), width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
-    }
-
-    function descargarQRGarzon() {
-      generarQRGarzon();
-      setTimeout(() => {
-        const qrCanvas = document.querySelector('#qr-garzon-render canvas');
-        const qrImg = document.querySelector('#qr-garzon-render img');
-        const canvasFinal = document.createElement('canvas');
-        const size = 591;
-        canvasFinal.width = size; canvasFinal.height = size;
-        const ctx = canvasFinal.getContext('2d');
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
-        ctx.strokeStyle = '#000000'; ctx.lineWidth = 10; ctx.strokeRect(10, 10, size - 20, size - 20);
-
-        ctx.fillStyle = '#000000'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(localId.toUpperCase(), size / 2, 60);
-
-        if (qrCanvas) ctx.drawImage(qrCanvas, (size - 380) / 2, 90, 380, 380);
-        else if (qrImg) ctx.drawImage(qrImg, (size - 380) / 2, 90, 380, 380);
-
-        ctx.fillStyle = '#0077ff'; ctx.font = 'bold 36px sans-serif';
-        ctx.fillText("ACCESO EXCLUSIVO GARZÓN", size / 2, size - 40);
-
-        const a = document.createElement('a');
-        a.download = `QR_Garzon_${localId}.png`;
-        a.href = canvasFinal.toDataURL('image/png');
-        a.click();
-      }, 200);
-    }
-
-    async function generarPDFMesas() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
-      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 12;
-
-      let x = 15, y = 15;
-      const boxW = 50, boxH = 50, gapX = 10, gapY = 10;
-
-      for (let m = desde; m <= hasta; m++) {
-        const tempDiv = document.createElement('div');
-        new QRCode(tempDiv, { text: construirUrlMesa(m), width: 100, height: 100 });
-        await new Promise(r => setTimeout(r, 80));
-
-        const imgData = tempDiv.querySelector('canvas').toDataURL('image/png');
-
-        doc.rect(x, y, boxW, boxH);
-        doc.setFontSize(8);
-        doc.text(localId.toUpperCase(), x + boxW / 2, y + 6, { align: 'center' });
-        doc.addImage(imgData, 'PNG', x + 10, y + 8, 30, 30);
-        doc.setFontSize(10);
-        doc.text(`MESA N° ${m}`, x + boxW / 2, y + 45, { align: 'center' });
-
-        x += boxW + gapX;
-        if (x + boxW > 195) {
-          x = 15;
-          y += boxH + gapY;
-          if (y + boxH > 280 && m < hasta) {
-            doc.addPage();
-            y = 15;
-          }
-        }
-      }
-
-      doc.save(`Planilla_QR_Mesas_${desde}_a_${hasta}_${localId}.pdf`);
+      } catch (e) { alert("Error al registrar la entrega."); }
     }
 
     async function cargarHistorialGarantizado() {
-      const tabla = document.getElementById('tabla-historial-garzon');
-      if (!tabla) return;
+      const tbody = document.getElementById('tabla-historial-garzon');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Consultando historial de entregas...</td></tr>';
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}`);
-        if (!res.ok) throw new Error("Error al consultar historial");
-
-        historialGlobal = await res.json();
-        historialFiltrado = [...historialGlobal];
-        renderizarTablaHistorial(historialFiltrado);
+        const res = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
+        if (res.ok) {
+          historialGlobal = await res.json();
+          historialFiltrado = [...historialGlobal];
+          renderizarHistorialYMetricas();
+        } else {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se pudieron obtener los registros.</td></tr>';
+        }
       } catch (e) {
-        tabla.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Error al cargar registros de historial.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Error de comunicación con el backend.</td></tr>';
       }
     }
 
@@ -1748,97 +1592,164 @@
       if (tipo === 'todos') {
         historialFiltrado = [...historialGlobal];
       } else if (tipo === 'rut') {
-        const rutBusqueda = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
-        if (!rutBusqueda) return alert("Ingresa un RUT para filtrar.");
-        historialFiltrado = historialGlobal.filter(r => (r.rutGarzon || '').toUpperCase().includes(rutBusqueda));
+        const rut = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
+        if (!rut) return alert("Ingresa un RUT para filtrar.");
+        historialFiltrado = historialGlobal.filter(h => (h.rutGarzon || '').toUpperCase().includes(rut));
       } else if (tipo === 'fechas') {
         const desde = document.getElementById('filtro-informe-desde').value;
         const hasta = document.getElementById('filtro-informe-hasta').value;
-        if (!desde || !hasta) return alert("Selecciona un rango de fechas válido.");
-
-        historialFiltrado = historialGlobal.filter(r => {
-          if (!r.createdAt && !r.fechaEntrega) return false;
-          const fechaReg = r.createdAt ? new Date(r.createdAt) : new Date(r.fechaEntrega.split('-').reverse().join('-'));
-          return fechaReg >= new Date(desde) && fechaReg <= new Date(hasta + 'T23:59:59');
+        if (!desde || !hasta) return alert("Selecciona el rango de fechas.");
+        historialFiltrado = historialGlobal.filter(h => {
+          const fechaReg = new Date(h.createdAt || Date.now()).toISOString().split('T')[0];
+          return fechaReg >= desde && fechaReg <= hasta;
         });
       }
-      renderizarTablaHistorial(historialFiltrado);
+      renderizarHistorialYMetricas();
     }
 
-    function renderizarTablaHistorial(registros) {
-      const tabla = document.getElementById('tabla-historial-garzon');
-      if (!tabla) return;
+    function renderizarHistorialYMetricas() {
+      const tbody = document.getElementById('tabla-historial-garzon');
+      const totalEntregados = historialFiltrado.length;
+      const totalMonto = historialFiltrado.reduce((sum, h) => sum + (h.total || 0), 0);
+      const promedio = totalEntregados > 0 ? Math.round(totalMonto / totalEntregados) : 0;
 
-      if (!Array.isArray(registros) || registros.length === 0) {
-        tabla.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No hay registros en el historial.</td></tr>';
-        actualizarMetricasUI(0, 0, 0);
+      document.getElementById('lbl-stat-entregados').innerText = totalEntregados;
+      document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
+      document.getElementById('lbl-stat-promedio').innerText = `$${promedio.toLocaleString('es-CL')}`;
+
+      if (totalEntregados === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No hay registros para mostrar.</td></tr>';
         return;
       }
 
-      let totalMonto = 0;
-      tabla.innerHTML = registros.map(r => {
-        const monto = Number(r.total || 0);
-        totalMonto += monto;
-        const itemsTxt = Array.isArray(r.items) ? r.items.map(i => `${i.cantidad || 1}x ${i.nombre}`).join(', ') : 'Ítems varios';
-
-        return `
-          <tr>
-            <td><b>Mesa ${r.mesa || '--'}</b></td>
-            <td>${r.rutGarzon || 'SIN-RUT'}</td>
-            <td>${r.fechaEntrega || '--'}</td>
-            <td>${r.horaEntrega || r.hora || '--'}</td>
-            <td>${itemsTxt}</td>
-            <td style="color:var(--neon-yellow); font-weight:bold;">$${monto.toLocaleString('es-CL')}</td>
-          </tr>
-        `;
-      }).join('');
-
-      const totalEntregados = registros.length;
-      const promedio = totalEntregados > 0 ? Math.round(totalMonto / totalEntregados) : 0;
-      actualizarMetricasUI(totalEntregados, totalMonto, promedio);
+      tbody.innerHTML = historialFiltrado.map(h => `
+        <tr>
+          <td>Mesa ${h.mesa || '--'}</td>
+          <td>${h.rutGarzon || 'SIN-RUT'}</td>
+          <td>${h.fechaEntrega || new Date(h.createdAt).toLocaleDateString('es-CL')}</td>
+          <td>${h.horaEntrega || new Date(h.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+          <td>${(h.items || []).map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}</td>
+          <td style="font-weight: bold; color: var(--neon-yellow);">$${(h.total || 0).toLocaleString('es-CL')}</td>
+        </tr>
+      `).join('');
     }
 
-    function actualizarMetricasUI(cant, monto, prom) {
-      document.getElementById('lbl-stat-entregados').innerText = cant;
-      document.getElementById('lbl-stat-monto').innerText = `$${monto.toLocaleString('es-CL')}`;
-      document.getElementById('lbl-stat-promedio').innerText = `$${prom.toLocaleString('es-CL')}`;
-    }
-
-    async function descargarInformePDF() {
+    function descargarInformePDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
 
       doc.setFontSize(16);
-      doc.text(`Informe de Atenciones - Local: ${localId.toUpperCase()}`, 14, 15);
-      doc.setFontSize(10);
-      doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-CL')}`, 14, 22);
+      doc.text(`Informe de Atenciones - ${localId.toUpperCase()}`, 14, 20);
 
-      let y = 32;
-      doc.setFontSize(11);
-      doc.text(`Mesa | Garzón | Fecha / Hora | Total`, 14, y);
-      doc.line(14, y + 2, 196, y + 2);
+      doc.setFontSize(10);
+      doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-CL')}`, 14, 28);
+      doc.text(`Total Atenciones: ${historialFiltrado.length}`, 14, 34);
+
+      const monto = historialFiltrado.reduce((sum, h) => sum + (h.total || 0), 0);
+      doc.text(`Monto Total: $${monto.toLocaleString('es-CL')}`, 14, 40);
+
+      let y = 50;
+      doc.setFontSize(9);
+      doc.text("Mesa", 14, y);
+      doc.text("Garzon", 35, y);
+      doc.text("Fecha", 75, y);
+      doc.text("Hora", 110, y);
+      doc.text("Total", 140, y);
+      doc.line(14, y + 2, 190, y + 2);
       y += 8;
 
-      let totalMonto = 0;
-      historialFiltrado.forEach(r => {
-        if (y > 270) {
-          doc.addPage();
-          y = 20;
-        }
-        const monto = Number(r.total || 0);
-        totalMonto += monto;
-        doc.setFontSize(9);
-        doc.text(`Mesa ${r.mesa || '--'} | Garzon: ${r.rutGarzon || 'SIN-RUT'} | ${r.fechaEntrega || ''} ${r.horaEntrega || ''} | $${monto.toLocaleString('es-CL')}`, 14, y);
+      historialFiltrado.forEach(h => {
+        if (y > 280) { doc.addPage(); y = 20; }
+        doc.text(`Mesa ${h.mesa || '--'}`, 14, y);
+        doc.text(String(h.rutGarzon || 'SIN-RUT'), 35, y);
+        doc.text(String(h.fechaEntrega || '--'), 75, y);
+        doc.text(String(h.horaEntrega || '--'), 110, y);
+        doc.text(`$${(h.total || 0).toLocaleString('es-CL')}`, 140, y);
         y += 6;
       });
 
-      y += 5;
-      doc.line(14, y, 196, y);
-      y += 8;
-      doc.setFontSize(11);
-      doc.text(`Total Atendidos: ${historialFiltrado.length} | Monto Total: $${totalMonto.toLocaleString('es-CL')}`, 14, y);
+      doc.save(`Informe_${localId}_${Date.now()}.pdf`);
+    }
 
-      doc.save(`Informe_Historial_${localId}_${Date.now()}.pdf`);
+    function generarQRUnico() {
+      const mesa = document.getElementById('qr-num-mesa').value || '1';
+      const url = construirUrlMesa(mesa);
+      const box = document.getElementById('qr-single-render');
+      box.innerHTML = '';
+      new QRCode(box, { text: url, width: 140, height: 140 });
+      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${mesa}`;
+    }
+
+    function descargarQRImagen() {
+      const mesa = document.getElementById('qr-num-mesa').value || '1';
+      const canvas = document.querySelector('#qr-single-render canvas');
+      if (!canvas) return alert("Genera el QR primero.");
+      const link = document.createElement('a');
+      link.download = `QR_Mesa_${mesa}_${localId}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    function generarQRGarzon() {
+      const url = construirUrlGarzon();
+      const box = document.getElementById('qr-garzon-render');
+      if (box) {
+        box.innerHTML = '';
+        new QRCode(box, { text: url, width: 140, height: 140 });
+      }
+    }
+
+    function descargarQRGarzon() {
+      const canvas = document.querySelector('#qr-garzon-render canvas');
+      if (!canvas) return alert("Genera el QR primero.");
+      const link = document.createElement('a');
+      link.download = `QR_Garzon_${localId}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    function generarPDFMesas() {
+      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
+      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 1;
+
+      if (desde > hasta) return alert("El rango es inválido.");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const tempBox = document.getElementById('qr-hidden-temp');
+
+      let x = 15;
+      let y = 15;
+      let count = 0;
+
+      for (let m = desde; m <= hasta; m++) {
+        tempBox.innerHTML = '';
+        const url = construirUrlMesa(m);
+        new QRCode(tempBox, { text: url, width: 150, height: 150 });
+
+        const canvas = tempBox.querySelector('canvas');
+        if (canvas) {
+          const imgData = canvas.toDataURL('image/png');
+          doc.rect(x, y, 50, 55);
+          doc.addImage(imgData, 'PNG', x + 5, y + 3, 40, 40);
+          doc.setFontSize(9);
+          doc.text(`MESA N° ${m}`, x + 25, y + 49, { align: 'center' });
+
+          count++;
+          x += 60;
+          if (count % 3 === 0) {
+            x = 15;
+            y += 65;
+          }
+          if (count % 12 === 0 && m < hasta) {
+            doc.addPage();
+            x = 15;
+            y = 15;
+          }
+        }
+      }
+
+      doc.save(`Plantilla_QR_Mesas_${desde}_a_${hasta}.pdf`);
     }
   </script>
 </body>
