@@ -185,7 +185,7 @@ app.get('/api/locales', async (req, res) => {
 // 5. DAR DE ALTA UN RESTAURANTE
 app.post('/api/locales/alta', async (req, res) => {
   try {
-    const { nombre, rut, correo, password } = req.body;
+    const { nombre, rut, correo, password, fechaVencimiento: fechaVencBody } = req.body;
     if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
 
     const nombreLimpio = nombre.trim();
@@ -197,8 +197,16 @@ app.post('/api/locales/alta', async (req, res) => {
     });
 
     const ahora = new Date();
-    const fechaVencimiento = new Date();
-    fechaVencimiento.setDate(ahora.getDate() + 365); // 365 días al dar de alta
+    
+    // Si la petición incluye una fecha de vencimiento explícita (ej. demo de 30 días), la utiliza.
+    // De lo contrario, asigna 365 días por defecto.
+    let fechaVencimientoCalculada;
+    if (fechaVencBody) {
+      fechaVencimientoCalculada = new Date(fechaVencBody);
+    } else {
+      fechaVencimientoCalculada = new Date(ahora);
+      fechaVencimientoCalculada.setDate(ahora.getDate() + 365);
+    }
 
     if (reg) {
       reg.nombre = nombreLimpio;
@@ -206,7 +214,7 @@ app.post('/api/locales/alta', async (req, res) => {
       reg.correo = correo || reg.correo || 'contacto@local.cl';
       if (password) reg.password = password;
       reg.activo = true;
-      reg.fechaVencimiento = fechaVencimiento;
+      reg.fechaVencimiento = fechaVencimientoCalculada;
       await reg.save();
     } else {
       reg = new Local({
@@ -218,7 +226,7 @@ app.post('/api/locales/alta', async (req, res) => {
         password: password || '123456',
         activo: true,
         fechaCreacion: ahora,
-        fechaVencimiento: fechaVencimiento,
+        fechaVencimiento: fechaVencimientoCalculada,
         menu: [],
         anuncio: "ok"
       });
