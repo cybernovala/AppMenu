@@ -37,7 +37,7 @@ const localSchema = new mongoose.Schema({
   fechaCreacion: Date,
   fechaVencimiento: Date,
   menu: Array,
-  anuncio: String
+  anuncio: { type: String, default: "ok" }
 }, { collection: 'locales' });
 
 const Local = mongoose.model('Local', localSchema);
@@ -149,7 +149,9 @@ app.get('/api/licencia', async (req, res) => {
     return res.json({
       activo: reg.activo,
       nombre: reg.nombre,
+      fechaCreacion: reg.fechaCreacion,
       fechaVencimiento: reg.fechaVencimiento,
+      anuncio: reg.anuncio || "ok",
       altaRegistrada: esAltaOficial
     });
   } catch (error) {
@@ -157,7 +159,7 @@ app.get('/api/licencia', async (req, res) => {
   }
 });
 
-// 4. OBTENER TODOS LOS LOCALES
+// 4. OBTENER TODOS LOS LOCALES (ADMIN GENERAL)
 app.get('/api/locales', async (req, res) => {
   try {
     const locales = await Local.find().sort({ fechaCreacion: -1 });
@@ -170,6 +172,7 @@ app.get('/api/locales', async (req, res) => {
       rut: l.rut,
       correo: l.correo,
       activo: l.activo,
+      anuncio: l.anuncio || "ok",
       fechaCreacion: l.fechaCreacion,
       fechaVencimiento: l.fechaVencimiento
     }));
@@ -195,7 +198,7 @@ app.post('/api/locales/alta', async (req, res) => {
 
     const ahora = new Date();
     const fechaVencimiento = new Date();
-    fechaVencimiento.setDate(ahora.getDate() + 365);
+    fechaVencimiento.setDate(ahora.getDate() + 365); // 365 días al dar de alta
 
     if (reg) {
       reg.nombre = nombreLimpio;
@@ -226,6 +229,22 @@ app.post('/api/locales/alta', async (req, res) => {
   } catch (error) {
     console.error("Error al dar de alta:", error);
     res.status(500).json({ error: 'Error interno al procesar el alta' });
+  }
+});
+
+// CAMBIAR ESTADO ACTIVO/BLOQUEADO (SUPERADMIN)
+app.put('/api/locales/estado', async (req, res) => {
+  try {
+    const { local, activo } = req.body;
+    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
+
+    reg.activo = Boolean(activo);
+    await reg.save();
+
+    res.json({ ok: true, mensaje: `Estado actualizado a ${reg.activo ? 'Activo' : 'Bloqueado'}`, activo: reg.activo });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cambiar estado' });
   }
 });
 
