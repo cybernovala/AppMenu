@@ -192,27 +192,43 @@
       }
     }
 
-    // 2. Crear una nueva demo en MongoDB y redirigir
+    // 2. Crear una nueva demo asignando 30 días exactos
     async function crearProbarDemo() {
       const nombre = document.getElementById('demo-local-nombre').value.trim();
       if (!nombre) return alert("⚠️ Ingresa el nombre para tu local");
 
+      // Asignar fechaVencimiento a exactamente 30 días desde la fecha actual
+      const hoy = new Date();
+      const fechaVencimiento = new Date(hoy);
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
+
+      const payload = {
+        nombre: nombre,
+        rut: "DEMO-30DIAS",
+        correo: "demo@appmenu.cl",
+        password: "123",
+        fechaVencimiento: fechaVencimiento.toISOString()
+      };
+
       try {
-        const res = await fetch(`${BACKEND_URL}/api/locales`, {
+        const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre })
+          body: JSON.stringify(payload)
         });
 
         const data = await res.json();
+
         if (res.ok) {
-          alert("🎉 Local demo creado con éxito.");
-          window.location.href = `https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(data.local)}`;
+          alert("🎉 Local demo creado con éxito (Válido por 30 días).");
+          const targetLocal = data.local || data.localId || nombre;
+          window.location.href = `https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(targetLocal)}`;
         } else {
-          alert(`❌ ${data.error || 'No se pudo crear el local'}`);
+          alert(`❌ Error al crear el local: ${data.error || 'No se pudo procesar la solicitud'}`);
         }
       } catch (err) {
-        alert("❌ Error al crear el local demo");
+        console.error("Error al crear demo:", err);
+        alert("❌ Error de conexión con el servidor");
       }
     }
 
