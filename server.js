@@ -42,7 +42,7 @@ const localSchema = new mongoose.Schema({
 
 const Local = mongoose.model('Local', localSchema);
 
-// Avisos / Mensajes Globales (Colección 'avisos')
+// Avisos / Mensajes Globales
 const avisoSchema = new mongoose.Schema({
   destinatario: { type: String, default: 'todos' },
   asunto: { type: String, default: 'Aviso del Sistema' },
@@ -51,6 +51,34 @@ const avisoSchema = new mongoose.Schema({
 }, { collection: 'avisos' });
 
 const Aviso = mongoose.model('Aviso', avisoSchema);
+
+// Pedidos en Cocina / Pendientes
+const pedidoSchema = new mongoose.Schema({
+  local: { type: String, required: true },
+  mesa: { type: String, required: true },
+  items: Array,
+  total: { type: Number, default: 0 },
+  estado: { type: String, default: 'pendiente' },
+  fecha: { type: Date, default: Date.now }
+}, { collection: 'pedidos', timestamps: true });
+
+const Pedido = mongoose.model('Pedido', pedidoSchema);
+
+// Historial de Entregas (Garzones)
+const historialSchema = new mongoose.Schema({
+  id: String,
+  local: { type: String, required: true },
+  mesa: String,
+  items: Array,
+  total: Number,
+  estado: { type: String, default: 'entregado' },
+  hora: String,
+  rutGarzon: String,
+  horaEntrega: String,
+  fechaEntrega: String
+}, { collection: 'historials', timestamps: true });
+
+const Historial = mongoose.model('Historial', historialSchema);
 
 // Auxiliar Regex
 function escapeRegex(text) {
@@ -79,11 +107,60 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
-// 2. OBTENER TODOS LOS LOCALES (Para demo.html)
+// 2. VERIFICAR SI UN LOCAL EXISTE (Búsqueda por slug o nombre exacto/insensible a mayúsculas)
+app.get('/api/locales/verificar/:busqueda', async (req, res) => {
+  try {
+    const busquedaLimpia = req.params.busqueda.trim();
+    const slugBusqueda = busquedaLimpia.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const regexBusqueda = new RegExp(`^${escapeRegex(busquedaLimpia)}$`, 'i');
+
+    const reg = await Local.findOne({
+      $or: [
+        { local: busquedaLimpia },
+        { local: slugBusqueda },
+        { nombre: { $regex: regexBusqueda } }
+      ]
+    });
+
+    if (reg) {
+      return res.json({ existe: true, local: reg.local, nombre: reg.nombre });
+    } else {
+      return res.status(404).json({ existe: false, error: 'Local no encontrado' });
+    }
+  } catch (error) {
+    console.error("Error al verificar local:", error);
+    res.status(500).json({ existe: false, error: 'Error al verificar el local' });
+  }
+});
+
+// 3. CONSULTAR LICENCIA Y ESTADO DE LOCAL
+app.get('/api/licencia', async (req, res) => {
+  try {
+    const localId = (req.query.local || '').trim().toLowerCase();
+    if (!localId) return res.status(400).json({ error: 'Parámetro local requerido' });
+
+    const reg = await Local.findOne({ local: localId });
+    if (!reg) {
+      return res.json({ activo: true, nombre: localId, altaRegistrada: false });
+    }
+
+    const esAltaOficial = reg.rut && reg.rut !== 'DEMO-30DIAS' && reg.rut !== 'SIN-RUT';
+
+    return res.json({
+      activo: reg.activo,
+      nombre: reg.nombre,
+      fechaVencimiento: reg.fechaVencimiento,
+      altaRegistrada: esAltaOficial
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al consultar licencia' });
+  }
+});
+
+// 4. OBTENER TODOS LOS LOCALES
 app.get('/api/locales', async (req, res) => {
   try {
     const locales = await Local.find().sort({ fechaCreacion: -1 });
-    // Adaptar la estructura devolviendo 'localId' para compatibilidad con demo.html
     const localesFormateados = locales.map(l => ({
       _id: l._id,
       id: l.id,
@@ -98,54 +175,11 @@ app.get('/api/locales', async (req, res) => {
     }));
     res.json(localesFormateados);
   } catch (error) {
-    console.error("Error al obtener locales:", error);
     res.status(500).json({ error: 'Error interno en el servidor' });
   }
 });
 
-// 3. CREAR LOCAL DEMO RÁPIDO (Ruta POST /api/locales)
-app.post('/api/locales', async (req, res) => {
-  try {
-    const { nombre } = req.body;
-    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
-
-    const nombreLimpio = nombre.trim();
-    const localSlug = nombreLimpio.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const nombreEscaped = escapeRegex(nombreLimpio);
-
-    const existe = await Local.findOne({
-      $or: [{ local: localSlug }, { nombre: { $regex: new RegExp(`^${nombreEscaped}$`, 'i') } }]
-    });
-
-    if (existe) return res.status(400).json({ error: 'El nombre de este local ya está registrado' });
-
-    const ahora = new Date();
-    const fechaVencimiento = new Date();
-    fechaVencimiento.setDate(ahora.getDate() + 30);
-
-    const nuevoLocal = new Local({
-      id: Date.now(),
-      local: localSlug,
-      nombre: nombreLimpio,
-      rut: 'DEMO-30DIAS',
-      correo: 'demo@appmenu.cl',
-      password: '123',
-      activo: true,
-      fechaCreacion: ahora,
-      fechaVencimiento: fechaVencimiento,
-      menu: [],
-      anuncio: "ok"
-    });
-
-    await nuevoLocal.save();
-    res.status(201).json({ mensaje: 'Local creado con éxito', local: localSlug, localId: localSlug, nombre: nombreLimpio });
-  } catch (error) {
-    console.error("Error al crear local demo:", error);
-    res.status(500).json({ error: 'Error interno en el servidor' });
-  }
-});
-
-// 4. DAR DE ALTA UN RESTAURANTE
+// 5. DAR DE ALTA UN RESTAURANTE
 app.post('/api/locales/alta', async (req, res) => {
   try {
     const { nombre, rut, correo, password } = req.body;
@@ -155,79 +189,238 @@ app.post('/api/locales/alta', async (req, res) => {
     const localSlug = nombreLimpio.toLowerCase().replace(/[^a-z0-9]/g, '');
     const nombreEscaped = escapeRegex(nombreLimpio);
 
-    const existe = await Local.findOne({
+    let reg = await Local.findOne({
       $or: [{ local: localSlug }, { nombre: { $regex: new RegExp(`^${nombreEscaped}$`, 'i') } }]
     });
 
-    if (existe) return res.status(400).json({ error: 'Este local ya existe' });
-
     const ahora = new Date();
     const fechaVencimiento = new Date();
-    fechaVencimiento.setDate(ahora.getDate() + 365); // 1 año de licencia oficial
+    fechaVencimiento.setDate(ahora.getDate() + 365);
 
-    const nuevoLocal = new Local({
-      id: Date.now(),
-      local: localSlug,
-      nombre: nombreLimpio,
-      rut: rut || 'SIN-RUT',
-      correo: correo || 'contacto@local.cl',
-      password: password || '123456',
-      activo: true,
-      fechaCreacion: ahora,
-      fechaVencimiento: fechaVencimiento,
-      menu: [],
-      anuncio: "ok"
-    });
+    if (reg) {
+      reg.nombre = nombreLimpio;
+      reg.rut = rut || reg.rut || 'SIN-RUT';
+      reg.correo = correo || reg.correo || 'contacto@local.cl';
+      if (password) reg.password = password;
+      reg.activo = true;
+      reg.fechaVencimiento = fechaVencimiento;
+      await reg.save();
+    } else {
+      reg = new Local({
+        id: Date.now(),
+        local: localSlug,
+        nombre: nombreLimpio,
+        rut: rut || 'SIN-RUT',
+        correo: correo || 'contacto@local.cl',
+        password: password || '123456',
+        activo: true,
+        fechaCreacion: ahora,
+        fechaVencimiento: fechaVencimiento,
+        menu: [],
+        anuncio: "ok"
+      });
+      await reg.save();
+    }
 
-    await nuevoLocal.save();
-    res.status(201).json({ mensaje: 'Alta realizada con éxito', local: localSlug, localId: localSlug, nombre: nombreLimpio });
+    res.status(201).json({ mensaje: 'Alta realizada con éxito', local: reg.local, localId: reg.local, nombre: reg.nombre });
   } catch (error) {
     console.error("Error al dar de alta:", error);
     res.status(500).json({ error: 'Error interno al procesar el alta' });
   }
 });
 
-// 5. CAMBIAR ESTADO DE LICENCIA (Bloquear / Desbloquear)
-app.patch('/api/locales/:localId/licencia', async (req, res) => {
+// 6. VERIFICAR PASSWORD DE LOCAL
+app.post('/api/locales/login', async (req, res) => {
   try {
-    const { localId } = req.params;
-    const { activo } = req.body;
+    const { local, password } = req.body;
+    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    if (!reg) return res.status(404).json({ ok: false, error: 'Local no encontrado' });
 
-    const local = await Local.findOneAndUpdate({ local: localId }, { activo }, { new: true });
-    if (!local) return res.status(404).json({ error: 'Local no encontrado' });
-
-    res.json({ ok: true, mensaje: 'Estado actualizado correctamente', local });
+    if (reg.password === password) {
+      res.json({ ok: true, mensaje: 'Acceso autorizado' });
+    } else {
+      res.status(401).json({ ok: false, error: 'Contraseña incorrecta' });
+    }
   } catch (error) {
-    res.status(500).json({ error: 'Error al cambiar licencia' });
+    res.status(500).json({ ok: false, error: 'Error al verificar credenciales' });
   }
 });
 
-// 6. RECUPERAR / REENVIAR CLAVE
-app.post('/api/locales/recuperar', async (req, res) => {
+// 7. MENÚ (Consultar estructurado)
+app.get('/api/menu', async (req, res) => {
   try {
-    const { correo } = req.body;
-    const local = await Local.findOne({ correo: correo.trim() });
-    if (!local) return res.status(404).json({ error: 'No existe un local registrado con ese correo' });
+    const localId = (req.query.local || '').trim().toLowerCase();
+    const reg = await Local.findOne({ local: localId });
 
-    res.json({ ok: true, password: local.password });
+    if (!reg) return res.json([]);
+    if (reg.activo === false) return res.status(403).json({ error: 'Cuenta bloqueada' });
+
+    res.json(reg.menu || []);
   } catch (error) {
-    res.status(500).json({ error: 'Error al buscar credenciales' });
+    res.status(500).json({ error: 'Error al obtener el menú' });
   }
 });
 
-app.post('/api/locales/reenviar-clave', async (req, res) => {
+// AGREGAR CATEGORÍA A MENÚ
+app.post('/api/menu/categoria', async (req, res) => {
   try {
-    const { local } = req.body;
-    const reg = await Local.findOne({ local });
+    const { local, categoria } = req.body;
+    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
     if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
 
-    res.json({ ok: true, mensaje: `La clave del local "${reg.nombre}" es: ${reg.password}` });
+    if (!reg.menu) reg.menu = [];
+    const existe = reg.menu.some(c => c.categoria.toLowerCase() === categoria.trim().toLowerCase());
+    if (!existe) {
+      reg.menu.push({ categoria: categoria.trim(), productos: [] });
+      await reg.save();
+    }
+    res.json({ ok: true, menu: reg.menu });
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener la clave' });
+    res.status(500).json({ error: 'Error al crear la categoría' });
   }
 });
 
-// 7. OBTENER AVISOS (Para mensajes.html)
+// ELIMINAR CATEGORÍA
+app.delete('/api/menu/categoria', async (req, res) => {
+  try {
+    const { local, categoria } = req.query;
+    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
+
+    reg.menu = (reg.menu || []).filter(c => c.categoria !== categoria);
+    await reg.save();
+    res.json({ ok: true, menu: reg.menu });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar la categoría' });
+  }
+});
+
+// AGREGAR PRODUCTO A MENÚ
+app.post('/api/menu', async (req, res) => {
+  try {
+    const { local, categoria, nombre, precio } = req.body;
+    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
+
+    const catObj = (reg.menu || []).find(c => c.categoria === categoria);
+    if (catObj) {
+      if (!catObj.productos) catObj.productos = [];
+      catObj.productos.push({ nombre, precio: Number(precio) });
+      reg.markModified('menu');
+      await reg.save();
+    }
+    res.json({ ok: true, menu: reg.menu });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al agregar producto' });
+  }
+});
+
+// ELIMINAR PRODUCTO DE MENÚ
+app.delete('/api/menu/del', async (req, res) => {
+  try {
+    const { local, categoria, index } = req.query;
+    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
+
+    const catObj = (reg.menu || []).find(c => c.categoria === categoria);
+    if (catObj && catObj.productos) {
+      catObj.productos.splice(Number(index), 1);
+      reg.markModified('menu');
+      await reg.save();
+    }
+    res.json({ ok: true, menu: reg.menu });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar producto' });
+  }
+});
+
+// EDITAR PRODUCTO DE MENÚ
+app.put('/api/menu/edit', async (req, res) => {
+  try {
+    const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaCategoria } = req.body;
+    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
+
+    const catObj = (reg.menu || []).find(c => c.categoria === categoriaOriginal);
+    if (catObj && catObj.productos && catObj.productos[indexOriginal]) {
+      catObj.productos[indexOriginal] = { nombre: nuevoNombre, precio: Number(nuevoPrecio) };
+      if (nuevaCategoria && nuevaCategoria !== categoriaOriginal) {
+        const prodEditado = catObj.productos.splice(indexOriginal, 1)[0];
+        let destinoCat = reg.menu.find(c => c.categoria === nuevaCategoria);
+        if (!destinoCat) {
+          destinoCat = { categoria: nuevaCategoria, productos: [] };
+          reg.menu.push(destinoCat);
+        }
+        destinoCat.productos.push(prodEditado);
+      }
+      reg.markModified('menu');
+      await reg.save();
+    }
+    res.json({ ok: true, menu: reg.menu });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al editar producto' });
+  }
+});
+
+// 8. PEDIDOS (Crear y Listar)
+app.get('/api/pedidos', async (req, res) => {
+  try {
+    const localId = (req.query.local || '').trim().toLowerCase();
+    const pedidos = await Pedido.find({ local: localId, estado: { $ne: 'entregado' } }).sort({ createdAt: -1 });
+    res.json(pedidos);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener pedidos' });
+  }
+});
+
+app.post('/api/pedidos', async (req, res) => {
+  try {
+    const { local, mesa, items, total } = req.body;
+    const nuevoPedido = new Pedido({
+      local: (local || '').toLowerCase().trim(),
+      mesa: String(mesa),
+      items: items || [],
+      total: Number(total || 0),
+      estado: 'pendiente'
+    });
+    await nuevoPedido.save();
+    res.status(201).json({ ok: true, pedido: nuevoPedido });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al registrar pedido' });
+  }
+});
+
+app.delete('/api/pedidos/:id', async (req, res) => {
+  try {
+    await Pedido.findByIdAndDelete(req.params.id);
+    res.json({ ok: true, mensaje: 'Pedido eliminado' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar pedido' });
+  }
+});
+
+// 9. HISTORIAL (Garzones y Entregas)
+app.get('/api/historials', async (req, res) => {
+  try {
+    const localId = (req.query.local || '').trim().toLowerCase();
+    const registros = await Historial.find({ local: localId }).sort({ createdAt: -1 });
+    res.json(registros);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener historial' });
+  }
+});
+
+app.post('/api/historials', async (req, res) => {
+  try {
+    const nuevoHistorial = new Historial(req.body);
+    await nuevoHistorial.save();
+    res.status(201).json({ ok: true, historial: nuevoHistorial });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al guardar historial' });
+  }
+});
+
+// 10. AVISOS
 app.get('/api/avisos', async (req, res) => {
   try {
     const avisos = await Aviso.find().sort({ fecha: -1 });
@@ -237,7 +430,6 @@ app.get('/api/avisos', async (req, res) => {
   }
 });
 
-// 8. PUBLICAR AVISO
 app.post('/api/avisos', async (req, res) => {
   try {
     const { destinatario, asunto, texto } = req.body;
@@ -251,7 +443,6 @@ app.post('/api/avisos', async (req, res) => {
   }
 });
 
-// 9. ELIMINAR AVISO
 app.delete('/api/avisos/:id', async (req, res) => {
   try {
     await Aviso.findByIdAndDelete(req.params.id);
