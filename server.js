@@ -107,7 +107,7 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
-// 2. VERIFICAR SI UN LOCAL EXISTE (Búsqueda por slug o nombre exacto/insensible a mayúsculas)
+// 2. VERIFICAR SI UN LOCAL EXISTE
 app.get('/api/locales/verificar/:busqueda', async (req, res) => {
   try {
     const busquedaLimpia = req.params.busqueda.trim();
@@ -420,10 +420,15 @@ app.post('/api/historials', async (req, res) => {
   }
 });
 
-// 10. AVISOS
+// 10. AVISOS Y MENSAJES DEL SISTEMA
 app.get('/api/avisos', async (req, res) => {
   try {
-    const avisos = await Aviso.find().sort({ fecha: -1 });
+    const localId = (req.query.local || '').trim().toLowerCase();
+    let query = {};
+    if (localId) {
+      query = { $or: [{ destinatario: 'todos' }, { destinatario: localId }] };
+    }
+    const avisos = await Aviso.find(query).sort({ fecha: -1 });
     res.json(avisos);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener los avisos' });
@@ -435,7 +440,11 @@ app.post('/api/avisos', async (req, res) => {
     const { destinatario, asunto, texto } = req.body;
     if (!texto) return res.status(400).json({ error: 'El contenido del aviso es requerido' });
 
-    const nuevoAviso = new Aviso({ destinatario, asunto, texto });
+    const nuevoAviso = new Aviso({
+      destinatario: (destinatario || 'todos').toLowerCase().trim(),
+      asunto: asunto || 'Aviso del Sistema',
+      texto
+    });
     await nuevoAviso.save();
     res.status(201).json({ ok: true, aviso: nuevoAviso });
   } catch (error) {
