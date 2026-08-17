@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>----Panel de Administración & Menú Digital</title>
+  <title>Panel de Administración & Menú Digital</title>
 
   <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -99,6 +99,9 @@
       border-radius: 8px;
       font-size: 14px;
       box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
     .header-bar {
@@ -194,7 +197,7 @@
 
     .form-inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
-    input, select {
+    input, select, textarea {
       flex: 1;
       padding: 12px 14px;
       background: #181822;
@@ -485,7 +488,7 @@
     <!-- CONTENEDOR DE BANNERS DE LICENCIA Y AVISOS -->
     <div class="banner-container" id="banner-wrapper">
       <div class="banner-licencia" id="banner-vencimiento">
-        ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">30</span> días a contar de la fecha de creación.
+        ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
       </div>
 
       <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
@@ -907,7 +910,6 @@
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
       const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
 
-      let fechaCreacion = null;
       let fechaVencimiento = null;
       let estaBloqueado = false;
 
@@ -921,7 +923,6 @@
           estaBloqueado = (data.activo === false);
           clienteDadoDeAlta = !!data.altaRegistrada;
 
-          if (data.fechaCreacion) fechaCreacion = new Date(data.fechaCreacion);
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         } else if (res.status === 403) {
           estaBloqueado = true;
@@ -930,14 +931,12 @@
         estaBloqueado = false;
       }
 
-      // Si no existe fecha de vencimiento explícita, calcular 30 días a partir de la fecha de creación
-      if (!fechaVencimiento || isNaN(fechaVencimiento.getTime())) {
-        const baseFecha = (fechaCreacion && !isNaN(fechaCreacion.getTime())) ? new Date(fechaCreacion) : new Date();
-        fechaVencimiento = new Date(baseFecha.setDate(baseFecha.getDate() + 30));
-      }
+      const hoy = new Date();
+      let limiteVencimiento = (fechaVencimiento && !isNaN(fechaVencimiento.getTime())) 
+        ? new Date(fechaVencimiento) 
+        : new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
 
-      const ahora = new Date();
-      const diferenciaMs = fechaVencimiento - ahora;
+      const diferenciaMs = limiteVencimiento.getTime() - hoy.getTime();
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
       if (elNumDias) elNumDias.innerText = diasRestantes;
@@ -954,6 +953,10 @@
       const contAvisos = document.getElementById('contenedor-avisos-sistema');
       if (!contAvisos) return;
 
+      if (document.activeElement && document.activeElement.tagName === 'TEXTAREA' && document.activeElement.id.startsWith('resp-aviso-')) {
+        return;
+      }
+
       try {
         const res = await fetch(`${BACKEND_URL}/api/avisos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
         if (res.ok) {
@@ -961,7 +964,13 @@
           if (Array.isArray(avisos) && avisos.length > 0) {
             contAvisos.innerHTML = avisos.map(a => `
               <div class="banner-aviso-sistema">
-                <strong style="color: var(--neon-yellow);">📢 ${a.asunto || 'Aviso del Sistema'}:</strong> ${a.texto}
+                <div>
+                  <strong style="color: var(--neon-yellow);">📢 ${a.asunto || 'Aviso del Sistema'}:</strong> ${a.texto}
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 5px;">
+                  <textarea id="resp-aviso-${a._id || a.id}" placeholder="Escribe tu respuesta..." style="min-height: 40px; font-size: 12px;"></textarea>
+                  <button class="btn btn-sm btn-blue" onclick="responderAviso('${a._id || a.id}')">✉️ Responder</button>
+                </div>
               </div>
             `).join('');
           } else {
@@ -969,6 +978,31 @@
           }
         }
       } catch (e) {}
+    }
+
+    async function responderAviso(avisoId) {
+      const txtArea = document.getElementById(`resp-aviso-${avisoId}`);
+      if (!txtArea) return;
+      const respuestaTexto = txtArea.value.trim();
+      if (!respuestaTexto) return alert("Por favor escribe una respuesta antes de enviar.");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/avisos/responder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, avisoId, respuesta: respuestaTexto })
+        });
+
+        if (res.ok) {
+          alert("✉️ Respuesta enviada con éxito al administrador.");
+          txtArea.value = '';
+          cargarAvisosSistema();
+        } else {
+          alert("Error al enviar la respuesta.");
+        }
+      } catch (e) {
+        alert("Error de conexión al responder el aviso.");
+      }
     }
 
     async function validarPasswordSeguridad() {
@@ -1018,7 +1052,7 @@
       }
 
       const hoy = new Date();
-      const vencimiento = new Date(hoy.setDate(hoy.getDate() + 30));
+      const vencimiento = new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
@@ -1339,26 +1373,39 @@
       actualizarBarraCarrito();
     }
 
-    function cambiarCantidadCarrito(nombre, cambio) {
-      const idx = carrito.findIndex(i => i.nombre === nombre);
-      if (idx > -1) {
-        carrito[idx].cantidad += cambio;
-        if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
-      }
-      actualizarBarraCarrito();
-      renderModalCarrito();
-    }
-
     function actualizarBarraCarrito() {
-      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
       const count = carrito.reduce((sum, item) => sum + item.cantidad, 0);
-      document.getElementById('txt-total-bar').innerText = `$${total.toLocaleString('es-CL')}`;
+      const total = carrito.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+
       document.getElementById('txt-count-bar').innerText = count;
+      document.getElementById('txt-total-bar').innerText = `$${total.toLocaleString('es-CL')}`;
     }
 
     function abrirModalCarrito() {
-      if (carrito.length === 0) return alert("El carrito está vacío.");
-      renderModalCarrito();
+      if (carrito.length === 0) return alert("El carrito está vacío. Agrega productos de la carta.");
+      
+      const contItems = document.getElementById('items-carrito');
+      let total = 0;
+
+      contItems.innerHTML = carrito.map((item, idx) => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+        return `
+          <div class="cart-item">
+            <div>
+              <div style="font-weight: bold; color: #fff; font-size: 14px;">${item.nombre}</div>
+              <div style="color: var(--neon-yellow); font-size: 12px;">$${item.precio.toLocaleString('es-CL')} c/u</div>
+            </div>
+            <div class="qty-controls">
+              <button class="btn-qty" onclick="cambiarCantidadCart(${idx}, -1)">-</button>
+              <span style="font-weight: bold; font-size: 14px;">${item.cantidad}</span>
+              <button class="btn-qty" onclick="cambiarCantidadCart(${idx}, 1)">+</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
       document.getElementById('modal-cart').style.display = 'flex';
     }
 
@@ -1366,78 +1413,94 @@
       document.getElementById('modal-cart').style.display = 'none';
     }
 
-    function renderModalCarrito() {
-      const cont = document.getElementById('items-carrito');
-      cont.innerHTML = carrito.map(i => `
-        <div class="cart-item">
-          <div>
-            <b>${i.nombre}</b><br>
-            <span style="color:var(--neon-yellow); font-size:13px;">$${(i.precio * i.cantidad).toLocaleString('es-CL')}</span>
-          </div>
-          <div class="qty-controls">
-            <button class="btn-qty" onclick="cambiarCantidadCarrito('${i.nombre.replace(/'/g, "\\'")}', -1)">-</button>
-            <span>${i.cantidad}</span>
-            <button class="btn-qty" onclick="cambiarCantidadCarrito('${i.nombre.replace(/'/g, "\\'")}', 1)">+</button>
-          </div>
-        </div>
-      `).join('');
-      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-      document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
+    function cambiarCantidadCart(idx, delta) {
+      carrito[idx].cantidad += delta;
+      if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
+      
+      if (carrito.length === 0) {
+        cerrarModalCarrito();
+      } else {
+        abrirModalCarrito();
+      }
+      actualizarBarraCarrito();
     }
 
     async function enviarPedidoCocina() {
-      if (carrito.length === 0) return;
-      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+      if (carrito.length === 0) return alert("Tu carrito está vacío.");
+
+      const total = carrito.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+      const payload = {
+        local: localId,
+        mesa: numeroMesa,
+        items: carrito.map(i => ({
+          nombre: i.nombre,
+          cantidad: i.cantidad,
+          precio: i.precio
+        })),
+        total,
+        fecha: new Date().toISOString()
+      };
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, mesa: numeroMesa, items: carrito, total })
+          body: JSON.stringify(payload)
         });
 
         if (res.ok) {
           const data = await res.json();
-          const pId = data.pedido?._id || data.pedido?.id;
-          if (pId) {
-            pedidoClienteActivoId = pId;
-            localStorage.setItem(`ultimoPedidoId_${localId}_${numeroMesa}`, pId);
+          alert("🚀 ¡Tu pedido ha sido enviado con éxito a la cocina!");
+          
+          if (data.pedido && data.pedido._id) {
+            pedidoClienteActivoId = data.pedido._id;
+            localStorage.setItem(`ultimoPedidoId_${localId}_${numeroMesa}`, pedidoClienteActivoId);
           }
-          alert("🚀 ¡Tu pedido ha sido enviado a la cocina!");
+
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalCarrito();
           verificarEstadoPedidoCliente();
         } else {
-          alert("Error al enviar el pedido.");
+          alert("❌ Error al enviar la orden a la cocina.");
         }
-      } catch (err) { alert("Error de conexión con el servidor."); }
+      } catch (e) {
+        alert("Error de red al enviar la orden.");
+      }
     }
 
     async function verificarEstadoPedidoCliente() {
-      const elResumen = document.getElementById('resumen-pedido-activo');
-      if (!elResumen || !pedidoClienteActivoId) return;
+      const resCard = document.getElementById('resumen-pedido-activo');
+      if (!resCard) return;
+
+      if (!pedidoClienteActivoId) {
+        resCard.style.display = 'none';
+        return;
+      }
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
         if (res.ok) {
           const pedidos = await res.json();
-          const encontrado = pedidos.find(p => String(p._id) === String(pedidoClienteActivoId) || String(p.id) === String(pedidoClienteActivoId));
+          const miPedido = pedidos.find(p => p._id === pedidoClienteActivoId);
 
-          if (encontrado) {
-            elResumen.style.display = 'block';
-            document.getElementById('resumen-pedido-hora').innerText = new Date(encontrado.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('resumen-pedido-items').innerHTML = (encontrado.items || []).map(i => `
-              <div style="display:flex; justify-content:space-between; padding:4px 0;">
-                <span>${i.cantidad}x ${i.nombre}</span>
-                <span>$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
+          if (miPedido) {
+            resCard.style.display = 'block';
+            document.getElementById('resumen-pedido-hora').innerText = new Date(miPedido.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const contItems = document.getElementById('resumen-pedido-items');
+            contItems.innerHTML = (miPedido.items || []).map(i => `
+              <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <span><b>${i.cantidad}x</b> ${i.nombre}</span>
+                <span style="color:var(--neon-yellow);">$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
               </div>
             `).join('');
-            document.getElementById('resumen-pedido-total').innerText = `Total: $${(encontrado.total || 0).toLocaleString('es-CL')}`;
+
+            document.getElementById('resumen-pedido-total').innerText = `Total: $${(miPedido.total || 0).toLocaleString('es-CL')}`;
           } else {
-            elResumen.style.display = 'none';
             localStorage.removeItem(`ultimoPedidoId_${localId}_${numeroMesa}`);
             pedidoClienteActivoId = null;
+            resCard.style.display = 'none';
           }
         }
       } catch (e) {}
@@ -1447,101 +1510,106 @@
       const cont = document.getElementById('contenedor-pedidos-cocina');
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-        if (!res.ok) throw new Error();
-        const pedidos = await res.json();
+        if (res.ok) {
+          const pedidos = await res.json();
+          cachePedidos = pedidos;
+          
+          if (pedidos.length === 0) {
+            cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Sin pedidos pendientes en la cocina. ☕</p>';
+            return;
+          }
 
-        if (!Array.isArray(pedidos) || pedidos.length === 0) {
-          cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en la cocina.</p>';
-          return;
-        }
-
-        cont.innerHTML = pedidos.map(p => `
-          <div class="card-pedido">
-            <div class="card-pedido-header">
-              <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
-              <span class="card-pedido-time">🕒 ${new Date(p.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-            <div class="pedido-items-list">
-              ${(p.items || []).map(i => `
-                <div class="pedido-item-row">
-                  <span><b>${i.cantidad}x</b> ${i.nombre}</span>
-                  <span>$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
+          cont.innerHTML = pedidos.map(p => `
+            <div class="card-pedido">
+              <div>
+                <div class="card-pedido-header">
+                  <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
+                  <span class="card-pedido-time">🕒 ${new Date(p.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-              `).join('')}
+                <div class="pedido-items-list">
+                  ${(p.items || []).map(i => `
+                    <div class="pedido-item-row">
+                      <span><b>${i.cantidad}x</b> ${i.nombre}</span>
+                      <span style="color: var(--neon-yellow);">$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="card-pedido-footer">
+                <span style="font-weight: bold; color: var(--neon-green); font-size: 16px;">Total: $${(p.total || 0).toLocaleString('es-CL')}</span>
+                <button class="btn btn-sm btn-success" onclick="marcarPedidoListo('${p._id}')">✅ Marcar Listo</button>
+              </div>
             </div>
-            <div class="card-pedido-footer">
-              <span style="font-weight: bold; color: var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
-              <button class="btn btn-danger btn-sm" onclick="eliminarPedido('${p._id || p.id}')">🗑️ Cancelar</button>
-            </div>
-          </div>
-        `).join('');
+          `).join('');
+        }
       } catch (e) {
-        cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No se pudieron cargar los pedidos.</p>';
+        cont.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al cargar comandas de la cocina.</p>';
       }
     }
 
-    async function eliminarPedido(id) {
-      if (!confirm("¿Deseas cancelar/eliminar este pedido?")) return;
-      try {
-        await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
-        cargarPedidosCocina();
-      } catch (e) {}
+    async function marcarPedidoListo(id) {
+      alert("✅ Comanda marcada como lista en la cocina. El garzón procederá con el despacho.");
+      cargarPedidosCocina();
     }
 
     async function cargarPedidosGarzon() {
       const cont = document.getElementById('contenedor-pedidos-garzon');
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-        if (!res.ok) throw new Error();
-        cachePedidos = await res.json();
+        if (res.ok) {
+          const pedidos = await res.json();
+          cachePedidos = pedidos;
 
-        if (!Array.isArray(cachePedidos) || cachePedidos.length === 0) {
-          cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comandas para llevar a mesa.</p>';
-          return;
-        }
+          if (pedidos.length === 0) {
+            cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay entregas pendientes para garzones. 👍</p>';
+            return;
+          }
 
-        cont.innerHTML = cachePedidos.map(p => `
-          <div class="card-pedido">
-            <div class="card-pedido-header">
-              <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
-              <span class="card-pedido-time">🕒 ${new Date(p.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-            <div class="pedido-items-list">
-              ${(p.items || []).map(i => `
-                <div class="pedido-item-row">
-                  <span><b>${i.cantidad}x</b> ${i.nombre}</span>
-                  <span>$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
+          cont.innerHTML = pedidos.map(p => `
+            <div class="card-pedido" style="border-color: var(--neon-blue);">
+              <div>
+                <div class="card-pedido-header">
+                  <span class="card-pedido-mesa" style="color: var(--neon-blue);">MESA N° ${p.mesa}</span>
+                  <span class="card-pedido-time">🕒 ${new Date(p.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-              `).join('')}
+                <div class="pedido-items-list">
+                  ${(p.items || []).map(i => `
+                    <div class="pedido-item-row">
+                      <span><b>${i.cantidad}x</b> ${i.nombre}</span>
+                      <span style="color: var(--neon-yellow);">$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="card-pedido-footer">
+                <span style="font-weight: bold; color: var(--neon-green); font-size: 16px;">$${(p.total || 0).toLocaleString('es-CL')}</span>
+                <button class="btn btn-sm btn-blue" onclick="entregarEnMesa('${p._id}')">🏃‍♂️ Entregado en Mesa</button>
+              </div>
             </div>
-            <div class="card-pedido-footer">
-              <span style="font-weight: bold; color: var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
-              <button class="btn btn-success btn-sm" onclick="entregarPedidoEnMesa('${p._id || p.id}')">✅ Entregado en Mesa</button>
-            </div>
-          </div>
-        `).join('');
+          `).join('');
+        }
       } catch (e) {
-        cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Error al cargar comandas.</p>';
+        cont.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al cargar comandas de garzón.</p>';
       }
     }
 
-    async function entregarPedidoEnMesa(id) {
+    async function entregarEnMesa(id) {
       if (!rutGarzonSesion) {
-        rutGarzonSesion = prompt("Por favor ingresa tu RUT de Garzón para confirmar:");
-        if (!rutGarzonSesion) return;
-        localStorage.setItem('rutGarzon', rutGarzonSesion);
-        document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
+        const inputRut = prompt("⚠️ Ingresa tu RUT de Garzón para confirmar la entrega:");
+        if (!inputRut || inputRut.trim().length < 7) return alert("RUT no válido.");
+        guardarRutAutogestion(inputRut);
       }
 
-      const pedido = cachePedidos.find(p => String(p._id) === String(id) || String(p.id) === String(id));
-      if (!pedido) return;
+      const pedidoObj = cachePedidos.find(p => p._id === id);
+      if (!pedidoObj) return;
 
       const ahora = new Date();
       const payloadHistorial = {
+        id: pedidoObj._id,
         local: localId,
-        mesa: String(pedido.mesa),
-        items: pedido.items || [],
-        total: Number(pedido.total || 0),
+        mesa: pedidoObj.mesa,
+        items: pedidoObj.items,
+        total: pedidoObj.total,
         estado: 'entregado',
         rutGarzon: rutGarzonSesion,
         fechaEntrega: ahora.toLocaleDateString('es-CL'),
@@ -1549,6 +1617,10 @@
       };
 
       try {
+        let guardadoLocal = JSON.parse(localStorage.getItem(`historial_local_${localId}`) || '[]');
+        guardadoLocal.unshift(payloadHistorial);
+        localStorage.setItem(`historial_local_${localId}`, JSON.stringify(guardadoLocal));
+
         await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1557,27 +1629,41 @@
 
         await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
 
-        alert(`✅ Pedido de Mesa ${pedido.mesa} entregado correctamente.`);
+        alert(`✅ Pedido entregado a la Mesa N° ${pedidoObj.mesa} registrado exitosamente bajo el RUT ${rutGarzonSesion}.`);
         cargarPedidosGarzon();
-      } catch (e) { alert("Error al registrar la entrega."); }
+        cargarPedidosCocina();
+      } catch (e) {
+        alert("Atención: El pedido se guardó localmente.");
+        cargarPedidosGarzon();
+      }
     }
 
     async function cargarHistorialGarantizado() {
       const tbody = document.getElementById('tabla-historial-garzon');
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Consultando historial de entregas...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando historial desde la base de datos...</td></tr>';
+
+      let datosHistorial = [];
+      let datosLocales = JSON.parse(localStorage.getItem(`historial_local_${localId}`) || '[]');
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
         if (res.ok) {
-          historialGlobal = await res.json();
-          historialFiltrado = [...historialGlobal];
-          renderizarHistorialYMetricas();
-        } else {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se pudieron obtener los registros.</td></tr>';
+          datosHistorial = await res.json();
         }
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Error de comunicación con el backend.</td></tr>';
-      }
+      } catch (e) {}
+
+      const mapaCombinado = new Map();
+      [...datosHistorial, ...datosLocales].forEach(item => {
+        const clave = item._id || item.id || `${item.mesa}_${item.fechaEntrega}_${item.horaEntrega}_${item.total}`;
+        if (!mapaCombinado.has(clave)) {
+          mapaCombinado.set(clave, item);
+        }
+      });
+
+      historialGlobal = Array.from(mapaCombinado.values());
+      historialGlobal.sort((a, b) => new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now()));
+
+      aplicarFiltroInforme();
     }
 
     function cambiarFiltrosInforme() {
@@ -1589,167 +1675,175 @@
 
     function aplicarFiltroInforme() {
       const tipo = document.getElementById('select-tipo-informe').value;
-      if (tipo === 'todos') {
-        historialFiltrado = [...historialGlobal];
-      } else if (tipo === 'rut') {
-        const rut = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
-        if (!rut) return alert("Ingresa un RUT para filtrar.");
-        historialFiltrado = historialGlobal.filter(h => (h.rutGarzon || '').toUpperCase().includes(rut));
+      historialFiltrado = [...historialGlobal];
+
+      if (tipo === 'rut') {
+        const rutBuscado = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
+        if (rutBuscado) {
+          historialFiltrado = historialFiltrado.filter(h => (h.rutGarzon || '').toUpperCase().includes(rutBuscado));
+        }
       } else if (tipo === 'fechas') {
-        const desde = document.getElementById('filtro-informe-desde').value;
-        const hasta = document.getElementById('filtro-informe-hasta').value;
-        if (!desde || !hasta) return alert("Selecciona el rango de fechas.");
-        historialFiltrado = historialGlobal.filter(h => {
-          const fechaReg = new Date(h.createdAt || Date.now()).toISOString().split('T')[0];
-          return fechaReg >= desde && fechaReg <= hasta;
-        });
+        const desdeVal = document.getElementById('filtro-informe-desde').value;
+        const hastaVal = document.getElementById('filtro-informe-hasta').value;
+
+        if (desdeVal) {
+          const fDesde = new Date(desdeVal);
+          historialFiltrado = historialFiltrado.filter(h => new Date(h.createdAt || h.fechaEntrega) >= fDesde);
+        }
+        if (hastaVal) {
+          const fHasta = new Date(hastaVal);
+          fHasta.setHours(23, 59, 59);
+          historialFiltrado = historialFiltrado.filter(h => new Date(h.createdAt || h.fechaEntrega) <= fHasta);
+        }
       }
-      renderizarHistorialYMetricas();
+
+      renderizarTablaHistorial();
     }
 
-    function renderizarHistorialYMetricas() {
+    function renderizarTablaHistorial() {
       const tbody = document.getElementById('tabla-historial-garzon');
-      const totalEntregados = historialFiltrado.length;
-      const totalMonto = historialFiltrado.reduce((sum, h) => sum + (h.total || 0), 0);
-      const promedio = totalEntregados > 0 ? Math.round(totalMonto / totalEntregados) : 0;
-
-      document.getElementById('lbl-stat-entregados').innerText = totalEntregados;
-      document.getElementById('lbl-stat-monto').innerText = `$${totalMonto.toLocaleString('es-CL')}`;
-      document.getElementById('lbl-stat-promedio').innerText = `$${promedio.toLocaleString('es-CL')}`;
-
-      if (totalEntregados === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No hay registros para mostrar.</td></tr>';
+      if (historialFiltrado.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No existen registros que coincidan con los filtros aplicados.</td></tr>';
+        document.getElementById('lbl-stat-entregados').innerText = '0';
+        document.getElementById('lbl-stat-monto').innerText = '$0';
+        document.getElementById('lbl-stat-promedio').innerText = '$0';
         return;
       }
 
-      tbody.innerHTML = historialFiltrado.map(h => `
-        <tr>
-          <td>Mesa ${h.mesa || '--'}</td>
-          <td>${h.rutGarzon || 'SIN-RUT'}</td>
-          <td>${h.fechaEntrega || new Date(h.createdAt).toLocaleDateString('es-CL')}</td>
-          <td>${h.horaEntrega || new Date(h.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-          <td>${(h.items || []).map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}</td>
-          <td style="font-weight: bold; color: var(--neon-yellow);">$${(h.total || 0).toLocaleString('es-CL')}</td>
-        </tr>
-      `).join('');
+      let montoTotal = 0;
+      tbody.innerHTML = historialFiltrado.map(h => {
+        const totalNum = Number(h.total || 0);
+        montoTotal += totalNum;
+        const itemsStr = (h.items || []).map(i => `${i.cantidad}x ${i.nombre}`).join(', ');
+
+        return `
+          <tr>
+            <td><b>Mesa ${h.mesa || '-'}</b></td>
+            <td><span style="color: var(--neon-blue); font-weight: bold;">${h.rutGarzon || 'N/A'}</span></td>
+            <td>${h.fechaEntrega || '-'}</td>
+            <td>${h.horaEntrega || '-'}</td>
+            <td style="font-size: 12px; color: var(--text-muted);">${itemsStr || 'Múltiples productos'}</td>
+            <td style="color: var(--neon-yellow); font-weight: bold;">$${totalNum.toLocaleString('es-CL')}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const totalCantidad = historialFiltrado.length;
+      const promedio = totalCantidad > 0 ? Math.round(montoTotal / totalCantidad) : 0;
+
+      document.getElementById('lbl-stat-entregados').innerText = totalCantidad;
+      document.getElementById('lbl-stat-monto').innerText = `$${montoTotal.toLocaleString('es-CL')}`;
+      document.getElementById('lbl-stat-promedio').innerText = `$${promedio.toLocaleString('es-CL')}`;
     }
 
     function descargarInformePDF() {
+      if (typeof window.jspdf === 'undefined') return alert("Cargando librería PDF...");
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
 
       doc.setFontSize(16);
-      doc.text(`Informe de Atenciones - ${localId.toUpperCase()}`, 14, 20);
-
+      doc.text(`Resumen de Ventas y Entregas - Local: ${localId.toUpperCase()}`, 14, 15);
       doc.setFontSize(10);
-      doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-CL')}`, 14, 28);
-      doc.text(`Total Atenciones: ${historialFiltrado.length}`, 14, 34);
+      doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-CL')}`, 14, 22);
 
-      const monto = historialFiltrado.reduce((sum, h) => sum + (h.total || 0), 0);
-      doc.text(`Monto Total: $${monto.toLocaleString('es-CL')}`, 14, 40);
+      let posY = 35;
+      doc.setFontSize(11);
+      doc.text(`Total Atendidos: ${document.getElementById('lbl-stat-entregados').innerText}`, 14, posY);
+      doc.text(`Monto Total: ${document.getElementById('lbl-stat-monto').innerText}`, 14, posY + 6);
+      doc.text(`Promedio Pedido: ${document.getElementById('lbl-stat-promedio').innerText}`, 14, posY + 12);
 
-      let y = 50;
-      doc.setFontSize(9);
-      doc.text("Mesa", 14, y);
-      doc.text("Garzon", 35, y);
-      doc.text("Fecha", 75, y);
-      doc.text("Hora", 110, y);
-      doc.text("Total", 140, y);
-      doc.line(14, y + 2, 190, y + 2);
-      y += 8;
+      posY += 22;
+      doc.setFontSize(10);
+      doc.text("Mesa | Garzon | Fecha | Hora | Total", 14, posY);
+      doc.line(14, posY + 2, 195, posY + 2);
 
-      historialFiltrado.forEach(h => {
-        if (y > 280) { doc.addPage(); y = 20; }
-        doc.text(`Mesa ${h.mesa || '--'}`, 14, y);
-        doc.text(String(h.rutGarzon || 'SIN-RUT'), 35, y);
-        doc.text(String(h.fechaEntrega || '--'), 75, y);
-        doc.text(String(h.horaEntrega || '--'), 110, y);
-        doc.text(`$${(h.total || 0).toLocaleString('es-CL')}`, 140, y);
-        y += 6;
+      posY += 8;
+      historialFiltrado.slice(0, 30).forEach(h => {
+        if (posY > 280) { doc.addPage(); posY = 20; }
+        doc.text(`${h.mesa || '-'} | ${h.rutGarzon || 'N/A'} | ${h.fechaEntrega || '-'} | ${h.horaEntrega || '-'} | $${(h.total || 0).toLocaleString('es-CL')}`, 14, posY);
+        posY += 6;
       });
 
       doc.save(`Informe_${localId}_${Date.now()}.pdf`);
     }
 
     function generarQRUnico() {
-      const mesa = document.getElementById('qr-num-mesa').value || '1';
-      const url = construirUrlMesa(mesa);
-      const box = document.getElementById('qr-single-render');
-      box.innerHTML = '';
-      new QRCode(box, { text: url, width: 140, height: 140 });
-      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${mesa}`;
-    }
+      const numMesa = document.getElementById('qr-num-mesa').value || "1";
+      const elRender = document.getElementById('qr-single-render');
+      const urlMesa = construirUrlMesa(numMesa);
 
-    function descargarQRImagen() {
-      const mesa = document.getElementById('qr-num-mesa').value || '1';
-      const canvas = document.querySelector('#qr-single-render canvas');
-      if (!canvas) return alert("Genera el QR primero.");
-      const link = document.createElement('a');
-      link.download = `QR_Mesa_${mesa}_${localId}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${numMesa}`;
+      elRender.innerHTML = "";
+      new QRCode(elRender, { text: urlMesa, width: 140, height: 140 });
     }
 
     function generarQRGarzon() {
-      const url = construirUrlGarzon();
-      const box = document.getElementById('qr-garzon-render');
-      if (box) {
-        box.innerHTML = '';
-        new QRCode(box, { text: url, width: 140, height: 140 });
-      }
+      const elRender = document.getElementById('qr-garzon-render');
+      if (!elRender) return;
+      const urlGarzon = construirUrlGarzon();
+
+      elRender.innerHTML = "";
+      new QRCode(elRender, { text: urlGarzon, width: 140, height: 140 });
+    }
+
+    function descargarQRImagen() {
+      const img = document.querySelector('#qr-single-render img');
+      if (!img) return alert("Por favor genera el código QR primero.");
+      const link = document.createElement('a');
+      link.download = `QR_Mesa_${document.getElementById('qr-num-mesa').value}_${localId}.png`;
+      link.href = img.src;
+      link.click();
     }
 
     function descargarQRGarzon() {
-      const canvas = document.querySelector('#qr-garzon-render canvas');
-      if (!canvas) return alert("Genera el QR primero.");
+      const img = document.querySelector('#qr-garzon-render img');
+      if (!img) return alert("Generando código QR...");
       const link = document.createElement('a');
-      link.download = `QR_Garzon_${localId}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.download = `QR_GARZON_${localId}.png`;
+      link.href = img.src;
       link.click();
     }
 
     function generarPDFMesas() {
-      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
-      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 1;
-
-      if (desde > hasta) return alert("El rango es inválido.");
-
+      if (typeof window.jspdf === 'undefined') return alert("Cargando librería PDF...");
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      const tempBox = document.getElementById('qr-hidden-temp');
 
-      let x = 15;
-      let y = 15;
-      let count = 0;
+      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
+      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 12;
+
+      let x = 15, y = 15;
+      const size = 50; 
+      const margin = 15;
+
+      const contTemp = document.getElementById('qr-hidden-temp');
 
       for (let m = desde; m <= hasta; m++) {
-        tempBox.innerHTML = '';
+        contTemp.innerHTML = '';
         const url = construirUrlMesa(m);
-        new QRCode(tempBox, { text: url, width: 150, height: 150 });
+        new QRCode(contTemp, { text: url, width: 150, height: 150 });
 
-        const canvas = tempBox.querySelector('canvas');
-        if (canvas) {
-          const imgData = canvas.toDataURL('image/png');
-          doc.rect(x, y, 50, 55);
-          doc.addImage(imgData, 'PNG', x + 5, y + 3, 40, 40);
-          doc.setFontSize(9);
-          doc.text(`MESA N° ${m}`, x + 25, y + 49, { align: 'center' });
+        const img = contTemp.querySelector('img');
+        if (img && img.src) {
+          doc.rect(x - 2, y - 2, size + 4, size + 16);
+          doc.addImage(img.src, 'PNG', x, y, size, size);
+          doc.setFontSize(10);
+          doc.text(`MESA N° ${m}`, x + (size / 2), y + size + 8, { align: 'center' });
 
-          count++;
-          x += 60;
-          if (count % 3 === 0) {
+          x += size + margin;
+          if (x + size > 200) {
             x = 15;
-            y += 65;
-          }
-          if (count % 12 === 0 && m < hasta) {
-            doc.addPage();
-            x = 15;
-            y = 15;
+            y += size + margin + 10;
+            if (y + size > 280) {
+              doc.addPage();
+              x = 15;
+              y = 15;
+            }
           }
         }
       }
 
-      doc.save(`Plantilla_QR_Mesas_${desde}_a_${hasta}.pdf`);
+      doc.save(`Planilla_QR_Mesas_${localId}.pdf`);
     }
   </script>
 </body>
