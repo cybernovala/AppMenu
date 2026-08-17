@@ -42,12 +42,19 @@ const localSchema = new mongoose.Schema({
 
 const Local = mongoose.model('Local', localSchema);
 
-// Avisos / Mensajes Globales
+// Avisos / Mensajes Globales y Respuestas
+const respuestaAvisoSchema = new mongoose.Schema({
+  local: { type: String, required: true },
+  texto: { type: String, required: true },
+  fecha: { type: Date, default: Date.now }
+});
+
 const avisoSchema = new mongoose.Schema({
   destinatario: { type: String, default: 'todos' },
   asunto: { type: String, default: 'Aviso del Sistema' },
   texto: { type: String, required: true },
-  fecha: { type: Date, default: Date.now }
+  fecha: { type: Date, default: Date.now },
+  respuestas: [respuestaAvisoSchema]
 }, { collection: 'avisos' });
 
 const Aviso = mongoose.model('Aviso', avisoSchema);
@@ -198,8 +205,6 @@ app.post('/api/locales/alta', async (req, res) => {
 
     const ahora = new Date();
     
-    // Si la petición incluye una fecha de vencimiento explícita (ej. demo de 30 días), la utiliza.
-    // De lo contrario, asigna 365 días por defecto.
     let fechaVencimientoCalculada;
     if (fechaVencBody) {
       fechaVencimientoCalculada = new Date(fechaVencBody);
@@ -447,7 +452,7 @@ app.post('/api/historials', async (req, res) => {
   }
 });
 
-// 10. AVISOS Y MENSAJES DEL SISTEMA
+// 10. AVISOS Y MENSAJES DEL SISTEMA (OBTENER, CREAR, RESPONDER Y ELIMINAR)
 app.get('/api/avisos', async (req, res) => {
   try {
     const localId = (req.query.local || '').trim().toLowerCase();
@@ -470,12 +475,40 @@ app.post('/api/avisos', async (req, res) => {
     const nuevoAviso = new Aviso({
       destinatario: (destinatario || 'todos').toLowerCase().trim(),
       asunto: asunto || 'Aviso del Sistema',
-      texto
+      texto,
+      respuestas: []
     });
     await nuevoAviso.save();
     res.status(201).json({ ok: true, aviso: nuevoAviso });
   } catch (error) {
     res.status(500).json({ error: 'Error al guardar el aviso' });
+  }
+});
+
+// RUTA PARA RESPONDER AVISO DESDE ADMIN.HTML
+app.post('/api/avisos/responder', async (req, res) => {
+  try {
+    const { local, avisoId, respuesta } = req.body;
+    if (!avisoId || !respuesta) {
+      return res.status(400).json({ error: 'Parámetros incompletos' });
+    }
+
+    const aviso = await Aviso.findById(avisoId);
+    if (!aviso) {
+      return res.status(404).json({ error: 'Aviso no encontrado' });
+    }
+
+    aviso.respuestas.push({
+      local: (local || 'desconocido').toLowerCase().trim(),
+      texto: respuesta.trim(),
+      fecha: new Date()
+    });
+
+    await aviso.save();
+    res.json({ ok: true, mensaje: 'Respuesta guardada con éxito', aviso });
+  } catch (error) {
+    console.error("Error al responder aviso:", error);
+    res.status(500).json({ error: 'Error interno al guardar la respuesta' });
   }
 });
 
