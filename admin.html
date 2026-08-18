@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración & Menú Digital</title>
+  <title>+-Panel de Administración & Menú Digital</title>
 
-  <!-- Librerías para Generación de QR y PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -95,13 +94,21 @@
       background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 119, 255, 0.3));
       border: 1px solid var(--neon-blue);
       color: #ffffff;
-      padding: 12px 15px;
+      padding: 15px;
       border-radius: 8px;
       font-size: 14px;
       box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
+    }
+
+    .respuesta-item-admin {
+      margin-top: 6px;
+      padding-left: 10px;
+      border-left: 2px solid var(--neon-green);
+      color: #e0e0e0;
+      font-size: 13px;
     }
 
     .header-bar {
@@ -316,16 +323,6 @@
       align-items: center;
     }
 
-    .btn-add {
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
-      border: none;
-      color: #fff;
-      padding: 10px 18px;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
     .cart-bar {
       background: rgba(12, 10, 20, 0.95);
       border: 1px solid var(--neon-orange);
@@ -375,24 +372,6 @@
     }
 
     .card-pedido-mesa { font-size: 18px; font-weight: bold; color: var(--neon-yellow); }
-    .card-pedido-time { font-size: 12px; color: var(--text-muted); }
-
-    .pedido-items-list { margin-bottom: 15px; font-size: 14px; }
-    .pedido-item-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 5px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .card-pedido-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
 
     .stats-grid {
       display: grid;
@@ -439,17 +418,6 @@
     .modal-content h3 { color: var(--neon-yellow); margin-bottom: 15px; }
     .modal-content label { display: block; font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px; }
 
-    .cart-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid #222;
-    }
-
-    .qty-controls { display: flex; gap: 10px; align-items: center; }
-    .btn-qty { background: #222; border: 1px solid #444; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
-
     .garzon-top-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -459,9 +427,10 @@
 
     .qr-preview-box {
       background: #ffffff;
-      padding: 15px;
+      padding: 18px 15px;
       border-radius: 8px;
       display: inline-block;
+      min-width: 240px;
     }
 
     .qr-card-container {
@@ -485,7 +454,6 @@
 
   <div class="container">
     
-    <!-- CONTENEDOR DE BANNERS DE LICENCIA Y AVISOS -->
     <div class="banner-container" id="banner-wrapper">
       <div class="banner-licencia" id="banner-vencimiento">
         ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
@@ -495,11 +463,9 @@
         <span id="txt-estado-bloqueo">✅ Sistema Activo y Desbloqueado</span>
       </div>
 
-      <!-- CONTENEDOR DE AVISOS Y MENSAJES -->
       <div id="contenedor-avisos-sistema"></div>
     </div>
 
-    <!-- HEADER GENERAL -->
     <div class="header-bar" id="admin-header">
       <div>
         <span style="font-size: 12px; color: var(--text-muted);">Local Administrado:</span>
@@ -508,7 +474,6 @@
       <button class="btn btn-secondary btn-sm" onclick="recargarTodo()">🔄 Recargar</button>
     </div>
 
-    <!-- BARRA DE PESTAÑAS -->
     <div class="nav-tabs" id="admin-nav-tabs">
       <button class="tab-btn" id="btn-tab-alta" onclick="cambiarPestana('tab-alta', this)">📝 Dar de Alta Negocio</button>
       <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
@@ -519,7 +484,6 @@
       <button class="tab-btn" id="btn-tab-historial" onclick="cambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
     </div>
 
-    <!-- PESTAÑA 0: DAR DE ALTA NEGOCIO -->
     <div id="tab-alta" class="tab-content">
       <div class="section-card">
         <h3>📝 Registrar y Dar de Alta el Negocio</h3>
@@ -556,7 +520,6 @@
 
         <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.15); margin: 25px 0;">
 
-        <!-- SECCIÓN DE SOPORTE Y CONTACTO -->
         <div style="background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 8px; border: 1px solid #333;">
           <h4 style="color: var(--neon-yellow); font-size: 14px; margin-bottom: 8px;">🔑 ¿Olvidaste tu contraseña o tienes dudas?</h4>
           <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
@@ -569,12 +532,11 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 1: GESTIÓN DE MENÚ -->
     <div id="tab-admin" class="tab-content active">
       <div class="section-card">
         <h3>📁 Crear Nueva Categoría</h3>
         <div class="form-inline">
-          <input type="text" id="nueva-categoria" placeholder="Ej: Entradas, Bebidas, Promociones">
+          <input type="text" id="nueva-categoria" placeholder="Ej: Bebidas, Postres, Platos Fuertes">
           <button class="btn" onclick="crearCategoria()">+ Agregar Categoría</button>
         </div>
       </div>
@@ -584,7 +546,6 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 2: MENÚ DIGITAL CLIENTE -->
     <div id="tab-cliente" class="tab-content">
       <div class="preview-header">
         <div class="brand-title" id="txt-local-cliente">MENÚ DIGITAL</div>
@@ -605,7 +566,6 @@
         <button class="cart-btn" onclick="abrirModalCarrito()">🛒 Ver Pedido (<span id="txt-count-bar">0</span>)</button>
       </div>
 
-      <!-- SECCIÓN DE RESUMEN DEL PEDIDO ENVIADO -->
       <div id="resumen-pedido-activo" style="display: none;" class="resumen-pedido-cliente">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 8px; margin-bottom: 10px;">
           <h4 style="color: var(--neon-green); font-size: 16px;">⏳ Pedido Enviado a Cocina</h4>
@@ -621,7 +581,6 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 3: GESTOR DE QR -->
     <div id="tab-qr" class="tab-content">
       <div class="section-card" style="border-color: var(--neon-blue);">
         <h3>🔲 QR Exclusivo para Garzones</h3>
@@ -649,8 +608,12 @@
 
         <div class="qr-card-container" style="margin-top: 20px; text-align: center;">
           <div class="qr-preview-box" id="box-qr-single">
+            <p id="lbl-qr-single-nombre-local" style="color: #000; font-weight: 900; margin-bottom: 8px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;"></p>
             <div id="qr-single-render"></div>
-            <p id="lbl-qr-single-mesa" style="color: #000; font-weight: bold; margin-top: 8px; font-size: 14px; text-transform: uppercase;"></p>
+            <p id="lbl-qr-single-mesa" style="color: #000; font-weight: 800; margin-top: 8px; margin-bottom: 6px; font-size: 14px; text-transform: uppercase;"></p>
+            <p style="color: #444; font-weight: 600; font-size: 11px; max-width: 190px; margin: 0 auto; line-height: 1.2;">
+              Escanea el QR para hacer tu pedido directamente
+            </p>
           </div>
           <br>
           <button class="btn btn-secondary btn-sm" onclick="descargarQRImagen()">📥 Descargar PNG (5x5 cm)</button>
@@ -668,7 +631,6 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 4: COCINA / PEDIDOS -->
     <div id="tab-cocina" class="tab-content">
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
@@ -687,7 +649,6 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 5: CONTROL DE GARZÓN -->
     <div id="tab-garzon" class="tab-content">
       <div class="garzon-top-grid">
         <div class="section-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: center;">
@@ -717,7 +678,6 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 6: HISTORIAL & MÉTRICAS -->
     <div id="tab-historial" class="tab-content">
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
@@ -747,11 +707,11 @@
 
         <div class="stats-grid">
           <div class="stat-card">
-            <span style="font-size: 12px; color: var(--text-muted);">Total Pedidos Atendidos</span>
+            <span style="font-size: 12px; color: var(--text-muted);">Pedidos Entregados</span>
             <div class="stat-number" id="lbl-stat-entregados">0</div>
           </div>
           <div class="stat-card">
-            <span style="font-size: 12px; color: var(--text-muted);">Monto Total Atendido</span>
+            <span style="font-size: 12px; color: var(--text-muted);">Monto Total Acumulado</span>
             <div class="stat-number" id="lbl-stat-monto">$0</div>
           </div>
           <div class="stat-card">
@@ -784,13 +744,12 @@
 
   </div>
 
-  <!-- MODAL DE EDICIÓN -->
   <div class="modal" id="modal-editar">
     <div class="modal-content">
       <h3>✏️ Editar Producto</h3>
       <input type="hidden" id="edit-cat-orig">
       <input type="hidden" id="edit-index-orig">
-      
+
       <label>Nombre del Producto</label>
       <input type="text" id="edit-nombre">
 
@@ -807,7 +766,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE CARRITO -->
   <div class="modal" id="modal-cart">
     <div class="modal-content">
       <h3 style="color: var(--neon-pink); margin-bottom: 15px;">📋 Revisa tu Orden</h3>
@@ -828,81 +786,88 @@
 
   <script>
     const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://localhost:3000'
+      ? 'http://localhost:3000' 
       : 'https://appmenu-tavr.onrender.com';
 
     const params = new URLSearchParams(window.location.search);
-    const localId = (params.get('local') || 't').toLowerCase().trim();
+    const localId = params.get('local') || 'demorestaurante';
     const numeroMesa = params.get('mesa') || '1';
-    const vistaModo = params.get('view');
+    const vistaDirecta = params.get('view');
 
     let productosPlanos = [];
     let categoriasSet = new Set();
-    let carrito = [];
     let catSeleccionadaCliente = '';
-    let rutGarzonSesion = localStorage.getItem('rutGarzon') || '12022962-1';
-    let cachePedidos = [];
-    let historialGlobal = [];
-    let historialFiltrado = [];
-
+    let carrito = [];
+    let rutGarzonSesion = localStorage.getItem('rutGarzon') || '';
     let clienteDadoDeAlta = false;
     let autenticadoAdmin = false;
     let pedidoClienteActivoId = localStorage.getItem(`ultimoPedidoId_${localId}_${numeroMesa}`) || null;
+    let historialCompleto = [];
+    let historialFiltrado = [];
 
-    document.addEventListener("DOMContentLoaded", () => {
+    window.addEventListener('load', () => {
       document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
       document.getElementById('txt-local-cliente').innerText = localId.toUpperCase();
-      document.getElementById('txt-mesa-cliente').innerText = `MESA N° ${numeroMesa}`;
-      
-      const elNombreAlta = document.getElementById('alta-nombre');
-      if (elNombreAlta) elNombreAlta.value = localId;
-
-      obtenerEstadoLicenciaYBloqueo();
-      cargarAvisosSistema();
+      document.getElementById('txt-mesa-cliente').innerText = `Mesa N° ${numeroMesa}`;
 
       if (rutGarzonSesion) {
         document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
-        document.getElementById('input-rut-directo').value = rutGarzonSesion;
+        const inRut = document.getElementById('input-rut-directo');
+        if (inRut) inRut.value = rutGarzonSesion;
       }
 
-      if (vistaModo === 'cliente') {
-        document.getElementById('banner-wrapper').style.display = 'none';
-        document.getElementById('admin-header').style.display = 'none';
-        document.getElementById('admin-nav-tabs').style.display = 'none';
-        cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
-      } else if (vistaModo === 'garzon') {
-        document.getElementById('banner-wrapper').style.display = 'none';
-        document.getElementById('admin-header').style.display = 'none';
-        document.getElementById('admin-nav-tabs').style.display = 'none';
-        cambiarPestana('tab-garzon', document.getElementById('btn-tab-garzon'));
-      }
-
+      obtenerEstadoLicenciaYBloqueo();
+      cargarAvisosSistema();
       cargarDatosMenu();
-      generarQRUnico();
       generarQRGarzon();
-      verificarEstadoPedidoCliente();
+      generarQRUnico();
+
+      if (vistaDirecta === 'cliente') {
+        ocultarPanelesAdministrador();
+        cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
+      } else if (vistaDirecta === 'garzon') {
+        ocultarPanelesAdministrador();
+        cambiarPestana('tab-garzon', document.getElementById('btn-tab-garzon'));
+      } else {
+        cambiarPestana('tab-admin', document.getElementById('btn-tab-admin'));
+      }
 
       setInterval(() => {
-        obtenerEstadoLicenciaYBloqueo();
+        const tabCocina = document.getElementById('tab-cocina');
+        const tabGarzon = document.getElementById('tab-garzon');
+        const tabCliente = document.getElementById('tab-cliente');
+
+        if (tabCocina && tabCocina.classList.contains('active')) cargarPedidosCocina();
+        if (tabGarzon && tabGarzon.classList.contains('active')) cargarPedidosGarzon();
+        if (tabCliente && tabCliente.classList.contains('active')) verificarEstadoPedidoCliente();
+      }, 5000);
+
+      setInterval(() => {
         cargarAvisosSistema();
-        verificarEstadoPedidoCliente();
-        if (document.getElementById('tab-cocina').classList.contains('active')) {
-          cargarPedidosCocina();
-        }
-        if (document.getElementById('tab-garzon').classList.contains('active')) {
-          cargarPedidosGarzon();
-        }
-        if (document.getElementById('tab-historial').classList.contains('active')) {
-          cargarHistorialGarantizado();
-        }
-      }, 4000); 
+      }, 10000);
     });
 
+    function ocultarPanelesAdministrador() {
+      const elHeader = document.getElementById('admin-header');
+      const elTabs = document.getElementById('admin-nav-tabs');
+      const elBanners = document.getElementById('banner-wrapper');
+      if (elHeader) elHeader.style.display = 'none';
+      if (elTabs) elTabs.style.display = 'none';
+      if (elBanners) elBanners.style.display = 'none';
+    }
+
     function forzarBloqueoUI() {
-      const elBannerBloqueo = document.getElementById('banner-bloqueo');
-      const elTxtBloqueo = document.getElementById('txt-estado-bloqueo');
-      if(elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-bloqueado";
-      if(elTxtBloqueo) elTxtBloqueo.innerHTML = "🚫 Su cuenta ha sido DESACTIVADA o BLOQUEADA por el Administrador.";
+      document.body.innerHTML = `
+        <div style="background:#110000; color:#ff3344; min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px; text-align:center;">
+          <h1 style="font-size:32px; margin-bottom:15px;">🚫 SERVICIO DESACTIVADO O LICENCIA EXPIRADA</h1>
+          <p style="font-size:18px; color:#fff; max-width:600px; margin-bottom:20px;">
+            El acceso a este sistema ha sido suspendido o requiere activación. Comuníquese con el administrador del servicio para regularizar la cuenta.
+          </p>
+          <div style="background:#220000; border:1px solid #ff3344; padding:15px; border-radius:8px; font-weight:bold; color:#ffcc00;">
+            WhatsApp Soporte: +56966648585 | Correo: appmenunova@gmail.com
+          </div>
+        </div>
+      `;
     }
 
     async function obtenerEstadoLicenciaYBloqueo() {
@@ -915,14 +880,11 @@
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-
         if (res.ok) {
           const data = await res.json();
           if (data.nombre) document.getElementById('lbl-local-nombre').innerText = data.nombre.toUpperCase();
-          
           estaBloqueado = (data.activo === false);
           clienteDadoDeAlta = !!data.altaRegistrada;
-
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
         } else if (res.status === 403) {
           estaBloqueado = true;
@@ -932,8 +894,8 @@
       }
 
       const hoy = new Date();
-      let limiteVencimiento = (fechaVencimiento && !isNaN(fechaVencimiento.getTime())) 
-        ? new Date(fechaVencimiento) 
+      let limiteVencimiento = (fechaVencimiento && !isNaN(fechaVencimiento.getTime()))
+        ? new Date(fechaVencimiento)
         : new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
 
       const diferenciaMs = limiteVencimiento.getTime() - hoy.getTime();
@@ -953,26 +915,42 @@
       const contAvisos = document.getElementById('contenedor-avisos-sistema');
       if (!contAvisos) return;
 
-      if (document.activeElement && document.activeElement.tagName === 'TEXTAREA' && document.activeElement.id.startsWith('resp-aviso-')) {
-        return;
-      }
+      if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/avisos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
         if (res.ok) {
           const avisos = await res.json();
           if (Array.isArray(avisos) && avisos.length > 0) {
-            contAvisos.innerHTML = avisos.map(a => `
-              <div class="banner-aviso-sistema">
-                <div>
-                  <strong style="color: var(--neon-yellow);">📢 ${a.asunto || 'Aviso del Sistema'}:</strong> ${a.texto}
+            contAvisos.innerHTML = avisos.map(a => {
+              const textoMensaje = a.texto || a.mensaje || a.mensajeSuperadmin || '';
+              const fStr = a.fecha ? new Date(a.fecha).toLocaleString('es-CL') : '';
+              let respuestasHtml = '';
+              if (Array.isArray(a.respuestas) && a.respuestas.length > 0) {
+                respuestasHtml = a.respuestas.map(r => `
+                  <div class="respuesta-item-admin">
+                    <b>💬 ${r.local === localId ? 'Tú' : 'Soporte'}:</b> ${r.texto || ''}
+                    <span style="font-size:10px; color:#aaa; margin-left:6px;">(${r.fecha ? new Date(r.fecha).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''})</span>
+                  </div>
+                `).join('');
+              }
+
+              return `
+                <div class="banner-aviso-sistema">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>📩 <b>Aviso del Sistema:</b> ${textoMensaje}</span>
+                    <span style="font-size: 11px; opacity: 0.8;">${fStr}</span>
+                  </div>
+                  
+                  ${respuestasHtml ? `<div style="margin-top: 5px; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 5px;">${respuestasHtml}</div>` : ''}
+
+                  <div style="display:flex; gap:8px; margin-top:8px;">
+                    <textarea id="resp-aviso-${a._id || a.id}" placeholder="Responder mensaje..." style="height:36px; padding:6px 10px; font-size:12px; border-radius:4px; flex:1; min-width:unset;"></textarea>
+                    <button class="btn btn-sm btn-blue" onclick="responderAviso('${a._id || a.id}')">Enviar</button>
+                  </div>
                 </div>
-                <div style="display: flex; gap: 8px; margin-top: 5px;">
-                  <textarea id="resp-aviso-${a._id || a.id}" placeholder="Escribe tu respuesta..." style="min-height: 40px; font-size: 12px;"></textarea>
-                  <button class="btn btn-sm btn-blue" onclick="responderAviso('${a._id || a.id}')">✉️ Responder</button>
-                </div>
-              </div>
-            `).join('');
+              `;
+            }).join('');
           } else {
             contAvisos.innerHTML = '';
           }
@@ -992,9 +970,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ local: localId, avisoId, respuesta: respuestaTexto })
         });
-
         if (res.ok) {
-          alert("✉️ Respuesta enviada con éxito al administrador.");
+          alert("✉️ Respuesta enviada con éxito.");
           txtArea.value = '';
           cargarAvisosSistema();
         } else {
@@ -1007,7 +984,6 @@
 
     async function validarPasswordSeguridad() {
       if (!clienteDadoDeAlta || autenticadoAdmin) return true;
-
       const claveIngresada = prompt("🔒 Este local está DADO DE ALTA. Ingresa la contraseña de Administrador:");
       if (!claveIngresada) return false;
 
@@ -1017,7 +993,6 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ local: localId, password: claveIngresada })
         });
-
         if (res.ok) {
           autenticadoAdmin = true;
           return true;
@@ -1042,43 +1017,38 @@
       if (!nombre || !rut || !correo || !correoConfirm || !password || !passwordConfirm) {
         return alert("⚠️ Por favor completa todos los campos para dar de alta el negocio.");
       }
-
       if (correo.toLowerCase() !== correoConfirm.toLowerCase()) {
         return alert("⚠️ El correo electrónico y su confirmación no coinciden.");
       }
-
       if (password !== passwordConfirm) {
         return alert("⚠️ La contraseña y su confirmación no coinciden.");
       }
 
       const hoy = new Date();
-      const vencimiento = new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
+      const vencimiento = new Date(hoy.getTime() + (365 * 24 * 60 * 60 * 1000));
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            nombre, 
-            rut, 
-            correo, 
+          body: JSON.stringify({
+            local: localId,
+            nombre,
+            rut,
+            correo,
             password,
-            activo: true,
-            fechaCreacion: new Date().toISOString(),
             fechaVencimiento: vencimiento.toISOString()
           })
         });
 
-        const data = await res.json();
-
         if (res.ok) {
-          alert("🎉 ¡Negocio dado de alta con éxito!");
+          alert("🎉 ¡Negocio registrado y DADO DE ALTA correctamente!");
           clienteDadoDeAlta = true;
           autenticadoAdmin = true;
           obtenerEstadoLicenciaYBloqueo();
-          cambiarPestana('tab-admin', document.getElementById('btn-tab-admin'));
         } else {
-          alert(`❌ Error: ${data.error || 'No se pudo completar el alta.'}`);
+          const errData = await res.json().catch(() => ({}));
+          alert(`❌ Error al dar de alta: ${errData.mensaje || 'Respuesta no válida del servidor'}`);
         }
       } catch (e) {
         alert("❌ Error de conexión con el servidor backend.");
@@ -1093,13 +1063,15 @@
 
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      
+
       document.getElementById(tabId).classList.add('active');
       if (element) element.classList.add('active');
 
       if (tabId === 'tab-cocina') cargarPedidosCocina();
-      else if (tabId === 'tab-garzon') { generarQRGarzon(); cargarPedidosGarzon(); }
-      else if (tabId === 'tab-historial') cargarHistorialGarantizado();
+      else if (tabId === 'tab-garzon') {
+        generarQRGarzon();
+        cargarPedidosGarzon();
+      } else if (tabId === 'tab-historial') cargarHistorialGarantizado();
     }
 
     function recargarTodo() {
@@ -1110,6 +1082,7 @@
       cargarPedidosGarzon();
       cargarHistorialGarantizado();
       generarQRGarzon();
+      generarQRUnico();
       verificarEstadoPedidoCliente();
     }
 
@@ -1146,50 +1119,58 @@
       contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú en la base de datos...</p>';
 
       try {
-        const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}&modo=estructurado`);
-        
+        const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
         if (respuesta.status === 403) {
           forzarBloqueoUI();
           throw new Error("Licencia desactivada o bloqueada por administrador");
         }
-        
         if (!respuesta.ok) {
           throw new Error(`Error HTTP: ${respuesta.status}`);
         }
 
         const data = await respuesta.json();
         productosPlanos = [];
+        
+        const categoriasAnteriores = new Set(categoriasSet);
         categoriasSet.clear();
 
         if (Array.isArray(data)) {
           data.forEach(c => {
-            if (c.categoria) {
-              categoriasSet.add(c.categoria);
+            if (c && c.categoria && typeof c.categoria === 'string') {
+              const catNombre = c.categoria.trim();
+              
+              if (catNombre.toLowerCase() === 'entradas' && (!c.productos || c.productos.length === 0)) {
+                return;
+              }
+
+              categoriasSet.add(catNombre);
               if (Array.isArray(c.productos)) {
                 c.productos.forEach(p => {
-                  productosPlanos.push({
-                    categoria: c.categoria,
-                    nombre: p.nombre,
-                    precio: p.precio
-                  });
+                  if (p && p.nombre) {
+                    productosPlanos.push({
+                      categoria: catNombre,
+                      nombre: p.nombre,
+                      precio: Number(p.precio) || 0
+                    });
+                  }
                 });
               }
             }
           });
         }
 
-      } catch (err) {
-        if (document.getElementById('banner-bloqueo').classList.contains('estado-bloqueado')) {
-          contenedorAdmin.innerHTML = '<p style="color: #ff3344; text-align: center;">🚫 Cuenta desactivada por el administrador.</p>';
-        } else {
-          contenedorAdmin.innerHTML = '<p style="color: var(--neon-yellow); text-align: center;">⚠️ No se pudo obtener el menú del servidor. Revisa tu conexión.</p>';
-        }
-        return;
-      }
+        categoriasAnteriores.forEach(cat => {
+          if (cat && cat.toLowerCase() !== 'entradas') {
+            categoriasSet.add(cat);
+          }
+        });
 
-      renderizarAdminCategorias();
-      renderizarClienteCategorias();
-      renderizarClienteProductos();
+        renderizarAdminCategorias();
+        renderizarClienteCategorias();
+        renderizarClienteProductos();
+      } catch (err) {
+        contenedorAdmin.innerHTML = `<p style="color: var(--neon-orange); text-align: center;">Error al cargar menú: ${err.message}</p>`;
+      }
     }
 
     function renderizarAdminCategorias() {
@@ -1197,109 +1178,158 @@
       contenedor.innerHTML = '';
 
       if (categoriasSet.size === 0) {
-        contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay categorías registradas. ¡Crea la primera categoría arriba!</p>';
+        contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay categorías creadas aún. Crea una arriba para comenzar.</p>';
         return;
       }
 
       categoriasSet.forEach(catNombre => {
-        const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
         const catCard = document.createElement('div');
         catCard.className = 'category-card';
 
+        const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
+        let htmlProductos = '';
+
+        productosCat.forEach((prod, index) => {
+          htmlProductos += `
+            <div class="product-item">
+              <div class="product-info">
+                <span class="product-title">${prod.nombre}</span>
+                <span class="product-price">$${prod.precio.toLocaleString('es-CL')}</span>
+              </div>
+              <div class="product-actions">
+                <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${index})">✏️ Editar</button>
+                <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${index})">🗑️ Eliminar</button>
+              </div>
+            </div>
+          `;
+        });
+
         catCard.innerHTML = `
           <div class="category-header">
-            <span class="category-name">📂 ${catNombre}</span>
-            <div style="display:flex; gap:10px; align-items:center;">
-              <span style="font-size: 12px; color: var(--text-muted);">${productosCat.length} producto(s)</span>
-              <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Cat.</button>
-            </div>
+            <span class="category-name">📁 ${catNombre}</span>
+            <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Categoría</button>
           </div>
           <div class="product-list">
-            ${productosCat.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>' : ''}
-            ${productosCat.map((prod, subIndex) => `
-              <div class="product-item">
-                <div class="product-info">
-                  <span class="product-title">${prod.nombre}</span>
-                  <span class="product-price">$${(prod.precio || 0).toLocaleString('es-CL')}</span>
-                </div>
-                <div class="product-actions">
-                  <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${subIndex}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">✏️ Editar</button>
-                  <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${subIndex})">🗑️ Eliminar</button>
-                </div>
-              </div>
-            `).join('')}
+            ${htmlProductos || '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>'}
           </div>
           <div class="add-product-box">
-            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del producto" style="flex:2;">
-            <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)" style="flex:1;">
-            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Guardar Producto</button>
+            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del Producto">
+            <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)">
+            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Añadir Producto</button>
           </div>
         `;
         contenedor.appendChild(catCard);
       });
     }
 
+    async function guardarMenuBackend() {
+      const est = Array.from(categoriasSet).map(cat => ({
+        categoria: cat,
+        productos: productosPlanos.filter(p => p.categoria === cat).map(p => ({
+          nombre: p.nombre,
+          precio: Number(p.precio)
+        }))
+      }));
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/menu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localId, menu: est })
+        });
+
+        if (res.ok) {
+          renderizarAdminCategorias();
+          renderizarClienteCategorias();
+          renderizarClienteProductos();
+        } else {
+          alert("Error al guardar el menú en el servidor.");
+        }
+      } catch (e) {
+        alert("Error de conexión al guardar el menú.");
+      }
+    }
+
     async function crearCategoria() {
-      const inputCat = document.getElementById('nueva-categoria');
-      const nombreCat = inputCat.value.trim();
-      if (!nombreCat) return alert("Ingresa un nombre para la categoría.");
+      const input = document.getElementById('nueva-categoria');
+      const val = input.value.trim();
+      if (!val) return alert("Ingresa un nombre para la categoría.");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/menu/categoria`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, categoria: nombreCat })
+          body: JSON.stringify({ local: localId, categoria: val })
         });
+
         if (res.ok) {
-          inputCat.value = '';
-          categoriasSet.add(nombreCat);
+          categoriasSet.add(val);
+          input.value = '';
           cargarDatosMenu();
         } else {
-          const errData = await res.json();
-          alert(errData.error || "Error al crear la categoría");
+          alert("Error al crear la categoría en la base de datos.");
         }
-      } catch (err) { alert("Error de red al crear categoría."); }
+      } catch (e) {
+        alert("Error de conexión al crear categoría.");
+      }
     }
 
-    async function eliminarCategoria(categoria) {
-      if (!confirm(`¿Deseas eliminar la categoría "${categoria}" y todos sus productos?`)) return;
-      try {
-        await fetch(`${BACKEND_URL}/api/menu/categoria?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}`, { method: 'DELETE' });
-        cargarDatosMenu();
-      } catch (err) {}
-    }
+    async function eliminarCategoria(cat) {
+      if (!confirm(`¿Estás seguro de eliminar la categoría "${cat}" y sus productos?`)) return;
 
-    async function agregarProducto(categoria) {
-      const inputNombre = document.getElementById(`nuevo-nombre-${categoria}`);
-      const inputPrecio = document.getElementById(`nuevo-precio-${categoria}`);
-      const nombre = inputNombre.value.trim();
-      const precio = parseFloat(inputPrecio.value);
-
-      if (!nombre || isNaN(precio)) return alert("Ingresa un nombre y precio válido.");
       try {
-        const res = await fetch(`${BACKEND_URL}/api/menu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, categoria, nombre, precio })
+        const res = await fetch(`${BACKEND_URL}/api/menu/categoria?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(cat)}`, {
+          method: 'DELETE'
         });
-        if (res.ok) cargarDatosMenu();
-      } catch (err) {}
+
+        if (res.ok) {
+          categoriasSet.delete(cat);
+          productosPlanos = productosPlanos.filter(p => p.categoria !== cat);
+          cargarDatosMenu();
+        } else {
+          alert("Error al eliminar la categoría.");
+        }
+      } catch (e) {
+        alert("Error de conexión al eliminar categoría.");
+      }
     }
 
-    async function eliminarProducto(categoria, index) {
-      if (!confirm("¿Deseas eliminar este producto?")) return;
-      try {
-        await fetch(`${BACKEND_URL}/api/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, { method: 'DELETE' });
-        cargarDatosMenu();
-      } catch (err) {}
+    function agregarProducto(cat) {
+      const elNombre = document.getElementById(`nuevo-nombre-${cat}`);
+      const elPrecio = document.getElementById(`nuevo-precio-${cat}`);
+
+      const nombre = elNombre.value.trim();
+      const precio = parseFloat(elPrecio.value);
+
+      if (!nombre || isNaN(precio)) return alert("Completa el nombre y precio del producto.");
+
+      productosPlanos.push({ categoria: cat, nombre, precio });
+      guardarMenuBackend();
     }
 
-    function abrirModalEdicion(catOrig, indexOrig, nombre, precio) {
-      document.getElementById('edit-cat-orig').value = catOrig;
-      document.getElementById('edit-index-orig').value = indexOrig;
-      document.getElementById('edit-nombre').value = nombre;
-      document.getElementById('edit-precio').value = precio;
-      document.getElementById('edit-categoria').value = catOrig;
+    function eliminarProducto(cat, indexCat) {
+      const productosCat = productosPlanos.filter(p => p.categoria === cat);
+      const prodEliminar = productosCat[indexCat];
+      if (prodEliminar) {
+        const idxGlobal = productosPlanos.findIndex(p => p === prodEliminar);
+        if (idxGlobal !== -1) {
+          productosPlanos.splice(idxGlobal, 1);
+          guardarMenuBackend();
+        }
+      }
+    }
+
+    function abrirModalEdicion(cat, indexCat) {
+      const productosCat = productosPlanos.filter(p => p.categoria === cat);
+      const prod = productosCat[indexCat];
+      if (!prod) return;
+
+      document.getElementById('edit-cat-orig').value = cat;
+      document.getElementById('edit-index-orig').value = indexCat;
+      document.getElementById('edit-nombre').value = prod.nombre;
+      document.getElementById('edit-precio').value = prod.precio;
+      document.getElementById('edit-categoria').value = prod.categoria;
+
       document.getElementById('modal-editar').style.display = 'flex';
     }
 
@@ -1307,105 +1337,104 @@
       document.getElementById('modal-editar').style.display = 'none';
     }
 
-    async function guardarEdicion() {
+    function guardarEdicion() {
       const catOrig = document.getElementById('edit-cat-orig').value;
-      const indexOrig = document.getElementById('edit-index-orig').value;
+      const indexCat = parseInt(document.getElementById('edit-index-orig').value);
+
       const nuevoNombre = document.getElementById('edit-nombre').value.trim();
       const nuevoPrecio = parseFloat(document.getElementById('edit-precio').value);
       const nuevaCategoria = document.getElementById('edit-categoria').value.trim();
 
-      try {
-        await fetch(`${BACKEND_URL}/api/menu/edit`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, categoriaOriginal: catOrig, indexOriginal: Number(indexOrig), nuevoNombre, nuevoPrecio, nuevaCategoria })
-        });
-        cerrarModalEdicion();
-        cargarDatosMenu();
-      } catch (err) {}
+      if (!nuevoNombre || isNaN(nuevoPrecio) || !nuevaCategoria) return alert("Por favor completa los campos.");
+
+      const productosCat = productosPlanos.filter(p => p.categoria === catOrig);
+      const prodOrig = productosCat[indexCat];
+
+      if (prodOrig) {
+        const idxGlobal = productosPlanos.findIndex(p => p === prodOrig);
+        if (idxGlobal !== -1) {
+          productosPlanos[idxGlobal] = { categoria: nuevaCategoria, nombre: nuevoNombre, precio: nuevoPrecio };
+          categoriasSet.add(nuevaCategoria);
+          cerrarModalEdicion();
+          guardarMenuBackend();
+        }
+      }
     }
 
     function renderizarClienteCategorias() {
-      const bar = document.getElementById('barra-categorias-cliente');
-      const cats = Array.from(categoriasSet);
-      if (cats.length > 0 && (!catSeleccionadaCliente || !cats.includes(catSeleccionadaCliente))) {
-        catSeleccionadaCliente = cats[0];
-      }
-      bar.innerHTML = cats.map(c => `
-        <div class="cat-chip ${c === catSeleccionadaCliente ? 'active' : ''}" onclick="filtrarCatCliente('${c}')">${c}</div>
-      `).join('');
-    }
+      const barra = document.getElementById('barra-categorias-cliente');
+      barra.innerHTML = '';
 
-    function filtrarCatCliente(cat) {
-      catSeleccionadaCliente = cat;
-      renderizarClienteCategorias();
-      renderizarClienteProductos();
+      if (categoriasSet.size === 0) return;
+
+      const arrayCats = Array.from(categoriasSet);
+      if (!catSeleccionadaCliente || !categoriasSet.has(catSeleccionadaCliente)) {
+        catSeleccionadaCliente = arrayCats[0];
+      }
+
+      arrayCats.forEach(cat => {
+        const chip = document.createElement('div');
+        chip.className = `cat-chip ${cat === catSeleccionadaCliente ? 'active' : ''}`;
+        chip.innerText = cat;
+        chip.onclick = () => {
+          catSeleccionadaCliente = cat;
+          renderizarClienteCategorias();
+          renderizarClienteProductos();
+        };
+        barra.appendChild(chip);
+      });
     }
 
     function renderizarClienteProductos() {
-      const cont = document.getElementById('lista-productos-cliente');
-      const filtrados = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
+      const contenedor = document.getElementById('lista-productos-cliente');
+      contenedor.innerHTML = '';
 
-      if (filtrados.length === 0) {
-        cont.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay productos en esta categoría.</p>';
+      if (!catSeleccionadaCliente) {
+        contenedor.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay categorías ni productos disponibles.</p>';
         return;
       }
 
-      cont.innerHTML = filtrados.map(p => `
-        <div class="product-card-client">
+      const prods = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
+      if (prods.length === 0) {
+        contenedor.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay productos en esta categoría.</p>';
+        return;
+      }
+
+      prods.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-card-client';
+        card.innerHTML = `
           <div>
-            <div style="font-weight: bold; color: #fff; font-size: 15px;">${p.nombre}</div>
-            <div style="color: var(--neon-yellow); font-weight: bold; font-size: 14px; margin-top: 3px;">$${(p.precio || 0).toLocaleString('es-CL')}</div>
+            <div class="product-title">${p.nombre}</div>
+            <div class="product-price">$${p.precio.toLocaleString('es-CL')}</div>
           </div>
-          <button class="btn-add" onclick="agregarAlCarrito('${(p.categoria || '').replace(/'/g, "\\'")}', '${p.nombre.replace(/'/g, "\\'")}', ${p.precio})">+ Agregar</button>
-        </div>
-      `).join('');
+          <button class="btn-add" onclick="agregarAlCarrito('${p.nombre}', ${p.precio})">+ Agregar</button>
+        `;
+        contenedor.appendChild(card);
+      });
     }
 
-    function agregarAlCarrito(categoria, nombre, precio) {
-      let nombreCompleto = nombre;
-      if (categoria && !nombre.toLowerCase().startsWith(categoria.toLowerCase())) {
-        nombreCompleto = `${categoria} - ${nombre}`;
+    function agregarAlCarrito(nombre, precio) {
+      const itemExistente = carrito.find(i => i.nombre === nombre);
+      if (itemExistente) {
+        itemExistente.cantidad += 1;
+      } else {
+        carrito.push({ nombre, precio, cantidad: 1 });
       }
-      const idx = carrito.findIndex(i => i.nombre === nombreCompleto);
-      if (idx > -1) carrito[idx].cantidad++;
-      else carrito.push({ nombre: nombreCompleto, precio, cantidad: 1 });
       actualizarBarraCarrito();
     }
 
     function actualizarBarraCarrito() {
       const count = carrito.reduce((sum, item) => sum + item.cantidad, 0);
-      const total = carrito.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
       document.getElementById('txt-count-bar').innerText = count;
       document.getElementById('txt-total-bar').innerText = `$${total.toLocaleString('es-CL')}`;
     }
 
     function abrirModalCarrito() {
-      if (carrito.length === 0) return alert("El carrito está vacío. Agrega productos de la carta.");
-      
-      const contItems = document.getElementById('items-carrito');
-      let total = 0;
-
-      contItems.innerHTML = carrito.map((item, idx) => {
-        const subtotal = item.precio * item.cantidad;
-        total += subtotal;
-        return `
-          <div class="cart-item">
-            <div>
-              <div style="font-weight: bold; color: #fff; font-size: 14px;">${item.nombre}</div>
-              <div style="color: var(--neon-yellow); font-size: 12px;">$${item.precio.toLocaleString('es-CL')} c/u</div>
-            </div>
-            <div class="qty-controls">
-              <button class="btn-qty" onclick="cambiarCantidadCart(${idx}, -1)">-</button>
-              <span style="font-weight: bold; font-size: 14px;">${item.cantidad}</span>
-              <button class="btn-qty" onclick="cambiarCantidadCart(${idx}, 1)">+</button>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
+      if (carrito.length === 0) return alert("Tu carrito está vacío.");
+      renderizarItemsModalCarrito();
       document.getElementById('modal-cart').style.display = 'flex';
     }
 
@@ -1413,32 +1442,56 @@
       document.getElementById('modal-cart').style.display = 'none';
     }
 
-    function cambiarCantidadCart(idx, delta) {
-      carrito[idx].cantidad += delta;
-      if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
-      
+    function renderizarItemsModalCarrito() {
+      const cont = document.getElementById('items-carrito');
+      cont.innerHTML = '';
+      let total = 0;
+
+      carrito.forEach((item, index) => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+
+        const row = document.createElement('div');
+        row.className = 'cart-item';
+        row.innerHTML = `
+          <div>
+            <div style="font-weight: bold; color: #fff;">${item.nombre}</div>
+            <div style="font-size: 12px; color: var(--neon-yellow);">$${item.precio.toLocaleString('es-CL')} c/u</div>
+          </div>
+          <div class="qty-controls">
+            <button class="btn-qty" onclick="cambiarCantidadCarrito(${index}, -1)">-</button>
+            <span>${item.cantidad}</span>
+            <button class="btn-qty" onclick="cambiarCantidadCarrito(${index}, 1)">+</button>
+          </div>
+        `;
+        cont.appendChild(row);
+      });
+
+      document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
+    }
+
+    function cambiarCantidadCarrito(index, delta) {
+      carrito[index].cantidad += delta;
+      if (carrito[index].cantidad <= 0) {
+        carrito.splice(index, 1);
+      }
+      actualizarBarraCarrito();
       if (carrito.length === 0) {
         cerrarModalCarrito();
       } else {
-        abrirModalCarrito();
+        renderizarItemsModalCarrito();
       }
-      actualizarBarraCarrito();
     }
 
     async function enviarPedidoCocina() {
-      if (carrito.length === 0) return alert("Tu carrito está vacío.");
+      if (carrito.length === 0) return;
 
-      const total = carrito.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
       const payload = {
         local: localId,
         mesa: numeroMesa,
-        items: carrito.map(i => ({
-          nombre: i.nombre,
-          cantidad: i.cantidad,
-          precio: i.precio
-        })),
-        total,
-        fecha: new Date().toISOString()
+        items: carrito,
+        total
       };
 
       try {
@@ -1450,33 +1503,30 @@
 
         if (res.ok) {
           const data = await res.json();
-          alert("🚀 ¡Tu pedido ha sido enviado con éxito a la cocina!");
-          
+          alert("🚀 ¡Pedido enviado a cocina con éxito!");
           if (data.pedido && data.pedido._id) {
             pedidoClienteActivoId = data.pedido._id;
             localStorage.setItem(`ultimoPedidoId_${localId}_${numeroMesa}`, pedidoClienteActivoId);
           }
-
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalCarrito();
           verificarEstadoPedidoCliente();
         } else {
-          alert("❌ Error al enviar la orden a la cocina.");
+          alert("Error al enviar el pedido a la cocina.");
         }
       } catch (e) {
-        alert("Error de red al enviar la orden.");
+        alert("Error de conexión al enviar el pedido.");
       }
     }
 
     async function verificarEstadoPedidoCliente() {
-      const resCard = document.getElementById('resumen-pedido-activo');
-      if (!resCard) return;
+      if (!pedidoClienteActivoId) return;
 
-      if (!pedidoClienteActivoId) {
-        resCard.style.display = 'none';
-        return;
-      }
+      const divResumen = document.getElementById('resumen-pedido-activo');
+      const divItems = document.getElementById('resumen-pedido-items');
+      const txtTotal = document.getElementById('resumen-pedido-total');
+      const txtHora = document.getElementById('resumen-pedido-hora');
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
@@ -1485,22 +1535,20 @@
           const miPedido = pedidos.find(p => p._id === pedidoClienteActivoId);
 
           if (miPedido) {
-            resCard.style.display = 'block';
-            document.getElementById('resumen-pedido-hora').innerText = new Date(miPedido.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            const contItems = document.getElementById('resumen-pedido-items');
-            contItems.innerHTML = (miPedido.items || []).map(i => `
-              <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <span><b>${i.cantidad}x</b> ${i.nombre}</span>
-                <span style="color:var(--neon-yellow);">$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
+            divResumen.style.display = 'block';
+            txtHora.innerText = new Date(miPedido.fecha || miPedido.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            txtTotal.innerText = `Total: $${(miPedido.total || 0).toLocaleString('es-CL')}`;
+
+            divItems.innerHTML = (miPedido.items || []).map(i => `
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span>• ${i.cantidad}x ${i.nombre}</span>
+                <span>$${(i.precio * i.cantidad).toLocaleString('es-CL')}</span>
               </div>
             `).join('');
-
-            document.getElementById('resumen-pedido-total').innerText = `Total: $${(miPedido.total || 0).toLocaleString('es-CL')}`;
           } else {
+            divResumen.style.display = 'none';
             localStorage.removeItem(`ultimoPedidoId_${localId}_${numeroMesa}`);
             pedidoClienteActivoId = null;
-            resCard.style.display = 'none';
           }
         }
       } catch (e) {}
@@ -1512,44 +1560,50 @@
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
         if (res.ok) {
           const pedidos = await res.json();
-          cachePedidos = pedidos;
-          
-          if (pedidos.length === 0) {
-            cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Sin pedidos pendientes en la cocina. ☕</p>';
+          if (!Array.isArray(pedidos) || pedidos.length === 0) {
+            cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en la cocina.</p>';
             return;
           }
 
-          cont.innerHTML = pedidos.map(p => `
-            <div class="card-pedido">
-              <div>
-                <div class="card-pedido-header">
-                  <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
-                  <span class="card-pedido-time">🕒 ${new Date(p.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          cont.innerHTML = pedidos.map(p => {
+            const hora = new Date(p.fecha || p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const itemsHtml = (p.items || []).map(i => `
+              <div class="pedido-item-row">
+                <span><b>${i.cantidad}x</b> ${i.nombre}</span>
+                <span>$${(i.precio * i.cantidad).toLocaleString('es-CL')}</span>
+              </div>
+            `).join('');
+
+            return `
+              <div class="card-pedido">
+                <div>
+                  <div class="card-pedido-header">
+                    <span class="card-pedido-mesa">Mesa ${p.mesa}</span>
+                    <span class="card-pedido-time">⏰ ${hora}</span>
+                  </div>
+                  <div class="pedido-items-list">${itemsHtml}</div>
                 </div>
-                <div class="pedido-items-list">
-                  ${(p.items || []).map(i => `
-                    <div class="pedido-item-row">
-                      <span><b>${i.cantidad}x</b> ${i.nombre}</span>
-                      <span style="color: var(--neon-yellow);">$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
-                    </div>
-                  `).join('')}
+                <div class="card-pedido-footer">
+                  <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
+                  <button class="btn btn-danger btn-sm" onclick="cancelarPedido('${p._id}')">🗑️ Eliminar</button>
                 </div>
               </div>
-              <div class="card-pedido-footer">
-                <span style="font-weight: bold; color: var(--neon-green); font-size: 16px;">Total: $${(p.total || 0).toLocaleString('es-CL')}</span>
-                <button class="btn btn-sm btn-success" onclick="marcarPedidoListo('${p._id}')">✅ Marcar Listo</button>
-              </div>
-            </div>
-          `).join('');
+            `;
+          }).join('');
         }
       } catch (e) {
-        cont.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al cargar comandas de la cocina.</p>';
+        cont.innerHTML = '<p style="color: var(--neon-orange); grid-column: 1/-1; text-align: center;">Error al cargar pedidos.</p>';
       }
     }
 
-    async function marcarPedidoListo(id) {
-      alert("✅ Comanda marcada como lista en la cocina. El garzón procederá con el despacho.");
-      cargarPedidosCocina();
+    async function cancelarPedido(id) {
+      if (!confirm("¿Eliminar este pedido de la cocina?")) return;
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
+        if (res.ok) cargarPedidosCocina();
+      } catch (e) {
+        alert("Error al eliminar pedido.");
+      }
     }
 
     async function cargarPedidosGarzon() {
@@ -1558,112 +1612,95 @@
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
         if (res.ok) {
           const pedidos = await res.json();
-          cachePedidos = pedidos;
-
-          if (pedidos.length === 0) {
-            cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay entregas pendientes para garzones. 👍</p>';
+          if (!Array.isArray(pedidos) || pedidos.length === 0) {
+            cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comanda pendiente por llevar a mesa.</p>';
             return;
           }
 
-          cont.innerHTML = pedidos.map(p => `
-            <div class="card-pedido" style="border-color: var(--neon-blue);">
-              <div>
-                <div class="card-pedido-header">
-                  <span class="card-pedido-mesa" style="color: var(--neon-blue);">MESA N° ${p.mesa}</span>
-                  <span class="card-pedido-time">🕒 ${new Date(p.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          cont.innerHTML = pedidos.map(p => {
+            const hora = new Date(p.fecha || p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const itemsHtml = (p.items || []).map(i => `
+              <div class="pedido-item-row">
+                <span><b>${i.cantidad}x</b> ${i.nombre}</span>
+              </div>
+            `).join('');
+
+            return `
+              <div class="card-pedido" style="border-color: var(--neon-green);">
+                <div>
+                  <div class="card-pedido-header">
+                    <span class="card-pedido-mesa">Mesa ${p.mesa}</span>
+                    <span class="card-pedido-time">⏰ ${hora}</span>
+                  </div>
+                  <div class="pedido-items-list">${itemsHtml}</div>
                 </div>
-                <div class="pedido-items-list">
-                  ${(p.items || []).map(i => `
-                    <div class="pedido-item-row">
-                      <span><b>${i.cantidad}x</b> ${i.nombre}</span>
-                      <span style="color: var(--neon-yellow);">$${((i.precio || 0) * i.cantidad).toLocaleString('es-CL')}</span>
-                    </div>
-                  `).join('')}
+                <div class="card-pedido-footer">
+                  <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
+                  <button class="btn btn-success btn-sm" onclick="entregarPedidoMesa('${p._id}', '${p.mesa}', ${p.total}, '${encodeURIComponent(JSON.stringify(p.items))}')">✅ Entregado en Mesa</button>
                 </div>
               </div>
-              <div class="card-pedido-footer">
-                <span style="font-weight: bold; color: var(--neon-green); font-size: 16px;">$${(p.total || 0).toLocaleString('es-CL')}</span>
-                <button class="btn btn-sm btn-blue" onclick="entregarEnMesa('${p._id}')">🏃‍♂️ Entregado en Mesa</button>
-              </div>
-            </div>
-          `).join('');
+            `;
+          }).join('');
         }
       } catch (e) {
-        cont.innerHTML = '<p style="color: #ff3344; grid-column: 1/-1; text-align: center;">Error al cargar comandas de garzón.</p>';
+        cont.innerHTML = '<p style="color: var(--neon-orange); grid-column: 1/-1; text-align: center;">Error al cargar pedidos para garzón.</p>';
       }
     }
 
-    async function entregarEnMesa(id) {
+    async function entregarPedidoMesa(pedidoId, mesa, total, itemsEnc) {
       if (!rutGarzonSesion) {
-        const inputRut = prompt("⚠️ Ingresa tu RUT de Garzón para confirmar la entrega:");
-        if (!inputRut || inputRut.trim().length < 7) return alert("RUT no válido.");
-        guardarRutAutogestion(inputRut);
+        const val = prompt("Por favor ingresa tu RUT de Garzón antes de entregar:");
+        if (!val || val.trim().length < 7) return alert("Es obligatorio un RUT válido.");
+        guardarRutAutogestion(val);
       }
 
-      const pedidoObj = cachePedidos.find(p => p._id === id);
-      if (!pedidoObj) return;
-
+      const items = JSON.parse(decodeURIComponent(itemsEnc));
       const ahora = new Date();
+      const fechaEntrega = ahora.toISOString().split('T')[0];
+      const horaEntrega = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       const payloadHistorial = {
-        id: pedidoObj._id,
+        id: pedidoId,
         local: localId,
-        mesa: pedidoObj.mesa,
-        items: pedidoObj.items,
-        total: pedidoObj.total,
+        mesa: String(mesa),
+        items,
+        total: Number(total),
         estado: 'entregado',
         rutGarzon: rutGarzonSesion,
-        fechaEntrega: ahora.toLocaleDateString('es-CL'),
-        horaEntrega: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        fechaEntrega,
+        horaEntrega
       };
 
       try {
-        let guardadoLocal = JSON.parse(localStorage.getItem(`historial_local_${localId}`) || '[]');
-        guardadoLocal.unshift(payloadHistorial);
-        localStorage.setItem(`historial_local_${localId}`, JSON.stringify(guardadoLocal));
-
         await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payloadHistorial)
         });
 
-        await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
+        await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}`, { method: 'DELETE' });
 
-        alert(`✅ Pedido entregado a la Mesa N° ${pedidoObj.mesa} registrado exitosamente bajo el RUT ${rutGarzonSesion}.`);
         cargarPedidosGarzon();
-        cargarPedidosCocina();
+        alert("✅ Pedido entregado y registrado en el historial.");
       } catch (e) {
-        alert("Atención: El pedido se guardó localmente.");
-        cargarPedidosGarzon();
+        alert("Error al procesar la entrega.");
       }
     }
 
     async function cargarHistorialGarantizado() {
       const tbody = document.getElementById('tabla-historial-garzon');
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando historial desde la base de datos...</td></tr>';
-
-      let datosHistorial = [];
-      let datosLocales = JSON.parse(localStorage.getItem(`historial_local_${localId}`) || '[]');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Cargando historial...</td></tr>';
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
         if (res.ok) {
-          datosHistorial = await res.json();
+          historialCompleto = await res.json();
+          historialFiltrado = [...historialCompleto];
+          renderizarTablaHistorial();
         }
-      } catch (e) {}
-
-      const mapaCombinado = new Map();
-      [...datosHistorial, ...datosLocales].forEach(item => {
-        const clave = item._id || item.id || `${item.mesa}_${item.fechaEntrega}_${item.horaEntrega}_${item.total}`;
-        if (!mapaCombinado.has(clave)) {
-          mapaCombinado.set(clave, item);
-        }
-      });
-
-      historialGlobal = Array.from(mapaCombinado.values());
-      historialGlobal.sort((a, b) => new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now()));
-
-      aplicarFiltroInforme();
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--neon-orange);">Error al cargar historial.</td></tr>';
+      }
     }
 
     function cambiarFiltrosInforme() {
@@ -1675,26 +1712,22 @@
 
     function aplicarFiltroInforme() {
       const tipo = document.getElementById('select-tipo-informe').value;
-      historialFiltrado = [...historialGlobal];
 
       if (tipo === 'rut') {
-        const rutBuscado = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
-        if (rutBuscado) {
-          historialFiltrado = historialFiltrado.filter(h => (h.rutGarzon || '').toUpperCase().includes(rutBuscado));
-        }
+        const rutBusq = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
+        if (!rutBusq) return alert("Ingresa un RUT para filtrar.");
+        historialFiltrado = historialCompleto.filter(h => (h.rutGarzon || '').toUpperCase().includes(rutBusq));
       } else if (tipo === 'fechas') {
-        const desdeVal = document.getElementById('filtro-informe-desde').value;
-        const hastaVal = document.getElementById('filtro-informe-hasta').value;
+        const desde = document.getElementById('filtro-informe-desde').value;
+        const hasta = document.getElementById('filtro-informe-hasta').value;
+        if (!desde || !hasta) return alert("Selecciona la fecha Desde y Hasta.");
 
-        if (desdeVal) {
-          const fDesde = new Date(desdeVal);
-          historialFiltrado = historialFiltrado.filter(h => new Date(h.createdAt || h.fechaEntrega) >= fDesde);
-        }
-        if (hastaVal) {
-          const fHasta = new Date(hastaVal);
-          fHasta.setHours(23, 59, 59);
-          historialFiltrado = historialFiltrado.filter(h => new Date(h.createdAt || h.fechaEntrega) <= fHasta);
-        }
+        historialFiltrado = historialCompleto.filter(h => {
+          const f = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
+          return f >= desde && f <= hasta;
+        });
+      } else {
+        historialFiltrado = [...historialCompleto];
       }
 
       renderizarTablaHistorial();
@@ -1702,143 +1735,206 @@
 
     function renderizarTablaHistorial() {
       const tbody = document.getElementById('tabla-historial-garzon');
-      if (historialFiltrado.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No existen registros que coincidan con los filtros aplicados.</td></tr>';
-        document.getElementById('lbl-stat-entregados').innerText = '0';
-        document.getElementById('lbl-stat-monto').innerText = '$0';
-        document.getElementById('lbl-stat-promedio').innerText = '$0';
+      tbody.innerHTML = '';
+
+      if (!Array.isArray(historialFiltrado) || historialFiltrado.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No hay registros en el historial para este criterio.</td></tr>';
+        actualizarMetricas(0, 0);
         return;
       }
 
-      let montoTotal = 0;
-      tbody.innerHTML = historialFiltrado.map(h => {
-        const totalNum = Number(h.total || 0);
-        montoTotal += totalNum;
-        const itemsStr = (h.items || []).map(i => `${i.cantidad}x ${i.nombre}`).join(', ');
+      let sumaTotal = 0;
 
-        return `
-          <tr>
-            <td><b>Mesa ${h.mesa || '-'}</b></td>
-            <td><span style="color: var(--neon-blue); font-weight: bold;">${h.rutGarzon || 'N/A'}</span></td>
-            <td>${h.fechaEntrega || '-'}</td>
-            <td>${h.horaEntrega || '-'}</td>
-            <td style="font-size: 12px; color: var(--text-muted);">${itemsStr || 'Múltiples productos'}</td>
-            <td style="color: var(--neon-yellow); font-weight: bold;">$${totalNum.toLocaleString('es-CL')}</td>
-          </tr>
+      historialFiltrado.forEach(h => {
+        const totalNum = Number(h.total) || 0;
+        sumaTotal += totalNum;
+
+        const itemsStr = Array.isArray(h.items)
+          ? h.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')
+          : 'Sin ítems';
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><b>Mesa ${h.mesa || '--'}</b></td>
+          <td>${h.rutGarzon || 'S/R'}</td>
+          <td>${h.fechaEntrega || '--'}</td>
+          <td>${h.horaEntrega || h.hora || '--'}</td>
+          <td style="max-width:250px; font-size:12px; color:#aaa;">${itemsStr}</td>
+          <td style="color:var(--neon-green); font-weight:bold;">$${totalNum.toLocaleString('es-CL')}</td>
         `;
-      }).join('');
+        tbody.appendChild(row);
+      });
 
-      const totalCantidad = historialFiltrado.length;
-      const promedio = totalCantidad > 0 ? Math.round(montoTotal / totalCantidad) : 0;
+      actualizarMetricas(historialFiltrado.length, sumaTotal);
+    }
 
-      document.getElementById('lbl-stat-entregados').innerText = totalCantidad;
-      document.getElementById('lbl-stat-monto').innerText = `$${montoTotal.toLocaleString('es-CL')}`;
+    function actualizarMetricas(cantidad, total) {
+      document.getElementById('lbl-stat-entregados').innerText = cantidad;
+      document.getElementById('lbl-stat-monto').innerText = `$${total.toLocaleString('es-CL')}`;
+      const promedio = cantidad > 0 ? Math.round(total / cantidad) : 0;
       document.getElementById('lbl-stat-promedio').innerText = `$${promedio.toLocaleString('es-CL')}`;
     }
 
     function descargarInformePDF() {
-      if (typeof window.jspdf === 'undefined') return alert("Cargando librería PDF...");
+      if (typeof window.jspdf === 'undefined') return alert("Librería jsPDF no disponible.");
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
 
       doc.setFontSize(16);
-      doc.text(`Resumen de Ventas y Entregas - Local: ${localId.toUpperCase()}`, 14, 15);
+      doc.text(`Informe de Ventas - Local ${localId.toUpperCase()}`, 14, 20);
       doc.setFontSize(10);
-      doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-CL')}`, 14, 22);
+      doc.text(`Fecha de generación: ${new Date().toLocaleString('es-CL')}`, 14, 28);
 
-      let posY = 35;
-      doc.setFontSize(11);
-      doc.text(`Total Atendidos: ${document.getElementById('lbl-stat-entregados').innerText}`, 14, posY);
-      doc.text(`Monto Total: ${document.getElementById('lbl-stat-monto').innerText}`, 14, posY + 6);
-      doc.text(`Promedio Pedido: ${document.getElementById('lbl-stat-promedio').innerText}`, 14, posY + 12);
+      let y = 38;
+      doc.text("Mesa | Garzón | Fecha | Hora | Total", 14, y);
+      doc.line(14, y + 2, 196, y + 2);
+      y += 8;
 
-      posY += 22;
-      doc.setFontSize(10);
-      doc.text("Mesa | Garzon | Fecha | Hora | Total", 14, posY);
-      doc.line(14, posY + 2, 195, posY + 2);
-
-      posY += 8;
-      historialFiltrado.slice(0, 30).forEach(h => {
-        if (posY > 280) { doc.addPage(); posY = 20; }
-        doc.text(`${h.mesa || '-'} | ${h.rutGarzon || 'N/A'} | ${h.fechaEntrega || '-'} | ${h.horaEntrega || '-'} | $${(h.total || 0).toLocaleString('es-CL')}`, 14, posY);
-        posY += 6;
+      historialFiltrado.forEach(h => {
+        if (y > 280) {
+          doc.addPage();
+          y = 20;
+        }
+        const linea = `Mesa ${h.mesa || '--'} | ${h.rutGarzon || 'S/R'} | ${h.fechaEntrega || '--'} | ${h.horaEntrega || '--'} | $${(Number(h.total) || 0).toLocaleString('es-CL')}`;
+        doc.text(linea, 14, y);
+        y += 6;
       });
 
-      doc.save(`Informe_${localId}_${Date.now()}.pdf`);
-    }
+      const totalMonto = historialFiltrado.reduce((s, h) => s + (Number(h.total) || 0), 0);
+      doc.setFontSize(12);
+      doc.text(`Monto Total: $${totalMonto.toLocaleString('es-CL')}`, 14, y + 10);
 
-    function generarQRUnico() {
-      const numMesa = document.getElementById('qr-num-mesa').value || "1";
-      const elRender = document.getElementById('qr-single-render');
-      const urlMesa = construirUrlMesa(numMesa);
-
-      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${numMesa}`;
-      elRender.innerHTML = "";
-      new QRCode(elRender, { text: urlMesa, width: 140, height: 140 });
+      doc.save(`Informe_Ventas_${localId}.pdf`);
     }
 
     function generarQRGarzon() {
-      const elRender = document.getElementById('qr-garzon-render');
-      if (!elRender) return;
+      const render = document.getElementById('qr-garzon-render');
+      if (!render) return;
+      render.innerHTML = '';
       const urlGarzon = construirUrlGarzon();
 
-      elRender.innerHTML = "";
-      new QRCode(elRender, { text: urlGarzon, width: 140, height: 140 });
-    }
-
-    function descargarQRImagen() {
-      const img = document.querySelector('#qr-single-render img');
-      if (!img) return alert("Por favor genera el código QR primero.");
-      const link = document.createElement('a');
-      link.download = `QR_Mesa_${document.getElementById('qr-num-mesa').value}_${localId}.png`;
-      link.href = img.src;
-      link.click();
+      new QRCode(render, {
+        text: urlGarzon,
+        width: 160,
+        height: 160
+      });
     }
 
     function descargarQRGarzon() {
-      const img = document.querySelector('#qr-garzon-render img');
-      if (!img) return alert("Generando código QR...");
-      const link = document.createElement('a');
-      link.download = `QR_GARZON_${localId}.png`;
-      link.href = img.src;
-      link.click();
+      const renderImg = document.querySelector('#qr-garzon-render img');
+      if (!renderImg) return alert("Generando QR, por favor reintenta en un momento.");
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 400, 400);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(localId.toUpperCase(), 200, 35);
+
+      ctx.drawImage(renderImg, 50, 50, 300, 300);
+
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText('ACCESO GARZÓN - ENTREGAS', 200, 380);
+
+      const a = document.createElement('a');
+      a.download = `QR_GARZON_${localId}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    }
+
+    function generarQRUnico() {
+      const mesa = document.getElementById('qr-num-mesa').value || '1';
+      document.getElementById('lbl-qr-single-nombre-local').innerText = localId.toUpperCase();
+      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${mesa}`;
+
+      const render = document.getElementById('qr-single-render');
+      render.innerHTML = '';
+
+      const urlMesa = construirUrlMesa(mesa);
+      new QRCode(render, {
+        text: urlMesa,
+        width: 160,
+        height: 160
+      });
+    }
+
+    function descargarQRImagen() {
+      const renderImg = document.querySelector('#qr-single-render img');
+      if (!renderImg) return alert("Generando QR...");
+
+      const mesa = document.getElementById('qr-num-mesa').value || '1';
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 400, 400);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(localId.toUpperCase(), 200, 40);
+
+      ctx.drawImage(renderImg, 60, 60, 280, 280);
+
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(`MESA N° ${mesa}`, 200, 370);
+
+      const a = document.createElement('a');
+      a.download = `QR_Mesa_${mesa}_${localId}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
     }
 
     function generarPDFMesas() {
-      if (typeof window.jspdf === 'undefined') return alert("Cargando librería PDF...");
+      if (typeof window.jspdf === 'undefined') return alert("Librería jsPDF no disponible.");
+      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
+      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 1;
+
+      if (desde > hasta) return alert("Rango no válido.");
+
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
 
-      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
-      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 12;
-
-      let x = 15, y = 15;
-      const size = 50; 
-      const margin = 15;
+      let x = 15;
+      let y = 15;
+      const tam = 55;
 
       const contTemp = document.getElementById('qr-hidden-temp');
 
       for (let m = desde; m <= hasta; m++) {
         contTemp.innerHTML = '';
-        const url = construirUrlMesa(m);
-        new QRCode(contTemp, { text: url, width: 150, height: 150 });
+        const urlMesa = construirUrlMesa(m);
+        new QRCode(contTemp, { text: urlMesa, width: 120, height: 120 });
 
         const img = contTemp.querySelector('img');
-        if (img && img.src) {
-          doc.rect(x - 2, y - 2, size + 4, size + 16);
-          doc.addImage(img.src, 'PNG', x, y, size, size);
-          doc.setFontSize(10);
-          doc.text(`MESA N° ${m}`, x + (size / 2), y + size + 8, { align: 'center' });
 
-          x += size + margin;
-          if (x + size > 200) {
+        doc.rect(x, y, tam, tam);
+        doc.setFontSize(10);
+        doc.text(localId.toUpperCase(), x + (tam / 2), y + 8, { align: 'center' });
+
+        if (img) {
+          doc.addImage(img.src, 'PNG', x + 7.5, y + 10, 40, 40);
+        }
+
+        doc.setFontSize(9);
+        doc.text(`MESA N° ${m}`, x + (tam / 2), y + 52, { align: 'center' });
+
+        x += tam + 10;
+        if (x + tam > 200) {
+          x = 15;
+          y += tam + 10;
+          if (y + tam > 280 && m < hasta) {
+            doc.addPage();
             x = 15;
-            y += size + margin + 10;
-            if (y + size > 280) {
-              doc.addPage();
-              x = 15;
-              y = 15;
-            }
+            y = 15;
           }
         }
       }
