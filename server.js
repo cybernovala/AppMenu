@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const app = express();
 
@@ -9,38 +9,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// --- INICIALIZAR RESEND CON VARIABLE DE ENTORNO SEGURA ---
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 // --- CONEXIÓN A MONGODB ATLAS ---
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/appmenu';
 
 mongoose.connect(MONGO_URI)
   .then(() => console.log('🟢 Conectado exitosamente a MongoDB'))
   .catch((err) => console.error('🔴 Error de conexión a MongoDB:', err));
-
-// --- CONFIGURACIÓN DE NODEMAILER (GMAIL CON SSL Y TIMEOUTS EXPANDIDOS) ---
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // SSL directo
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS
-  },
-  connectionTimeout: 10000, // 10 segundos
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-  tls: {
-    rejectUnauthorized: false
-  }
-});
-
-// Verificar conexión SMTP al arrancar
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("🔴 Error al verificar conexión SMTP con Gmail:", error.message);
-  } else {
-    console.log("🟢 Transporter SMTP listo para enviar correos");
-  }
-});
 
 // --- ESQUEMAS Y MODELOS DE MONGOOSE ---
 
@@ -216,7 +193,7 @@ app.get('/api/locales', async (req, res) => {
   }
 });
 
-// 5. DAR DE ALTA UN RESTAURANTE Y ENVIAR CORREO DE CONFIRMACIÓN
+// 5. DAR DE ALTA UN RESTAURANTE Y ENVIAR CORREO DE CONFIRMACIÓN VÍA RESEND
 app.post('/api/locales/alta', async (req, res) => {
   try {
     const { nombre, rut, correo, password, fechaVencimiento: fechaVencBody } = req.body;
@@ -267,41 +244,38 @@ app.post('/api/locales/alta', async (req, res) => {
       await reg.save();
     }
 
-    // --- ENVIAR CORREO DE BIENVENIDA AL CLIENTE ---
+    // --- ENVIAR CORREO VÍA API HTTPS (RESEND) ---
     const destinoCorreo = reg.correo;
     if (destinoCorreo && destinoCorreo !== 'contacto@local.cl') {
-      const mailOptions = {
-        from: `"AppMenu Digital" <${process.env.GMAIL_USER}>`,
-        to: destinoCorreo,
-        subject: `🎉 ¡Bienvenido a AppMenu! Datos de tu Demo: ${reg.nombre}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
-            <h2 style="color: #ff5500;">¡Hola, ${reg.nombre}!</h2>
-            <p>Tu cuenta y entorno demo han sido creados exitosamente en nuestra plataforma.</p>
-            <p><strong>Detalles de acceso a tu panel:</strong></p>
-            <ul>
-              <li><strong>Local / ID:</strong> ${reg.local}</li>
-              <li><strong>Contraseña:</strong> ${passwordFinal}</li>
-              <li><strong>Fecha de Vencimiento:</strong> ${new Date(reg.fechaVencimiento).toLocaleDateString()}</li>
-            </ul>
-            <p>Puedes acceder a tu panel de administración en el siguiente enlace:</p>
-            <a href="https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(reg.local)}" 
-               style="background-color: #ff007f; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-               Ingresar a mi Administración
-            </a>
-            <br><br>
-            <p style="font-size: 12px; color: #a0a0b0;">Soporte: +56966648585 | appmenu26@gmail.com</p>
-          </div>
-        `
-      };
-
-      transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-          console.error("🔴 Error al enviar correo:", err);
-        } else {
-          console.log("🟢 Correo enviado con éxito:", info.response);
-        }
-      });
+      try {
+        const respuestaCorreo = await resend.emails.send({
+          from: 'AppMenu Digital <onboarding@resend.dev>',
+          to: destinoCorreo,
+          subject: `🎉 ¡Bienvenido a AppMenu! Datos de tu Demo: ${reg.nombre}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
+              <h2 style="color: #ff5500;">¡Hola, ${reg.nombre}!</h2>
+              <p>Tu cuenta y entorno demo han sido creados exitosamente en nuestra plataforma.</p>
+              <p><strong>Detalles de acceso a tu panel:</strong></p>
+              <ul>
+                <li><strong>Local / ID:</strong> ${reg.local}</li>
+                <li><strong>Contraseña:</strong> ${passwordFinal}</li>
+                <li><strong>Fecha de Vencimiento:</strong> ${new Date(reg.fechaVencimiento).toLocaleDateString()}</li>
+              </ul>
+              <p>Puedes acceder a tu panel de administración en el siguiente enlace:</p>
+              <a href="https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(reg.local)}" 
+                 style="background-color: #ff007f; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                 Ingresar a mi Administración
+              </a>
+              <br><br>
+              <p style="font-size: 12px; color: #a0a0b0;">Soporte: +56966648585 | appmenu26@gmail.com</p>
+            </div>
+          `
+        });
+        console.log("🟢 Correo enviado con éxito vía Resend:", respuestaCorreo);
+      } catch (errResend) {
+        console.error("🔴 Error al enviar correo vía Resend:", errResend);
+      }
     }
 
     res.status(201).json({ mensaje: 'Alta realizada con éxito', local: reg.local, localId: reg.local, nombre: reg.nombre });
