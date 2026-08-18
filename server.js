@@ -297,6 +297,8 @@ app.get('/api/menu', async (req, res) => {
 app.post('/api/menu/categoria', async (req, res) => {
   try {
     const { local, categoria } = req.body;
+    if (!categoria || !categoria.trim()) return res.status(400).json({ error: 'Nombre de categoría requerido' });
+
     const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
     if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
 
@@ -304,10 +306,12 @@ app.post('/api/menu/categoria', async (req, res) => {
     const existe = reg.menu.some(c => c.categoria.toLowerCase() === categoria.trim().toLowerCase());
     if (!existe) {
       reg.menu.push({ categoria: categoria.trim(), productos: [] });
+      reg.markModified('menu');
       await reg.save();
     }
     res.json({ ok: true, menu: reg.menu });
   } catch (error) {
+    console.error("Error al crear categoría:", error);
     res.status(500).json({ error: 'Error al crear la categoría' });
   }
 });
@@ -320,6 +324,7 @@ app.delete('/api/menu/categoria', async (req, res) => {
     if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
 
     reg.menu = (reg.menu || []).filter(c => c.categoria !== categoria);
+    reg.markModified('menu');
     await reg.save();
     res.json({ ok: true, menu: reg.menu });
   } catch (error) {
@@ -327,23 +332,40 @@ app.delete('/api/menu/categoria', async (req, res) => {
   }
 });
 
-// AGREGAR PRODUCTO A MENÚ
+// ACTUALIZAR O GUARDAR ESTRUCTURA COMPLETA DE MENÚ / AGREGAR PRODUCTO
 app.post('/api/menu', async (req, res) => {
   try {
-    const { local, categoria, nombre, precio } = req.body;
+    const { local, menu, categoria, nombre, precio } = req.body;
     const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
     if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
 
-    const catObj = (reg.menu || []).find(c => c.categoria === categoria);
-    if (catObj) {
-      if (!catObj.productos) catObj.productos = [];
-      catObj.productos.push({ nombre, precio: Number(precio) });
+    // Si viene el menú completo en el body, lo actualizamos directamente
+    if (Array.isArray(menu)) {
+      reg.menu = menu;
       reg.markModified('menu');
       await reg.save();
+      return res.json({ ok: true, menu: reg.menu });
     }
-    res.json({ ok: true, menu: reg.menu });
+
+    // Si viene para agregar un solo producto
+    if (categoria && nombre) {
+      if (!reg.menu) reg.menu = [];
+      let catObj = reg.menu.find(c => c.categoria === categoria);
+      if (!catObj) {
+        catObj = { categoria, productos: [] };
+        reg.menu.push(catObj);
+      }
+      if (!catObj.productos) catObj.productos = [];
+      catObj.productos.push({ nombre, precio: Number(precio || 0) });
+      reg.markModified('menu');
+      await reg.save();
+      return res.json({ ok: true, menu: reg.menu });
+    }
+
+    res.status(400).json({ error: 'Parámetros no válidos' });
   } catch (error) {
-    res.status(500).json({ error: 'Error al agregar producto' });
+    console.error("Error al guardar en el menú:", error);
+    res.status(500).json({ error: 'Error al actualizar el menú' });
   }
 });
 
@@ -452,7 +474,7 @@ app.post('/api/historials', async (req, res) => {
   }
 });
 
-// 10. AVISOS Y MENSAJES DEL SISTEMA (OBTENER, CREAR, RESPONDER Y ELIMINAR)
+// 10. AVISOS Y MENSAJES DEL SISTEMA
 app.get('/api/avisos', async (req, res) => {
   try {
     const localId = (req.query.local || '').trim().toLowerCase();
