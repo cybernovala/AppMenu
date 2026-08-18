@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
 
 const app = express();
 
@@ -14,6 +15,15 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/appmenu';
 mongoose.connect(MONGO_URI)
   .then(() => console.log('🟢 Conectado exitosamente a MongoDB'))
   .catch((err) => console.error('🔴 Error de conexión a MongoDB:', err));
+
+// --- CONFIGURACIÓN DE NODEMAILER (GMAIL) ---
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS
+  }
+});
 
 // --- ESQUEMAS Y MODELOS DE MONGOOSE ---
 
@@ -189,7 +199,7 @@ app.get('/api/locales', async (req, res) => {
   }
 });
 
-// 5. DAR DE ALTA UN RESTAURANTE
+// 5. DAR DE ALTA UN RESTAURANTE Y ENVIAR CORREO DE CONFIRMACIÓN
 app.post('/api/locales/alta', async (req, res) => {
   try {
     const { nombre, rut, correo, password, fechaVencimiento: fechaVencBody } = req.body;
@@ -213,6 +223,8 @@ app.post('/api/locales/alta', async (req, res) => {
       fechaVencimientoCalculada.setDate(ahora.getDate() + 365);
     }
 
+    const passwordFinal = password || '123456';
+
     if (reg) {
       reg.nombre = nombreLimpio;
       reg.rut = rut || reg.rut || 'SIN-RUT';
@@ -228,7 +240,7 @@ app.post('/api/locales/alta', async (req, res) => {
         nombre: nombreLimpio,
         rut: rut || 'SIN-RUT',
         correo: correo || 'contacto@local.cl',
-        password: password || '123456',
+        password: passwordFinal,
         activo: true,
         fechaCreacion: ahora,
         fechaVencimiento: fechaVencimientoCalculada,
@@ -236,6 +248,43 @@ app.post('/api/locales/alta', async (req, res) => {
         anuncio: "ok"
       });
       await reg.save();
+    }
+
+    // --- ENVIAR CORREO DE BIENVENIDA AL CLIENTE ---
+    const destinoCorreo = reg.correo;
+    if (destinoCorreo && destinoCorreo !== 'contacto@local.cl') {
+      const mailOptions = {
+        from: `"AppMenu Digital" <${process.env.GMAIL_USER}>`,
+        to: destinoCorreo,
+        subject: `🎉 ¡Bienvenido a AppMenu! Datos de tu Demo: ${reg.nombre}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #ff5500;">¡Hola, ${reg.nombre}!</h2>
+            <p>Tu cuenta y entorno demo han sido creados exitosamente en nuestra plataforma.</p>
+            <p><strong>Detalles de acceso a tu panel:</strong></p>
+            <ul>
+              <li><strong>Local / ID:</strong> ${reg.local}</li>
+              <li><strong>Contraseña:</strong> ${passwordFinal}</li>
+              <li><strong>Fecha de Vencimiento:</strong> ${new Date(reg.fechaVencimiento).toLocaleDateString()}</li>
+            </ul>
+            <p>Puedes acceder a tu panel de administración en el siguiente enlace:</p>
+            <a href="https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(reg.local)}" 
+               style="background-color: #ff007f; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+               Ingresar a mi Administración
+            </a>
+            <br><br>
+            <p style="font-size: 12px; color: #a0a0b0;">Soporte: +56966648585 | appmenu26@gmail.com</p>
+          </div>
+        `
+      };
+
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error("🔴 Error al enviar correo:", err);
+        } else {
+          console.log("🟢 Correo enviado con éxito:", info.response);
+        }
+      });
     }
 
     res.status(201).json({ mensaje: 'Alta realizada con éxito', local: reg.local, localId: reg.local, nombre: reg.nombre });
