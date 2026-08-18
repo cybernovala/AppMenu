@@ -16,17 +16,29 @@ mongoose.connect(MONGO_URI)
   .then(() => console.log('🟢 Conectado exitosamente a MongoDB'))
   .catch((err) => console.error('🔴 Error de conexión a MongoDB:', err));
 
-// --- CONFIGURACIÓN DE NODEMAILER (GMAIL CON PUERTO 465 Y SSL) ---
+// --- CONFIGURACIÓN DE NODEMAILER (GMAIL CON SSL Y TIMEOUTS EXPANDIDOS) ---
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
-  secure: true, // Conexión SSL rápida y segura para Render
+  secure: true, // SSL directo
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS
   },
+  connectionTimeout: 10000, // 10 segundos
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
   tls: {
     rejectUnauthorized: false
+  }
+});
+
+// Verificar conexión SMTP al arrancar
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("🔴 Error al verificar conexión SMTP con Gmail:", error.message);
+  } else {
+    console.log("🟢 Transporter SMTP listo para enviar correos");
   }
 });
 
@@ -393,7 +405,6 @@ app.post('/api/menu', async (req, res) => {
     const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
     if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
 
-    // Si viene el menú completo en el body, lo actualizamos directamente
     if (Array.isArray(menu)) {
       reg.menu = menu;
       reg.markModified('menu');
@@ -401,7 +412,6 @@ app.post('/api/menu', async (req, res) => {
       return res.json({ ok: true, menu: reg.menu });
     }
 
-    // Si viene para agregar un solo producto
     if (categoria && nombre) {
       if (!reg.menu) reg.menu = [];
       let catObj = reg.menu.find(c => c.categoria === categoria);
