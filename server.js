@@ -19,7 +19,27 @@ if (process.env.BREVO_API_KEY) {
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/appmenu';
 
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('🟢 Conectado exitosamente a MongoDB'))
+  .then(async () => {
+    console.log('🟢 Conectado exitosamente a MongoDB');
+    
+    // --- AUTO-INICIALIZAR CONTRASEÑA ADMIN EN MONGO DB ---
+    try {
+      const configExistente = await ConfigGlobal.findOne({ tipo: 'superadmin' });
+      if (!configExistente) {
+        await ConfigGlobal.create({
+          tipo: 'superadmin',
+          password: '@Juan20737373'
+        });
+        console.log('🔑 Credencial SuperAdmin creada con éxito en MongoDB.');
+      } else if (configExistente.password !== '@Juan20737373') {
+        configExistente.password = '@Juan20737373';
+        await configExistente.save();
+        console.log('🔑 Credencial SuperAdmin actualizada en MongoDB.');
+      }
+    } catch (err) {
+      console.error('🔴 Error al inicializar credencial en MongoDB:', err);
+    }
+  })
   .catch((err) => console.error('🔴 Error de conexión a MongoDB:', err));
 
 // --- ESQUEMAS Y MODELOS DE MONGOOSE ---
@@ -107,10 +127,14 @@ app.post('/api/admin/login', async (req, res) => {
     const { password } = req.body;
     if (!password) return res.status(400).json({ ok: false, error: 'Debe ingresar una contraseña' });
 
+    // Consulta la contraseña almacenada en la colección configglobals
     const configAdmin = await ConfigGlobal.findOne({ tipo: 'superadmin' });
-    const claveCorrecta = configAdmin ? configAdmin.password : "@Juan20737373";
+    
+    if (!configAdmin) {
+      return res.status(500).json({ ok: false, error: 'Configuración de Administrador no encontrada' });
+    }
 
-    if (password === claveCorrecta) {
+    if (password === configAdmin.password) {
       return res.json({ ok: true, mensaje: 'Acceso concedido como Administrador General' });
     } else {
       return res.status(401).json({ ok: false, error: 'Contraseña incorrecta' });
@@ -162,7 +186,6 @@ app.get('/api/licencia', async (req, res) => {
     let fechaVenc = reg.fechaVencimiento ? new Date(reg.fechaVencimiento) : new Date(ahoraServidor.getTime() + (30 * 24 * 60 * 60 * 1000));
     let estadoActivo = reg.activo;
 
-    // Verificar si ha vencido la fecha en el servidor
     if (ahoraServidor >= fechaVenc) {
       estadoActivo = false;
       if (reg.activo !== false) {
@@ -256,7 +279,7 @@ app.post('/api/locales/demo', async (req, res) => {
   }
 });
 
-// NUEVO ENDPOINT: RENOVACIÓN DE LICENCIA (REINICIA FECHA DE CREACIÓN Y EXTIENDE 30 DÍAS)
+// RENOVACIÓN DE LICENCIA
 app.put('/api/locales/renovar', async (req, res) => {
   try {
     const { local, dias } = req.body;
@@ -269,7 +292,6 @@ app.put('/api/locales/renovar', async (req, res) => {
     const diasASumar = Number(dias) || 30;
     const ahora = new Date();
 
-    // Determina la base para el cálculo de la nueva expiración
     let baseFecha = ahora;
     if (reg.fechaVencimiento) {
       const fechaVencActual = new Date(reg.fechaVencimiento);
@@ -281,7 +303,6 @@ app.put('/api/locales/renovar', async (req, res) => {
     const nuevaFechaVenc = new Date(baseFecha);
     nuevaFechaVenc.setDate(nuevaFechaVenc.getDate() + diasASumar);
 
-    // Actualización de los datos del local
     reg.fechaCreacion = ahora;
     reg.fechaVencimiento = nuevaFechaVenc;
     reg.activo = true;
@@ -301,7 +322,7 @@ app.put('/api/locales/renovar', async (req, res) => {
   }
 });
 
-// 5. DAR DE ALTA O RENOVAR UN RESTAURANTE (SUMA 30 DÍAS DE EXPIRACIÓN)
+// 5. DAR DE ALTA O RENOVAR UN RESTAURANTE
 app.post('/api/locales/alta', async (req, res) => {
   try {
     const { local: localParam, nombre, rut, correo, password, fechaVencimiento: fechaVencBody, renovar30Dias } = req.body;
@@ -493,7 +514,7 @@ app.post('/api/locales/recuperar-password', async (req, res) => {
   }
 });
 
-// 7. MENÚ (Consultar estructurado)
+// 7. MENÚ
 app.get('/api/menu', async (req, res) => {
   try {
     const localId = (req.query.local || '').trim().toLowerCase();
@@ -501,7 +522,6 @@ app.get('/api/menu', async (req, res) => {
 
     if (!reg) return res.json([]);
     
-    // Verificar estado o vencimiento
     const ahoraServidor = new Date();
     if (reg.activo === false || (reg.fechaVencimiento && ahoraServidor >= new Date(reg.fechaVencimiento))) {
       return res.status(403).json({ error: 'Cuenta bloqueada o licencia expirada' });
@@ -552,7 +572,7 @@ app.delete('/api/menu/categoria', async (req, res) => {
   }
 });
 
-// ACTUALIZAR O GUARDAR ESTRUCTURA COMPLETA DE MENÚ / AGREGAR PRODUCTO
+// ACTUALIZAR O GUARDAR ESTRUCTURA COMPLETA DE MENÚ
 app.post('/api/menu', async (req, res) => {
   try {
     const { local, menu, categoria, nombre, precio } = req.body;
@@ -634,7 +654,7 @@ app.put('/api/menu/edit', async (req, res) => {
   }
 });
 
-// 8. PEDIDOS (Crear y Listar)
+// 8. PEDIDOS
 app.get('/api/pedidos', async (req, res) => {
   try {
     const localId = (req.query.local || '').trim().toLowerCase();
@@ -671,7 +691,7 @@ app.delete('/api/pedidos/:id', async (req, res) => {
   }
 });
 
-// 9. HISTORIAL (Garzones y Entregas)
+// 9. HISTORIAL
 app.get('/api/historials', async (req, res) => {
   try {
     const localId = (req.query.local || '').trim().toLowerCase();
@@ -692,7 +712,7 @@ app.post('/api/historials', async (req, res) => {
   }
 });
 
-// 10. AVISOS Y MENSAJES DEL SISTEMA
+// 10. AVISOS
 app.get('/api/avisos', async (req, res) => {
   try {
     const localId = (req.query.local || '').trim().toLowerCase();
