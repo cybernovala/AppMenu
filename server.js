@@ -164,7 +164,6 @@ app.get('/api/licencia', async (req, res) => {
 
     // Verificar si ha vencido la fecha en el servidor
     if (ahoraServidor >= fechaVenc) {
-      // Si la cuenta vence y sigue marcada activa, se marca inactiva o requiere acción
       estadoActivo = false;
       if (reg.activo !== false) {
         reg.activo = false;
@@ -215,25 +214,74 @@ app.get('/api/locales', async (req, res) => {
   }
 });
 
+// CREAR/REGISTRAR DEMO
+app.post('/api/locales/demo', async (req, res) => {
+  try {
+    const { local, nombre, rut, correo, fechaCreacion, fechaVencimiento } = req.body;
+    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es requerido' });
+
+    const localSlug = (local || nombre).toLowerCase().replace(/[^a-z0-9]/g, '');
+    let reg = await Local.findOne({ local: localSlug });
+
+    const ahora = fechaCreacion ? new Date(fechaCreacion) : new Date();
+    const venc = fechaVencimiento ? new Date(fechaVencimiento) : new Date(ahora.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+    if (reg) {
+      reg.nombre = nombre;
+      reg.activo = true;
+      reg.fechaVencimiento = venc;
+      await reg.save();
+    } else {
+      reg = new Local({
+        id: Date.now(),
+        local: localSlug,
+        nombre: nombre.trim(),
+        rut: rut || 'DEMO-30DIAS',
+        correo: correo || 'demo@appmenu.cl',
+        password: '123',
+        activo: true,
+        fechaCreacion: ahora,
+        fechaVencimiento: venc,
+        menu: [],
+        anuncio: "ok"
+      });
+      await reg.save();
+    }
+
+    res.status(201).json({ ok: true, local: reg });
+  } catch (error) {
+    console.error("Error al crear demo:", error);
+    res.status(500).json({ error: 'Error al registrar demo' });
+  }
+});
+
 // 5. DAR DE ALTA O RENOVAR UN RESTAURANTE (SUMA 30 DÍAS DE EXPIRACIÓN)
 app.post('/api/locales/alta', async (req, res) => {
   try {
-    const { nombre, rut, correo, password, fechaVencimiento: fechaVencBody, renovar30Dias } = req.body;
-    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
+    const { local: localParam, nombre, rut, correo, password, fechaVencimiento: fechaVencBody, renovar30Dias } = req.body;
+    
+    let localSlug = localParam ? localParam.toLowerCase().trim() : '';
+    let nombreLimpio = nombre ? nombre.trim() : '';
 
-    const nombreLimpio = nombre.trim();
-    const localSlug = nombreLimpio.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const nombreEscaped = escapeRegex(nombreLimpio);
+    if (!localSlug && nombreLimpio) {
+      localSlug = nombreLimpio.toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    if (!localSlug && !nombreLimpio) {
+      return res.status(400).json({ error: 'El identificador o nombre es obligatorio' });
+    }
 
     let reg = await Local.findOne({
-      $or: [{ local: localSlug }, { nombre: { $regex: new RegExp(`^${nombreEscaped}$`, 'i') } }]
+      $or: [
+        { local: localSlug },
+        ...(nombreLimpio ? [{ nombre: { $regex: new RegExp(`^${escapeRegex(nombreLimpio)}$`, 'i') } }] : [])
+      ]
     });
 
     const ahora = new Date();
     let fechaVencimientoCalculada;
 
     if (renovar30Dias && reg && reg.fechaVencimiento) {
-      // Si la fecha actual ya venció se cuentan 30 días desde HOY, de lo contrario se suman 30 días a la fecha previa
       const baseFecha = new Date(reg.fechaVencimiento) > ahora ? new Date(reg.fechaVencimiento) : ahora;
       fechaVencimientoCalculada = new Date(baseFecha);
       fechaVencimientoCalculada.setDate(fechaVencimientoCalculada.getDate() + 30);
@@ -244,10 +292,10 @@ app.post('/api/locales/alta', async (req, res) => {
       fechaVencimientoCalculada.setDate(ahora.getDate() + 30);
     }
 
-    const passwordFinal = password || '123456';
+    const passwordFinal = password || (reg ? reg.password : '123456');
 
     if (reg) {
-      reg.nombre = nombreLimpio;
+      if (nombreLimpio) reg.nombre = nombreLimpio;
       reg.rut = rut || reg.rut || 'SIN-RUT';
       reg.correo = correo || reg.correo || 'contacto@local.cl';
       if (password) reg.password = password;
@@ -258,7 +306,7 @@ app.post('/api/locales/alta', async (req, res) => {
       reg = new Local({
         id: Date.now(),
         local: localSlug,
-        nombre: nombreLimpio,
+        nombre: nombreLimpio || localSlug,
         rut: rut || 'SIN-RUT',
         correo: correo || 'contacto@local.cl',
         password: passwordFinal,
@@ -306,10 +354,10 @@ app.post('/api/locales/alta', async (req, res) => {
       }
     }
 
-    res.status(201).json({ mensaje: 'Alta realizada con éxito', local: reg.local, localId: reg.local, nombre: reg.nombre, fechaVencimiento: reg.fechaVencimiento });
+    res.status(201).json({ mensaje: 'Alta/Renovación realizada con éxito', local: reg.local, localId: reg.local, nombre: reg.nombre, fechaVencimiento: reg.fechaVencimiento });
   } catch (error) {
     console.error("Error al dar de alta:", error);
-    res.status(500).json({ error: 'Error interno al procesar el alta' });
+    res.status(500).json({ error: 'Error interno al procesar la alta/renovación' });
   }
 });
 
