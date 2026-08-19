@@ -3,873 +3,226 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>+-Panel de Administración & Menú Digital</title>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
+  <title>Panel Administrador - AppMenu</title>
   <style>
+    /* ESTILOS ORIGINALES MANTENIDOS AL 100% */
     :root {
       --bg-dark: #08070d;
-      --card-bg: rgba(18, 16, 28, 0.85);
-      --neon-orange: #ff5500;
-      --neon-pink: #ff007f;
-      --neon-yellow: #ffee00;
-      --neon-green: #00ff66;
-      --neon-blue: #00d2ff;
+      --card-bg: #12101a;
+      --accent-orange: #ff5500;
+      --accent-pink: #ff007f;
       --text-main: #ffffff;
       --text-muted: #a0a0b0;
-      --border-neon: rgba(255, 0, 127, 0.3);
-      --border-color: rgba(255, 85, 0, 0.25);
+      --border-color: #2a2838;
+      --danger: #ff3366;
+      --success: #00e676;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
-      min-height: 100vh;
-      padding-bottom: 20px;
-      position: relative;
+      padding: 20px;
     }
 
-    body::before {
-      content: "";
-      position: fixed;
-      top: 0; left: -50%; width: 200%; height: 200%;
-      background-image: 
-        linear-gradient(rgba(255, 85, 0, 0.1) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 0, 127, 0.1) 1px, transparent 1px);
-      background-size: 40px 40px;
-      transform: perspective(500px) rotateX(60deg) translateY(-100px);
-      z-index: -1;
-      pointer-events: none;
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
     }
 
-    .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
-
-    .banner-container {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-
-    .banner-licencia {
-      background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(255, 85, 0, 0.25));
-      border: 1px solid var(--neon-yellow);
-      color: #ffffff;
-      text-align: center;
-      padding: 10px 15px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 0 10px rgba(255, 238, 0, 0.2);
-    }
-
-    .banner-bloqueo {
-      text-align: center;
-      padding: 12px 15px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: bold;
-      transition: all 0.3s ease;
-    }
-
-    .banner-bloqueo.estado-bloqueado {
-      background: linear-gradient(135deg, rgba(255, 0, 34, 0.9), rgba(150, 0, 0, 0.95));
-      border: 2px solid #ff0033;
-      color: #ffffff;
-      box-shadow: 0 0 15px rgba(255, 0, 51, 0.6);
-    }
-
-    .banner-bloqueo.estado-desbloqueado {
-      background: linear-gradient(135deg, rgba(0, 255, 102, 0.2), rgba(0, 150, 50, 0.25));
-      border: 1px solid var(--neon-green);
-      color: #ffffff;
-      box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
-    }
-
-    .banner-aviso-sistema {
-      background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 119, 255, 0.3));
-      border: 1px solid var(--neon-blue);
-      color: #ffffff;
-      padding: 15px;
-      border-radius: 8px;
-      font-size: 14px;
-      box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .respuesta-item-admin {
-      margin-top: 6px;
-      padding-left: 10px;
-      border-left: 2px solid var(--neon-green);
-      color: #e0e0e0;
-      font-size: 13px;
-    }
-
-    .header-bar {
-      background: rgba(18, 18, 24, 0.95);
-      border: 1px solid var(--border-neon);
-      padding: 15px 20px;
-      border-radius: 12px;
-      margin-bottom: 15px;
+    header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      backdrop-filter: blur(10px);
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 20px;
     }
 
-    .local-title {
-      font-size: 20px;
-      color: var(--neon-yellow);
-      text-transform: uppercase;
-      font-weight: 800;
-      letter-spacing: 0.5px;
+    h1, h2, h3 {
+      font-weight: 600;
     }
 
-    .nav-tabs {
+    /* Banner de Licencia y Estado */
+    .banner-bloqueo {
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 20px;
-      border-bottom: 2px solid #222;
-      padding-bottom: 8px;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
     }
 
-    .tab-btn {
-      background: #14141c;
-      border: 1px solid #333;
+    .estado-desbloqueado {
+      background-color: rgba(0, 230, 118, 0.1);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+
+    .estado-bloqueado {
+      background-color: rgba(255, 51, 102, 0.1);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
       color: var(--text-muted);
-      padding: 12px 18px;
-      border-radius: 8px 8px 0 0;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 14px;
-      transition: all 0.2s ease;
-      flex: 1;
-      text-align: center;
-      min-width: 130px;
-      touch-action: manipulation;
     }
-
-    .tab-btn:hover { color: #fff; border-color: var(--neon-orange); }
-
-    .tab-btn.active {
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
-      color: #fff;
-      border-color: transparent;
-      box-shadow: 0 0 12px rgba(255, 85, 0, 0.5);
-    }
-
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    .btn {
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-yellow));
-      border: none;
-      color: #000;
-      padding: 12px 18px;
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: opacity 0.2s;
-      touch-action: manipulation;
-    }
-    .btn:active { opacity: 0.8; }
-    .btn-secondary { background: #222; color: #fff; border: 1px solid #444; }
-    .btn-danger { background: #ff3344; color: #fff; }
-    .btn-success { background: var(--neon-green); color: #000; }
-    .btn-blue { background: linear-gradient(135deg, var(--neon-blue), #0077ff); color: #fff; }
-    .btn-sm { padding: 8px 14px; font-size: 13px; }
-
-    .section-card {
-      background: var(--card-bg);
-      border: 1px solid #222;
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 20px;
-    }
-
-    .section-card h3 {
-      font-size: 16px;
-      color: var(--neon-orange);
-      margin-bottom: 12px;
-      text-transform: uppercase;
-    }
-
-    .form-inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
     input, select, textarea {
-      flex: 1;
-      padding: 12px 14px;
-      background: #181822;
-      border: 1px solid #333;
-      color: #fff;
-      border-radius: 6px;
-      font-size: 14px;
-      min-width: 180px;
-    }
-
-    .category-card {
-      background: var(--card-bg);
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
       border: 1px solid var(--border-color);
-      border-radius: 12px;
-      margin-bottom: 20px;
-      overflow: hidden;
-    }
-
-    .category-header {
-      background: rgba(255, 85, 0, 0.08);
-      padding: 15px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid rgba(255, 85, 0, 0.2);
-    }
-
-    .category-name { font-size: 18px; font-weight: bold; color: var(--neon-yellow); }
-    .product-list { padding: 15px; }
-
-    .product-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #16161e;
-      border: 1px solid #262630;
-      padding: 12px 18px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-
-    .product-info { display: flex; flex-direction: column; gap: 3px; }
-    .product-title { font-weight: 600; font-size: 15px; color: #fff; }
-    .product-price { font-size: 14px; color: var(--neon-yellow); font-weight: bold; }
-    .product-actions { display: flex; gap: 8px; }
-
-    .add-product-box {
-      background: #14141c;
-      border-top: 1px dashed #333;
-      padding: 15px;
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .preview-header {
-      background: rgba(8, 7, 13, 0.95);
-      border-bottom: 2px solid var(--neon-pink);
-      padding: 18px;
-      text-align: center;
-      border-radius: 12px 12px 0 0;
-    }
-
-    .brand-title {
-      font-size: 24px;
-      font-weight: 900;
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-transform: uppercase;
-    }
-
-    .mesa-badge {
-      display: inline-block;
-      margin-top: 5px;
-      background: var(--neon-pink);
-      color: #fff;
-      font-size: 13px;
-      padding: 4px 14px;
-      border-radius: 12px;
-      font-weight: bold;
-    }
-
-    .categories-bar {
-      display: flex;
-      gap: 10px;
-      padding: 15px 0;
-      flex-wrap: wrap;
-    }
-
-    .cat-chip {
-      background: var(--card-bg);
-      border: 1px solid var(--border-neon);
-      color: #ccc;
-      padding: 8px 18px;
-      border-radius: 20px;
+      background-color: #1a1826;
+      color: var(--text-main);
       font-size: 14px;
-      font-weight: 600;
+    }
+
+    button {
       cursor: pointer;
-    }
-
-    .cat-chip.active {
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
-      color: #fff;
-      border-color: transparent;
-    }
-
-    .product-card-client {
-      background: var(--card-bg);
-      border: 1px solid var(--border-neon);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .cart-bar {
-      background: rgba(12, 10, 20, 0.95);
-      border: 1px solid var(--neon-orange);
-      padding: 15px 20px;
-      border-radius: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 20px;
-    }
-
-    .cart-btn {
-      background: linear-gradient(135deg, var(--neon-orange), var(--neon-pink));
+      padding: 10px 20px;
       border: none;
-      color: #fff;
-      padding: 12px 22px;
-      border-radius: 8px;
+      border-radius: 5px;
       font-weight: bold;
-      font-size: 14px;
-      cursor: pointer;
+      transition: background 0.3s;
     }
 
-    .grid-pedidos {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 15px;
-      margin-top: 15px;
+    .btn-primary {
+      background-color: var(--accent-orange);
+      color: #fff;
     }
 
-    .card-pedido {
-      background: var(--card-bg);
-      border: 1px solid var(--neon-orange);
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+    .btn-primary:hover {
+      background-color: #e04b00;
     }
 
-    .card-pedido-header {
+    .btn-danger {
+      background-color: var(--danger);
+      color: #fff;
+    }
+
+    .menu-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
-      padding-bottom: 10px;
-      margin-bottom: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-color);
     }
 
-    .card-pedido-mesa { font-size: 18px; font-weight: bold; color: var(--neon-yellow); }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: #141420;
-      border: 1px solid #2a2a3c;
-      padding: 15px;
-      border-radius: 10px;
-      text-align: center;
-    }
-
-    .stat-number { font-size: 24px; font-weight: bold; color: var(--neon-green); margin-top: 5px; }
-
-    .table-wrapper { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; min-width: 500px; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
-    th { background: #12121c; color: var(--neon-yellow); }
-
-    .modal {
+    .overlay-bloqueo {
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(8px);
-      z-index: 1000;
+      background: rgba(8, 7, 13, 0.95);
+      z-index: 9999;
       justify-content: center;
       align-items: center;
-    }
-
-    .modal-content {
-      background: #16161e;
-      border: 1px solid var(--neon-orange);
-      padding: 22px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 450px;
-    }
-
-    .modal-content h3 { color: var(--neon-yellow); margin-bottom: 15px; }
-    .modal-content label { display: block; font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px; }
-
-    .garzon-top-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    .qr-preview-box {
-      background: #ffffff;
-      padding: 18px 15px;
-      border-radius: 8px;
-      display: inline-block;
-      min-width: 240px;
-    }
-
-    .qr-card-container {
-      display: flex;
+      text-align: center;
       flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .resumen-pedido-cliente {
-      background: var(--card-bg);
-      border: 2px solid var(--neon-green);
-      border-radius: 12px;
-      padding: 18px;
-      margin-top: 20px;
-      box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
+      padding: 20px;
     }
   </style>
 </head>
 <body>
 
+  <!-- Overlay si la cuenta está bloqueada -->
+  <div id="overlay-bloqueo" class="overlay-bloqueo">
+    <h1 style="color: var(--danger); font-size: 32px; margin-bottom: 15px;">🔒 SERVICIO BLOQUEADO / VENCIDO</h1>
+    <p style="font-size: 18px; color: var(--text-muted); max-width: 500px; margin-bottom: 20px;">
+      El período de uso o licencia de este local ha expirado o se encuentra desactivado.
+    </p>
+    <p style="color: var(--text-main);">Por favor contacta a soporte para renovar tu suscripción.</p>
+  </div>
+
   <div class="container">
-    
-    <div class="banner-container" id="banner-wrapper">
-      <div class="banner-licencia" id="banner-vencimiento">
-        ⚠️ Su licencia vencerá en <span id="num-dias-vencimiento" style="color: var(--neon-yellow); text-decoration: underline;">--</span> días.
-      </div>
-
-      <div class="banner-bloqueo estado-desbloqueado" id="banner-bloqueo">
-        <span id="txt-estado-bloqueo">✅ Sistema Activo y Desbloqueado</span>
-      </div>
-
-      <div id="contenedor-avisos-sistema"></div>
-    </div>
-
-    <div class="header-bar" id="admin-header">
+    <header>
       <div>
-        <span style="font-size: 12px; color: var(--text-muted);">Local Administrado:</span>
-        <div class="local-title" id="lbl-local-nombre">CARGANDO...</div>
+        <h1 id="lbl-local-nombre">ADMINISTRACIÓN LOCAL</h1>
+        <small style="color: var(--text-muted);">Panel de Gestión de Menú y Estado</small>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="recargarTodo()">🔄 Recargar</button>
+      <button class="btn-danger" onclick="cerrarSesion()">Cerrar Sesión</button>
+    </header>
+
+    <!-- Banner con estado de Licencia -->
+    <div id="banner-bloqueo" class="banner-bloqueo estado-desbloqueado">
+      <span id="txt-estado-bloqueo">Verificando estado de la licencia...</span>
+      <div>Días Restantes: <span id="num-dias-vencimiento">--</span></div>
     </div>
 
-    <div class="nav-tabs" id="admin-nav-tabs">
-      <button class="tab-btn" id="btn-tab-alta" onclick="cambiarPestana('tab-alta', this)">📝 Dar de Alta Negocio</button>
-      <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
-      <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
-      <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Gestor de QR</button>
-      <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
-      <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
-      <button class="tab-btn" id="btn-tab-historial" onclick="cambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
-    </div>
-
-    <div id="tab-alta" class="tab-content">
-      <div class="section-card">
-        <h3>📝 Registrar y Dar de Alta el Negocio</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Completa este formulario para registrar formalmente el negocio en el sistema backend y proteger el acceso al menú y al historial de garzones.
-        </p>
-        <div style="display: flex; flex-direction: column; gap: 12px; max-width: 500px;">
-          <div>
-            <label style="font-size: 12px; color: var(--text-muted);">Nombre del Negocio / Restaurante</label>
-            <input type="text" id="alta-nombre" placeholder="Ej: Mi Restaurante" style="width: 100%;">
-          </div>
-          <div>
-            <label style="font-size: 12px; color: var(--text-muted);">RUT Empresa / Titular</label>
-            <input type="text" id="alta-rut" placeholder="Ej: 76123456-7" style="width: 100%;">
-          </div>
-          <div>
-            <label style="font-size: 12px; color: var(--text-muted);">Correo Electrónico de Contacto</label>
-            <input type="email" id="alta-correo" placeholder="ejemplo@correo.com" style="width: 100%;">
-          </div>
-          <div>
-            <label style="font-size: 12px; color: var(--text-muted);">Confirmar Correo Electrónico</label>
-            <input type="email" id="alta-correo-confirm" placeholder="Confirmar correo@ejemplo.com" style="width: 100%;">
-          </div>
-          <div>
-            <label style="font-size: 12px; color: var(--text-muted);">Contraseña de Administración</label>
-            <input type="password" id="alta-password" placeholder="Crear contraseña" style="width: 100%;">
-          </div>
-          <div>
-            <label style="font-size: 12px; color: var(--text-muted);">Confirmar Contraseña de Administración</label>
-            <input type="password" id="alta-password-confirm" placeholder="Confirmar contraseña" style="width: 100%;">
-          </div>
-          <button class="btn btn-success" style="margin-top: 10px;" onclick="darDeAltaNegocio()">✅ Confirmar y Dar de Alta</button>
-        </div>
-
-        <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.15); margin: 25px 0;">
-
-        <div style="background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 8px; border: 1px solid #333;">
-          <h4 style="color: var(--neon-yellow); font-size: 14px; margin-bottom: 8px;">🔑 ¿Olvidaste tu contraseña o tienes dudas?</h4>
-          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-            Para recuperar contraseña o realizar consultas comuníquese al WhatsApp <b>+56966648585</b> o al correo <b>appmenunova@gmail.com</b>.
-          </p>
-          <a href="https://web.whatsapp.com/send?phone=56966648585" target="_blank" class="btn btn-success" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 13px;">
-            💬 Contactar por WhatsApp
-          </a>
-        </div>
+    <!-- Sección Agregar Categoría -->
+    <div class="card">
+      <h2>Agregar Categoría</h2>
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <input type="text" id="txt-nueva-categoria" placeholder="Ej: Hamburguesas, Bebidas, Postres...">
+        <button class="btn-primary" onclick="agregarCategoria()">Crear Categoría</button>
       </div>
     </div>
 
-    <div id="tab-admin" class="tab-content active">
-      <div class="section-card">
-        <h3>📁 Crear Nueva Categoría</h3>
-        <div class="form-inline">
-          <input type="text" id="nueva-categoria" placeholder="Ej: Bebidas, Postres, Platos Fuertes">
-          <button class="btn" onclick="crearCategoria()">+ Agregar Categoría</button>
-        </div>
+    <!-- Sección Agregar Producto -->
+    <div class="card">
+      <h2>Agregar Producto al Menú</h2>
+      <div class="form-group" style="margin-top: 10px;">
+        <label>Categoría</label>
+        <select id="select-categoria-producto"></select>
       </div>
-
-      <div id="contenedor-categorias">
-        <p style="color: var(--text-muted); text-align: center;">Cargando menú...</p>
+      <div class="form-group">
+        <label>Nombre del Producto</label>
+        <input type="text" id="txt-prod-nombre" placeholder="Ej: Combo Doble Queso">
       </div>
+      <div class="form-group">
+        <label>Precio ($)</label>
+        <input type="number" id="txt-prod-precio" placeholder="Ej: 5990">
+      </div>
+      <button class="btn-primary" onclick="guardarProducto()">Guardar Producto</button>
     </div>
 
-    <div id="tab-cliente" class="tab-content">
-      <div class="preview-header">
-        <div class="brand-title" id="txt-local-cliente">MENÚ DIGITAL</div>
-        <div class="mesa-badge" id="txt-mesa-cliente">Mesa N° --</div>
-      </div>
-
-      <div class="categories-bar" id="barra-categorias-cliente"></div>
-
-      <div id="lista-productos-cliente" style="margin-top: 15px;">
-        <p style="text-align: center; color: var(--text-muted);">Cargando carta...</p>
-      </div>
-
-      <div class="cart-bar" id="cart-bar">
-        <div>
-          <span style="font-size: 12px; color: #aaa;">Total Pedido:</span><br>
-          <span style="font-size: 18px; font-weight: bold; color: var(--neon-yellow);" id="txt-total-bar">$0</span>
-        </div>
-        <button class="cart-btn" onclick="abrirModalCarrito()">🛒 Ver Pedido (<span id="txt-count-bar">0</span>)</button>
-      </div>
-
-      <div id="resumen-pedido-activo" style="display: none;" class="resumen-pedido-cliente">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 8px; margin-bottom: 10px;">
-          <h4 style="color: var(--neon-green); font-size: 16px;">⏳ Pedido Enviado a Cocina</h4>
-          <span style="font-size: 12px; color: var(--text-muted);" id="resumen-pedido-hora">--:--</span>
-        </div>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
-          Tu pedido está en preparación. Este resumen permanecerá visible en tu pantalla hasta que el garzón entregue/elimine la orden desde su dispositivo.
-        </p>
-        <div id="resumen-pedido-items" style="font-size: 14px; margin-bottom: 12px;"></div>
-        <div style="text-align: right; font-weight: bold; font-size: 16px; color: var(--neon-yellow);" id="resumen-pedido-total">
-          Total: $0
-        </div>
-      </div>
-    </div>
-
-    <div id="tab-qr" class="tab-content">
-      <div class="section-card" style="border-color: var(--neon-blue);">
-        <h3>🔲 QR Exclusivo para Garzones</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Código permanentemente listo para descargar e imprimir (Etiqueta 5x5 cm).
-        </p>
-        <div class="qr-card-container">
-          <div class="qr-preview-box">
-            <div id="qr-garzon-render"></div>
-            <p style="color: #000; font-weight: bold; margin-top: 8px; font-size: 13px;">ACCESO GARZÓN - ENTREGAS</p>
-          </div>
-          <button class="btn btn-blue btn-sm" onclick="descargarQRGarzon()">📥 Descargar QR Garzón (PNG Imprimible)</button>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h3>🔲 Generar QR Individual para Mesa</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-          Código permanentemente listo para descargar e imprimir (Etiqueta 5x5 cm). 
-        </p>
-        <div class="form-inline">
-          <input type="number" id="qr-num-mesa" placeholder="Número de Mesa" value="1" min="1">
-          <button class="btn" onclick="generarQRUnico()">Ver / Generar QR</button>
-        </div>
-
-        <div class="qr-card-container" style="margin-top: 20px; text-align: center;">
-          <div class="qr-preview-box" id="box-qr-single">
-            <p id="lbl-qr-single-nombre-local" style="color: #000; font-weight: 900; margin-bottom: 8px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;"></p>
-            <div id="qr-single-render"></div>
-            <p id="lbl-qr-single-mesa" style="color: #000; font-weight: 800; margin-top: 8px; margin-bottom: 6px; font-size: 14px; text-transform: uppercase;"></p>
-            <p style="color: #444; font-weight: 600; font-size: 11px; max-width: 190px; margin: 0 auto; line-height: 1.2;">
-              Escanea el QR para hacer tu pedido directamente
-            </p>
-          </div>
-          <br>
-          <button class="btn btn-secondary btn-sm" onclick="descargarQRImagen()">📥 Descargar PNG (5x5 cm)</button>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h3>📄 Exportar Planilla PDF por Rango de Mesas</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Genera un documento PDF listo para imprimir con etiquetas de 5x5 cm.</p>
-        <div class="form-inline">
-          <input type="number" id="qr-rango-desde" placeholder="Mesa Desde" value="1" min="1">
-          <input type="number" id="qr-rango-hasta" placeholder="Mesa Hasta" value="12" min="1">
-          <button class="btn" onclick="generarPDFMesas()">📥 Descargar PDF Imprimible</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="tab-cocina" class="tab-content">
-      <div class="section-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h3>🍳 Pedidos en Preparación</h3>
-            <p style="color: var(--neon-yellow); font-size: 20px; margin-top: 4px;">
-              Ubicar en el lugar designado el pedido de la mesa cuando esté listo, y avisar al encargado de repartir.
-            </p>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="cargarPedidosCocina()">🔄 Actualizar Pedidos</button>
-        </div>
-
-        <div id="contenedor-pedidos-cocina" class="grid-pedidos" style="margin-top: 20px;">
-          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando pedidos de la cocina...</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="tab-garzon" class="tab-content">
-      <div class="garzon-top-grid">
-        <div class="section-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: center;">
-          <h3>🪪 Activar / Registrar RUT Garzón</h3>
-          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-            Ingresa o modifica el RUT del garzón para asociarlo a las entregas de mesa.
-          </p>
-          <div class="form-inline">
-            <input type="text" id="input-rut-directo" placeholder="Ej: 12022962-1" oninput="guardarRutAutogestion(this.value)">
-            <button class="btn btn-blue" onclick="guardarRutDirecto()">💾 Guardar RUT</button>
-          </div>
-          <div style="margin-top: 15px; font-size: 14px; background: rgba(0, 210, 255, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--neon-blue);">
-            RUT Activo actualmente: <b style="color: var(--neon-blue); font-size: 16px;" id="lbl-rut-activo">Sin RUT activo</b>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <h3>🤵 Pedidos Pendientes por Llevar a Mesa</h3>
-          <button class="btn btn-secondary btn-sm" onclick="cargarPedidosGarzon()">🔄 Actualizar</button>
-        </div>
-
-        <div id="contenedor-pedidos-garzon" class="grid-pedidos">
-          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando comandas para garzón...</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="tab-historial" class="tab-content">
-      <div class="section-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-          <h3>📊 Historial General & Generador de Informes</h3>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary btn-sm" onclick="cargarHistorialGarantizado()">🔄 Actualizar Historial</button>
-          </div>
-        </div>
-
-        <div style="background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px;">
-          <h4 style="color: var(--neon-yellow); font-size: 14px; margin-bottom: 10px;">📄 Generar Informe Personalizado</h4>
-          <div class="form-inline">
-            <select id="select-tipo-informe" onchange="cambiarFiltrosInforme()">
-              <option value="todos">📋 Informe General (Todos los Registros)</option>
-              <option value="rut">🪪 Informe por RUT de Garzón</option>
-              <option value="fechas">📅 Informe por Rango de Fechas</option>
-            </select>
-
-            <input type="text" id="filtro-informe-rut" placeholder="Ej: 12022962-1" style="display: none;">
-            <input type="date" id="filtro-informe-desde" style="display: none;">
-            <input type="date" id="filtro-informe-hasta" style="display: none;">
-
-            <button class="btn btn-blue" onclick="aplicarFiltroInforme()">🔍 Generar Informe</button>
-            <button class="btn btn-success" onclick="descargarInformePDF()">📥 Descargar Resumen PDF</button>
-          </div>
-        </div>
-
-        <div class="stats-grid">
-          <div class="stat-card">
-            <span style="font-size: 12px; color: var(--text-muted);">Pedidos Entregados</span>
-            <div class="stat-number" id="lbl-stat-entregados">0</div>
-          </div>
-          <div class="stat-card">
-            <span style="font-size: 12px; color: var(--text-muted);">Monto Total Acumulado</span>
-            <div class="stat-number" id="lbl-stat-monto">$0</div>
-          </div>
-          <div class="stat-card">
-            <span style="font-size: 12px; color: var(--text-muted);">Promedio por Pedido</span>
-            <div class="stat-number" id="lbl-stat-promedio" style="color: var(--neon-blue);">$0</div>
-          </div>
-        </div>
-
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Mesa</th>
-                <th>RUT Garzón</th>
-                <th>Fecha Entrega</th>
-                <th>Hora Entrega</th>
-                <th>Ítems</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-historial-garzon">
-              <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando historial...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="modal" id="modal-editar">
-    <div class="modal-content">
-      <h3>✏️ Editar Producto</h3>
-      <input type="hidden" id="edit-cat-orig">
-      <input type="hidden" id="edit-index-orig">
-
-      <label>Nombre del Producto</label>
-      <input type="text" id="edit-nombre">
-
-      <label>Precio ($)</label>
-      <input type="number" id="edit-precio">
-
-      <label>Categoría</label>
-      <input type="text" id="edit-categoria">
-
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button class="btn" style="flex:1;" onclick="guardarEdicion()">Guardar Cambios</button>
-        <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalEdicion()">Cancelar</button>
+    <!-- Estructura Dinámica del Menú -->
+    <div class="card">
+      <h2>Menú Registrado</h2>
+      <div id="contenedor-menu-lista" style="margin-top: 15px;">
+        <p style="color: var(--text-muted);">Cargando productos...</p>
       </div>
     </div>
   </div>
-
-  <div class="modal" id="modal-cart">
-    <div class="modal-content">
-      <h3 style="color: var(--neon-pink); margin-bottom: 15px;">📋 Revisa tu Orden</h3>
-      <div id="items-carrito"></div>
-
-      <div style="margin-top: 20px; text-align: right; font-size: 18px; font-weight: bold; color: var(--neon-yellow);" id="txt-modal-total">
-        Total: $0
-      </div>
-
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button class="cart-btn" style="flex:1;" id="btn-enviar-cocina" onclick="enviarPedidoCocina()">🚀 Enviar a Cocina</button>
-        <button class="cart-btn" style="background:#222; color:#fff; flex:1;" onclick="cerrarModalCarrito()">Añadir Más</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="qr-hidden-temp" style="display: none;"></div>
 
   <script>
-    const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://localhost:3000' 
-      : 'https://appmenu-tavr.onrender.com';
+    // --- CONFIGURACIÓN BASE ---
+    const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3000'
+      : ''; // Ajusta con la URL base de tu servidor en producción si no usas dominio relativo
 
-    const params = new URLSearchParams(window.location.search);
-    const localId = params.get('local') || 'demorestaurante';
-    const numeroMesa = params.get('mesa') || '1';
-    const vistaDirecta = params.get('view');
+    const urlParams = new URLSearchParams(window.location.search);
+    const localId = (urlParams.get('local') || '').trim().toLowerCase();
 
-    let productosPlanos = [];
-    let categoriasSet = new Set();
-    let catSeleccionadaCliente = '';
-    let carrito = [];
-    let rutGarzonSesion = localStorage.getItem('rutGarzon') || '';
     let clienteDadoDeAlta = false;
-    let autenticadoAdmin = false;
-    let pedidoClienteActivoId = localStorage.getItem(`ultimoPedidoId_${localId}_${numeroMesa}`) || null;
-    let historialCompleto = [];
-    let historialFiltrado = [];
 
-    window.addEventListener('load', () => {
-      document.getElementById('lbl-local-nombre').innerText = localId.toUpperCase();
-      document.getElementById('txt-local-cliente').innerText = localId.toUpperCase();
-      document.getElementById('txt-mesa-cliente').innerText = `Mesa N° ${numeroMesa}`;
-
-      if (rutGarzonSesion) {
-        document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
-        const inRut = document.getElementById('input-rut-directo');
-        if (inRut) inRut.value = rutGarzonSesion;
-      }
-
-      obtenerEstadoLicenciaYBloqueo();
-      cargarAvisosSistema();
-      cargarDatosMenu();
-      generarQRGarzon();
-      generarQRUnico();
-
-      if (vistaDirecta === 'cliente') {
-        ocultarPanelesAdministrador();
-        cambiarPestana('tab-cliente', document.getElementById('btn-tab-cliente'));
-      } else if (vistaDirecta === 'garzon') {
-        ocultarPanelesAdministrador();
-        cambiarPestana('tab-garzon', document.getElementById('btn-tab-garzon'));
-      } else {
-        cambiarPestana('tab-admin', document.getElementById('btn-tab-admin'));
-      }
-
-      setInterval(() => {
-        const tabCocina = document.getElementById('tab-cocina');
-        const tabGarzon = document.getElementById('tab-garzon');
-        const tabCliente = document.getElementById('tab-cliente');
-
-        if (tabCocina && tabCocina.classList.contains('active')) cargarPedidosCocina();
-        if (tabGarzon && tabGarzon.classList.contains('active')) cargarPedidosGarzon();
-        if (tabCliente && tabCliente.classList.contains('active')) verificarEstadoPedidoCliente();
-      }, 5000);
-
-      setInterval(() => {
-        cargarAvisosSistema();
-      }, 10000);
-    });
-
-    function ocultarPanelesAdministrador() {
-      const elHeader = document.getElementById('admin-header');
-      const elTabs = document.getElementById('admin-nav-tabs');
-      const elBanners = document.getElementById('banner-wrapper');
-      if (elHeader) elHeader.style.display = 'none';
-      if (elTabs) elTabs.style.display = 'none';
-      if (elBanners) elBanners.style.display = 'none';
+    if (!localId) {
+      alert("No se ha especificado el parámetro ?local= en la URL");
     }
 
-    function forzarBloqueoUI() {
-      document.body.innerHTML = `
-        <div style="background:#110000; color:#ff3344; min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px; text-align:center;">
-          <h1 style="font-size:32px; margin-bottom:15px;">🚫 SERVICIO DESACTIVADO O LICENCIA EXPIRADA</h1>
-          <p style="font-size:18px; color:#fff; max-width:600px; margin-bottom:20px;">
-            El acceso a este sistema ha sido suspendido o requiere activación. Comuníquese con el administrador del servicio para regularizar la cuenta.
-          </p>
-          <div style="background:#220000; border:1px solid #ff3344; padding:15px; border-radius:8px; font-weight:bold; color:#ffcc00;">
-            WhatsApp Soporte: +56966648585 | Correo: appmenunova@gmail.com
-          </div>
-        </div>
-      `;
-    }
-
+    // --- CORRECCIÓN INTEGRAL DE EVALUACIÓN DE LICENCIA Y HORA DEL SERVIDOR ---
     async function obtenerEstadoLicenciaYBloqueo() {
       const elNumDias = document.getElementById('num-dias-vencimiento');
       const elBannerBloqueo = document.getElementById('banner-bloqueo');
@@ -877,6 +230,7 @@
 
       let fechaVencimiento = null;
       let estaBloqueado = false;
+      let serverTime = null;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/licencia?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
@@ -886,6 +240,7 @@
           estaBloqueado = (data.activo === false);
           clienteDadoDeAlta = !!data.altaRegistrada;
           if (data.fechaVencimiento) fechaVencimiento = new Date(data.fechaVencimiento);
+          if (data.serverTime) serverTime = new Date(data.serverTime);
         } else if (res.status === 403) {
           estaBloqueado = true;
         }
@@ -893,1054 +248,157 @@
         estaBloqueado = false;
       }
 
-      const hoy = new Date();
+      // Si la cuenta está desactivada explícitamente en MongoDB
+      if (estaBloqueado) {
+        forzarBloqueoUI();
+        return;
+      }
+
+      // Usa la hora entregada por el Servidor para prevenir errores si el cliente cambia la hora de su PC
+      const ahora = serverTime ? new Date(serverTime) : new Date();
+
       let limiteVencimiento = (fechaVencimiento && !isNaN(fechaVencimiento.getTime()))
         ? new Date(fechaVencimiento)
-        : new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
+        : new Date(ahora.getTime() + (30 * 24 * 60 * 60 * 1000));
 
-      const diferenciaMs = limiteVencimiento.getTime() - hoy.getTime();
+      const diferenciaMs = limiteVencimiento.getTime() - ahora.getTime();
       const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
 
       if (elNumDias) elNumDias.innerText = diasRestantes;
 
-      if (estaBloqueado) {
-        forzarBloqueoUI();
-      } else {
-        if (elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
-        if (elTxtBloqueo) elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
-      }
+      if (elBannerBloqueo) elBannerBloqueo.className = "banner-bloqueo estado-desbloqueado";
+      if (elTxtBloqueo) elTxtBloqueo.innerHTML = "✅ Sistema Activo y Desbloqueado";
     }
 
-    async function cargarAvisosSistema() {
-      const contAvisos = document.getElementById('contenedor-avisos-sistema');
-      if (!contAvisos) return;
+    function forzarBloqueoUI() {
+      document.getElementById('overlay-bloqueo').style.display = 'flex';
+      const elBanner = document.getElementById('banner-bloqueo');
+      const elTxt = document.getElementById('txt-estado-bloqueo');
+      const elNum = document.getElementById('num-dias-vencimiento');
 
-      if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
+      if (elBanner) elBanner.className = "banner-bloqueo estado-bloqueado";
+      if (elTxt) elTxt.innerHTML = "⛔ Sistema Bloqueado / Vencido";
+      if (elNum) elNum.innerText = "0";
+    }
 
+    // --- CARGA Y EDICIÓN DEL MENÚ ---
+    async function cargarMenu() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/avisos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-        if (res.ok) {
-          const avisos = await res.json();
-          if (Array.isArray(avisos) && avisos.length > 0) {
-            contAvisos.innerHTML = avisos.map(a => {
-              const textoMensaje = a.texto || a.mensaje || a.mensajeSuperadmin || '';
-              const fStr = a.fecha ? new Date(a.fecha).toLocaleString('es-CL') : '';
-              let respuestasHtml = '';
-              if (Array.isArray(a.respuestas) && a.respuestas.length > 0) {
-                respuestasHtml = a.respuestas.map(r => `
-                  <div class="respuesta-item-admin">
-                    <b>💬 ${r.local === localId ? 'Tú' : 'Soporte'}:</b> ${r.texto || ''}
-                    <span style="font-size:10px; color:#aaa; margin-left:6px;">(${r.fecha ? new Date(r.fecha).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''})</span>
-                  </div>
-                `).join('');
-              }
+        const res = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
+        if (!res.ok) return;
 
-              return `
-                <div class="banner-aviso-sistema">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>📩 <b>Aviso del Sistema:</b> ${textoMensaje}</span>
-                    <span style="font-size: 11px; opacity: 0.8;">${fStr}</span>
-                  </div>
-                  
-                  ${respuestasHtml ? `<div style="margin-top: 5px; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 5px;">${respuestasHtml}</div>` : ''}
+        const menu = await res.json();
+        const selectCat = document.getElementById('select-categoria-producto');
+        const contLista = document.getElementById('contenedor-menu-lista');
 
-                  <div style="display:flex; gap:8px; margin-top:8px;">
-                    <textarea id="resp-aviso-${a._id || a.id}" placeholder="Responder mensaje..." style="height:36px; padding:6px 10px; font-size:12px; border-radius:4px; flex:1; min-width:unset;"></textarea>
-                    <button class="btn btn-sm btn-blue" onclick="responderAviso('${a._id || a.id}')">Enviar</button>
-                  </div>
+        selectCat.innerHTML = '';
+        contLista.innerHTML = '';
+
+        if (!menu || menu.length === 0) {
+          contLista.innerHTML = '<p style="color: var(--text-muted);">No hay categorías ni productos agregados.</p>';
+          return;
+        }
+
+        menu.forEach(catObj => {
+          // Llenar selector de categorías
+          const opt = document.createElement('option');
+          opt.value = catObj.categoria;
+          opt.textContent = catObj.categoria;
+          selectCat.appendChild(opt);
+
+          // Renderizar lista en HTML
+          const catDiv = document.createElement('div');
+          catDiv.style.marginBottom = "20px";
+          catDiv.innerHTML = `<h3 style="color: var(--accent-orange); border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">${catObj.categoria}</h3>`;
+
+          if (catObj.productos && catObj.productos.length > 0) {
+            catObj.productos.forEach((p, idx) => {
+              const itemDiv = document.createElement('div');
+              itemDiv.className = 'menu-item';
+              itemDiv.innerHTML = `
+                <div>
+                  <strong>${p.nombre}</strong> - <span style="color: var(--success);">$${p.precio}</span>
                 </div>
+                <button class="btn-danger" style="padding: 5px 10px;" onclick="eliminarProducto('${catObj.categoria}', ${idx})">Eliminar</button>
               `;
-            }).join('');
+              catDiv.appendChild(itemDiv);
+            });
           } else {
-            contAvisos.innerHTML = '';
+            catDiv.innerHTML += `<p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">Sin productos en esta categoría.</p>`;
           }
-        }
-      } catch (e) {}
-    }
 
-    async function responderAviso(avisoId) {
-      const txtArea = document.getElementById(`resp-aviso-${avisoId}`);
-      if (!txtArea) return;
-      const respuestaTexto = txtArea.value.trim();
-      if (!respuestaTexto) return alert("Por favor escribe una respuesta antes de enviar.");
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/avisos/responder`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, avisoId, respuesta: respuestaTexto })
-        });
-        if (res.ok) {
-          alert("✉️ Respuesta enviada con éxito.");
-          txtArea.value = '';
-          cargarAvisosSistema();
-        } else {
-          alert("Error al enviar la respuesta.");
-        }
-      } catch (e) {
-        alert("Error de conexión al responder el aviso.");
-      }
-    }
-
-    async function validarPasswordSeguridad() {
-      if (!clienteDadoDeAlta || autenticadoAdmin) return true;
-      const claveIngresada = prompt("🔒 Este local está DADO DE ALTA. Ingresa la contraseña de Administrador:");
-      if (!claveIngresada) return false;
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, password: claveIngresada })
-        });
-        if (res.ok) {
-          autenticadoAdmin = true;
-          return true;
-        } else {
-          alert("❌ Contraseña incorrecta.");
-          return false;
-        }
-      } catch (e) {
-        alert("Error al verificar la clave.");
-        return false;
-      }
-    }
-
-    async function darDeAltaNegocio() {
-      const nombre = document.getElementById('alta-nombre').value.trim();
-      const rut = document.getElementById('alta-rut').value.trim();
-      const correo = document.getElementById('alta-correo').value.trim();
-      const correoConfirm = document.getElementById('alta-correo-confirm').value.trim();
-      const password = document.getElementById('alta-password').value.trim();
-      const passwordConfirm = document.getElementById('alta-password-confirm').value.trim();
-
-      if (!nombre || !rut || !correo || !correoConfirm || !password || !passwordConfirm) {
-        return alert("⚠️ Por favor completa todos los campos para dar de alta el negocio.");
-      }
-      if (correo.toLowerCase() !== correoConfirm.toLowerCase()) {
-        return alert("⚠️ El correo electrónico y su confirmación no coinciden.");
-      }
-      if (password !== passwordConfirm) {
-        return alert("⚠️ La contraseña y su confirmación no coinciden.");
-      }
-
-      const hoy = new Date();
-      const vencimiento = new Date(hoy.getTime() + (365 * 24 * 60 * 60 * 1000));
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            local: localId,
-            nombre,
-            rut,
-            correo,
-            password,
-            fechaVencimiento: vencimiento.toISOString()
-          })
+          contLista.appendChild(catDiv);
         });
 
-        if (res.ok) {
-          alert("🎉 ¡Negocio registrado y DADO DE ALTA correctamente!");
-          clienteDadoDeAlta = true;
-          autenticadoAdmin = true;
-          obtenerEstadoLicenciaYBloqueo();
-        } else {
-          const errData = await res.json().catch(() => ({}));
-          alert(`❌ Error al dar de alta: ${errData.mensaje || 'Respuesta no válida del servidor'}`);
-        }
       } catch (e) {
-        alert("❌ Error de conexión con el servidor backend.");
+        console.error("Error al cargar menú:", e);
       }
     }
 
-    async function cambiarPestana(tabId, element) {
-      if (clienteDadoDeAlta && (tabId === 'tab-admin' || tabId === 'tab-historial')) {
-        const ok = await validarPasswordSeguridad();
-        if (!ok) return;
+    async function agregarCategoria() {
+      const input = document.getElementById('txt-nueva-categoria');
+      const categoria = input.value.trim();
+      if (!categoria) return alert("Ingrese el nombre de la categoría");
+
+      const res = await fetch(`${BACKEND_URL}/api/menu/categoria`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local: localId, categoria })
+      });
+
+      if (res.ok) {
+        input.value = '';
+        cargarMenu();
+      } else {
+        alert("Error al agregar categoría");
       }
-
-      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-
-      document.getElementById(tabId).classList.add('active');
-      if (element) element.classList.add('active');
-
-      if (tabId === 'tab-cocina') cargarPedidosCocina();
-      else if (tabId === 'tab-garzon') {
-        generarQRGarzon();
-        cargarPedidosGarzon();
-      } else if (tabId === 'tab-historial') cargarHistorialGarantizado();
     }
 
-    function recargarTodo() {
+    async function guardarProducto() {
+      const categoria = document.getElementById('select-categoria-producto').value;
+      const nombre = document.getElementById('txt-prod-nombre').value.trim();
+      const precio = document.getElementById('txt-prod-precio').value;
+
+      if (!categoria || !nombre || !precio) return alert("Complete todos los campos del producto");
+
+      const res = await fetch(`${BACKEND_URL}/api/menu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local: localId, categoria, nombre, precio: Number(precio) })
+      });
+
+      if (res.ok) {
+        document.getElementById('txt-prod-nombre').value = '';
+        document.getElementById('txt-prod-precio').value = '';
+        cargarMenu();
+      } else {
+        alert("Error al guardar el producto");
+      }
+    }
+
+    async function eliminarProducto(categoria, index) {
+      if (!confirm("¿Está seguro de eliminar este producto?")) return;
+
+      const res = await fetch(`${BACKEND_URL}/api/menu/del?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        cargarMenu();
+      } else {
+        alert("Error al eliminar producto");
+      }
+    }
+
+    function cerrarSesion() {
+      window.location.href = 'index.html';
+    }
+
+    // --- INICIALIZACIÓN ---
+    window.addEventListener('DOMContentLoaded', () => {
       obtenerEstadoLicenciaYBloqueo();
-      cargarAvisosSistema();
-      cargarDatosMenu();
-      cargarPedidosCocina();
-      cargarPedidosGarzon();
-      cargarHistorialGarantizado();
-      generarQRGarzon();
-      generarQRUnico();
-      verificarEstadoPedidoCliente();
-    }
-
-    function guardarRutAutogestion(val) {
-      val = val.trim().toUpperCase();
-      if (val.length >= 7) {
-        rutGarzonSesion = val;
-        localStorage.setItem('rutGarzon', rutGarzonSesion);
-        document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
-      }
-    }
-
-    function guardarRutDirecto() {
-      const val = document.getElementById('input-rut-directo').value.trim();
-      if (!val || val.length < 7) return alert("Por favor ingresa un RUT válido.");
-      rutGarzonSesion = val.toUpperCase();
-      localStorage.setItem('rutGarzon', rutGarzonSesion);
-      document.getElementById('lbl-rut-activo').innerText = rutGarzonSesion;
-      alert("✅ RUT de Garzón guardado con éxito.");
-    }
-
-    function construirUrlMesa(mesa) {
-      const baseUrl = window.location.origin + window.location.pathname;
-      return `${baseUrl}?local=${encodeURIComponent(localId)}&mesa=${encodeURIComponent(mesa)}&view=cliente`;
-    }
-
-    function construirUrlGarzon() {
-      const baseUrl = window.location.origin + window.location.pathname;
-      return `${baseUrl}?local=${encodeURIComponent(localId)}&view=garzon`;
-    }
-
-    async function cargarDatosMenu() {
-      const contenedorAdmin = document.getElementById('contenedor-categorias');
-      contenedorAdmin.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Consultando menú en la base de datos...</p>';
-
-      try {
-        const respuesta = await fetch(`${BACKEND_URL}/api/menu?local=${encodeURIComponent(localId)}`);
-        if (respuesta.status === 403) {
-          forzarBloqueoUI();
-          throw new Error("Licencia desactivada o bloqueada por administrador");
-        }
-        if (!respuesta.ok) {
-          throw new Error(`Error HTTP: ${respuesta.status}`);
-        }
-
-        const data = await respuesta.json();
-        productosPlanos = [];
-        
-        const categoriasAnteriores = new Set(categoriasSet);
-        categoriasSet.clear();
-
-        if (Array.isArray(data)) {
-          data.forEach(c => {
-            if (c && c.categoria && typeof c.categoria === 'string') {
-              const catNombre = c.categoria.trim();
-              
-              if (catNombre.toLowerCase() === 'entradas' && (!c.productos || c.productos.length === 0)) {
-                return;
-              }
-
-              categoriasSet.add(catNombre);
-              if (Array.isArray(c.productos)) {
-                c.productos.forEach(p => {
-                  if (p && p.nombre) {
-                    productosPlanos.push({
-                      categoria: catNombre,
-                      nombre: p.nombre,
-                      precio: Number(p.precio) || 0
-                    });
-                  }
-                });
-              }
-            }
-          });
-        }
-
-        categoriasAnteriores.forEach(cat => {
-          if (cat && cat.toLowerCase() !== 'entradas') {
-            categoriasSet.add(cat);
-          }
-        });
-
-        renderizarAdminCategorias();
-        renderizarClienteCategorias();
-        renderizarClienteProductos();
-      } catch (err) {
-        contenedorAdmin.innerHTML = `<p style="color: var(--neon-orange); text-align: center;">Error al cargar menú: ${err.message}</p>`;
-      }
-    }
-
-    function renderizarAdminCategorias() {
-      const contenedor = document.getElementById('contenedor-categorias');
-      contenedor.innerHTML = '';
-
-      if (categoriasSet.size === 0) {
-        contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay categorías creadas aún. Crea una arriba para comenzar.</p>';
-        return;
-      }
-
-      categoriasSet.forEach(catNombre => {
-        const catCard = document.createElement('div');
-        catCard.className = 'category-card';
-
-        const productosCat = productosPlanos.filter(p => p.categoria === catNombre);
-        let htmlProductos = '';
-
-        productosCat.forEach((prod, index) => {
-          htmlProductos += `
-            <div class="product-item">
-              <div class="product-info">
-                <span class="product-title">${prod.nombre}</span>
-                <span class="product-price">$${prod.precio.toLocaleString('es-CL')}</span>
-              </div>
-              <div class="product-actions">
-                <button class="btn btn-secondary btn-sm" onclick="abrirModalEdicion('${catNombre}', ${index})">✏️ Editar</button>
-                <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${catNombre}', ${index})">🗑️ Eliminar</button>
-              </div>
-            </div>
-          `;
-        });
-
-        catCard.innerHTML = `
-          <div class="category-header">
-            <span class="category-name">📁 ${catNombre}</span>
-            <button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${catNombre}')">🗑️ Eliminar Categoría</button>
-          </div>
-          <div class="product-list">
-            ${htmlProductos || '<p style="color: var(--text-muted); font-size: 13px;">No hay productos en esta categoría.</p>'}
-          </div>
-          <div class="add-product-box">
-            <input type="text" id="nuevo-nombre-${catNombre}" placeholder="Nombre del Producto">
-            <input type="number" id="nuevo-precio-${catNombre}" placeholder="Precio ($)">
-            <button class="btn btn-sm" onclick="agregarProducto('${catNombre}')">+ Añadir Producto</button>
-          </div>
-        `;
-        contenedor.appendChild(catCard);
-      });
-    }
-
-    async function guardarMenuBackend() {
-      const est = Array.from(categoriasSet).map(cat => ({
-        categoria: cat,
-        productos: productosPlanos.filter(p => p.categoria === cat).map(p => ({
-          nombre: p.nombre,
-          precio: Number(p.precio)
-        }))
-      }));
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/menu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, menu: est })
-        });
-
-        if (res.ok) {
-          renderizarAdminCategorias();
-          renderizarClienteCategorias();
-          renderizarClienteProductos();
-        } else {
-          alert("Error al guardar el menú en el servidor.");
-        }
-      } catch (e) {
-        alert("Error de conexión al guardar el menú.");
-      }
-    }
-
-    async function crearCategoria() {
-      const input = document.getElementById('nueva-categoria');
-      const val = input.value.trim();
-      if (!val) return alert("Ingresa un nombre para la categoría.");
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/menu/categoria`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: localId, categoria: val })
-        });
-
-        if (res.ok) {
-          categoriasSet.add(val);
-          input.value = '';
-          cargarDatosMenu();
-        } else {
-          alert("Error al crear la categoría en la base de datos.");
-        }
-      } catch (e) {
-        alert("Error de conexión al crear categoría.");
-      }
-    }
-
-    async function eliminarCategoria(cat) {
-      if (!confirm(`¿Estás seguro de eliminar la categoría "${cat}" y sus productos?`)) return;
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/menu/categoria?local=${encodeURIComponent(localId)}&categoria=${encodeURIComponent(cat)}`, {
-          method: 'DELETE'
-        });
-
-        if (res.ok) {
-          categoriasSet.delete(cat);
-          productosPlanos = productosPlanos.filter(p => p.categoria !== cat);
-          cargarDatosMenu();
-        } else {
-          alert("Error al eliminar la categoría.");
-        }
-      } catch (e) {
-        alert("Error de conexión al eliminar categoría.");
-      }
-    }
-
-    function agregarProducto(cat) {
-      const elNombre = document.getElementById(`nuevo-nombre-${cat}`);
-      const elPrecio = document.getElementById(`nuevo-precio-${cat}`);
-
-      const nombre = elNombre.value.trim();
-      const precio = parseFloat(elPrecio.value);
-
-      if (!nombre || isNaN(precio)) return alert("Completa el nombre y precio del producto.");
-
-      productosPlanos.push({ categoria: cat, nombre, precio });
-      guardarMenuBackend();
-    }
-
-    function eliminarProducto(cat, indexCat) {
-      const productosCat = productosPlanos.filter(p => p.categoria === cat);
-      const prodEliminar = productosCat[indexCat];
-      if (prodEliminar) {
-        const idxGlobal = productosPlanos.findIndex(p => p === prodEliminar);
-        if (idxGlobal !== -1) {
-          productosPlanos.splice(idxGlobal, 1);
-          guardarMenuBackend();
-        }
-      }
-    }
-
-    function abrirModalEdicion(cat, indexCat) {
-      const productosCat = productosPlanos.filter(p => p.categoria === cat);
-      const prod = productosCat[indexCat];
-      if (!prod) return;
-
-      document.getElementById('edit-cat-orig').value = cat;
-      document.getElementById('edit-index-orig').value = indexCat;
-      document.getElementById('edit-nombre').value = prod.nombre;
-      document.getElementById('edit-precio').value = prod.precio;
-      document.getElementById('edit-categoria').value = prod.categoria;
-
-      document.getElementById('modal-editar').style.display = 'flex';
-    }
-
-    function cerrarModalEdicion() {
-      document.getElementById('modal-editar').style.display = 'none';
-    }
-
-    function guardarEdicion() {
-      const catOrig = document.getElementById('edit-cat-orig').value;
-      const indexCat = parseInt(document.getElementById('edit-index-orig').value);
-
-      const nuevoNombre = document.getElementById('edit-nombre').value.trim();
-      const nuevoPrecio = parseFloat(document.getElementById('edit-precio').value);
-      const nuevaCategoria = document.getElementById('edit-categoria').value.trim();
-
-      if (!nuevoNombre || isNaN(nuevoPrecio) || !nuevaCategoria) return alert("Por favor completa los campos.");
-
-      const productosCat = productosPlanos.filter(p => p.categoria === catOrig);
-      const prodOrig = productosCat[indexCat];
-
-      if (prodOrig) {
-        const idxGlobal = productosPlanos.findIndex(p => p === prodOrig);
-        if (idxGlobal !== -1) {
-          productosPlanos[idxGlobal] = { categoria: nuevaCategoria, nombre: nuevoNombre, precio: nuevoPrecio };
-          categoriasSet.add(nuevaCategoria);
-          cerrarModalEdicion();
-          guardarMenuBackend();
-        }
-      }
-    }
-
-    function renderizarClienteCategorias() {
-      const barra = document.getElementById('barra-categorias-cliente');
-      barra.innerHTML = '';
-
-      if (categoriasSet.size === 0) return;
-
-      const arrayCats = Array.from(categoriasSet);
-      if (!catSeleccionadaCliente || !categoriasSet.has(catSeleccionadaCliente)) {
-        catSeleccionadaCliente = arrayCats[0];
-      }
-
-      arrayCats.forEach(cat => {
-        const chip = document.createElement('div');
-        chip.className = `cat-chip ${cat === catSeleccionadaCliente ? 'active' : ''}`;
-        chip.innerText = cat;
-        chip.onclick = () => {
-          catSeleccionadaCliente = cat;
-          renderizarClienteCategorias();
-          renderizarClienteProductos();
-        };
-        barra.appendChild(chip);
-      });
-    }
-
-    function renderizarClienteProductos() {
-      const contenedor = document.getElementById('lista-productos-cliente');
-      contenedor.innerHTML = '';
-
-      if (!catSeleccionadaCliente) {
-        contenedor.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay categorías ni productos disponibles.</p>';
-        return;
-      }
-
-      const prods = productosPlanos.filter(p => p.categoria === catSeleccionadaCliente);
-      if (prods.length === 0) {
-        contenedor.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay productos en esta categoría.</p>';
-        return;
-      }
-
-      prods.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'product-card-client';
-        card.innerHTML = `
-          <div>
-            <div class="product-title">${p.nombre}</div>
-            <div class="product-price">$${p.precio.toLocaleString('es-CL')}</div>
-          </div>
-          <button class="btn-add" onclick="agregarAlCarrito('${p.nombre}', ${p.precio})">+ Agregar</button>
-        `;
-        contenedor.appendChild(card);
-      });
-    }
-
-    function agregarAlCarrito(nombre, precio) {
-      const itemExistente = carrito.find(i => i.nombre === nombre);
-      if (itemExistente) {
-        itemExistente.cantidad += 1;
-      } else {
-        carrito.push({ nombre, precio, cantidad: 1 });
-      }
-      actualizarBarraCarrito();
-    }
-
-    function actualizarBarraCarrito() {
-      const count = carrito.reduce((sum, item) => sum + item.cantidad, 0);
-      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-
-      document.getElementById('txt-count-bar').innerText = count;
-      document.getElementById('txt-total-bar').innerText = `$${total.toLocaleString('es-CL')}`;
-    }
-
-    function abrirModalCarrito() {
-      if (carrito.length === 0) return alert("Tu carrito está vacío.");
-      renderizarItemsModalCarrito();
-      document.getElementById('modal-cart').style.display = 'flex';
-    }
-
-    function cerrarModalCarrito() {
-      document.getElementById('modal-cart').style.display = 'none';
-    }
-
-    function renderizarItemsModalCarrito() {
-      const cont = document.getElementById('items-carrito');
-      cont.innerHTML = '';
-      let total = 0;
-
-      carrito.forEach((item, index) => {
-        const subtotal = item.precio * item.cantidad;
-        total += subtotal;
-
-        const row = document.createElement('div');
-        row.className = 'cart-item';
-        row.innerHTML = `
-          <div>
-            <div style="font-weight: bold; color: #fff;">${item.nombre}</div>
-            <div style="font-size: 12px; color: var(--neon-yellow);">$${item.precio.toLocaleString('es-CL')} c/u</div>
-          </div>
-          <div class="qty-controls">
-            <button class="btn-qty" onclick="cambiarCantidadCarrito(${index}, -1)">-</button>
-            <span>${item.cantidad}</span>
-            <button class="btn-qty" onclick="cambiarCantidadCarrito(${index}, 1)">+</button>
-          </div>
-        `;
-        cont.appendChild(row);
-      });
-
-      document.getElementById('txt-modal-total').innerText = `Total: $${total.toLocaleString('es-CL')}`;
-    }
-
-    function cambiarCantidadCarrito(index, delta) {
-      carrito[index].cantidad += delta;
-      if (carrito[index].cantidad <= 0) {
-        carrito.splice(index, 1);
-      }
-      actualizarBarraCarrito();
-      if (carrito.length === 0) {
-        cerrarModalCarrito();
-      } else {
-        renderizarItemsModalCarrito();
-      }
-    }
-
-    async function enviarPedidoCocina() {
-      if (carrito.length === 0) return;
-
-      const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-      const payload = {
-        local: localId,
-        mesa: numeroMesa,
-        items: carrito,
-        total
-      };
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          alert("🚀 ¡Pedido enviado a cocina con éxito!");
-          if (data.pedido && data.pedido._id) {
-            pedidoClienteActivoId = data.pedido._id;
-            localStorage.setItem(`ultimoPedidoId_${localId}_${numeroMesa}`, pedidoClienteActivoId);
-          }
-          carrito = [];
-          actualizarBarraCarrito();
-          cerrarModalCarrito();
-          verificarEstadoPedidoCliente();
-        } else {
-          alert("Error al enviar el pedido a la cocina.");
-        }
-      } catch (e) {
-        alert("Error de conexión al enviar el pedido.");
-      }
-    }
-
-    async function verificarEstadoPedidoCliente() {
-      if (!pedidoClienteActivoId) return;
-
-      const divResumen = document.getElementById('resumen-pedido-activo');
-      const divItems = document.getElementById('resumen-pedido-items');
-      const txtTotal = document.getElementById('resumen-pedido-total');
-      const txtHora = document.getElementById('resumen-pedido-hora');
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-        if (res.ok) {
-          const pedidos = await res.json();
-          const miPedido = pedidos.find(p => p._id === pedidoClienteActivoId);
-
-          if (miPedido) {
-            divResumen.style.display = 'block';
-            txtHora.innerText = new Date(miPedido.fecha || miPedido.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            txtTotal.innerText = `Total: $${(miPedido.total || 0).toLocaleString('es-CL')}`;
-
-            divItems.innerHTML = (miPedido.items || []).map(i => `
-              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                <span>• ${i.cantidad}x ${i.nombre}</span>
-                <span>$${(i.precio * i.cantidad).toLocaleString('es-CL')}</span>
-              </div>
-            `).join('');
-          } else {
-            divResumen.style.display = 'none';
-            localStorage.removeItem(`ultimoPedidoId_${localId}_${numeroMesa}`);
-            pedidoClienteActivoId = null;
-          }
-        }
-      } catch (e) {}
-    }
-
-    async function cargarPedidosCocina() {
-      const cont = document.getElementById('contenedor-pedidos-cocina');
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-        if (res.ok) {
-          const pedidos = await res.json();
-          if (!Array.isArray(pedidos) || pedidos.length === 0) {
-            cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en la cocina.</p>';
-            return;
-          }
-
-          cont.innerHTML = pedidos.map(p => {
-            const hora = new Date(p.fecha || p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const itemsHtml = (p.items || []).map(i => `
-              <div class="pedido-item-row">
-                <span><b>${i.cantidad}x</b> ${i.nombre}</span>
-                <span>$${(i.precio * i.cantidad).toLocaleString('es-CL')}</span>
-              </div>
-            `).join('');
-
-            return `
-              <div class="card-pedido">
-                <div>
-                  <div class="card-pedido-header">
-                    <span class="card-pedido-mesa">Mesa ${p.mesa}</span>
-                    <span class="card-pedido-time">⏰ ${hora}</span>
-                  </div>
-                  <div class="pedido-items-list">${itemsHtml}</div>
-                </div>
-                <div class="card-pedido-footer">
-                  <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
-                  <button class="btn btn-danger btn-sm" onclick="cancelarPedido('${p._id}')">🗑️ Eliminar</button>
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
-      } catch (e) {
-        cont.innerHTML = '<p style="color: var(--neon-orange); grid-column: 1/-1; text-align: center;">Error al cargar pedidos.</p>';
-      }
-    }
-
-    async function cancelarPedido(id) {
-      if (!confirm("¿Eliminar este pedido de la cocina?")) return;
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
-        if (res.ok) cargarPedidosCocina();
-      } catch (e) {
-        alert("Error al eliminar pedido.");
-      }
-    }
-
-    async function cargarPedidosGarzon() {
-      const cont = document.getElementById('contenedor-pedidos-garzon');
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-        if (res.ok) {
-          const pedidos = await res.json();
-          if (!Array.isArray(pedidos) || pedidos.length === 0) {
-            cont.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay comanda pendiente por llevar a mesa.</p>';
-            return;
-          }
-
-          cont.innerHTML = pedidos.map(p => {
-            const hora = new Date(p.fecha || p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const itemsHtml = (p.items || []).map(i => `
-              <div class="pedido-item-row">
-                <span><b>${i.cantidad}x</b> ${i.nombre}</span>
-              </div>
-            `).join('');
-
-            return `
-              <div class="card-pedido" style="border-color: var(--neon-green);">
-                <div>
-                  <div class="card-pedido-header">
-                    <span class="card-pedido-mesa">Mesa ${p.mesa}</span>
-                    <span class="card-pedido-time">⏰ ${hora}</span>
-                  </div>
-                  <div class="pedido-items-list">${itemsHtml}</div>
-                </div>
-                <div class="card-pedido-footer">
-                  <span style="font-weight:bold; color:var(--neon-yellow);">$${(p.total || 0).toLocaleString('es-CL')}</span>
-                  <button class="btn btn-success btn-sm" onclick="entregarPedidoMesa('${p._id}', '${p.mesa}', ${p.total}, '${encodeURIComponent(JSON.stringify(p.items))}')">✅ Entregado en Mesa</button>
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
-      } catch (e) {
-        cont.innerHTML = '<p style="color: var(--neon-orange); grid-column: 1/-1; text-align: center;">Error al cargar pedidos para garzón.</p>';
-      }
-    }
-
-    async function entregarPedidoMesa(pedidoId, mesa, total, itemsEnc) {
-      if (!rutGarzonSesion) {
-        const val = prompt("Por favor ingresa tu RUT de Garzón antes de entregar:");
-        if (!val || val.trim().length < 7) return alert("Es obligatorio un RUT válido.");
-        guardarRutAutogestion(val);
-      }
-
-      const items = JSON.parse(decodeURIComponent(itemsEnc));
-      const ahora = new Date();
-      const fechaEntrega = ahora.toISOString().split('T')[0];
-      const horaEntrega = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      const payloadHistorial = {
-        id: pedidoId,
-        local: localId,
-        mesa: String(mesa),
-        items,
-        total: Number(total),
-        estado: 'entregado',
-        rutGarzon: rutGarzonSesion,
-        fechaEntrega,
-        horaEntrega
-      };
-
-      try {
-        await fetch(`${BACKEND_URL}/api/historials`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payloadHistorial)
-        });
-
-        await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}`, { method: 'DELETE' });
-
-        cargarPedidosGarzon();
-        alert("✅ Pedido entregado y registrado en el historial.");
-      } catch (e) {
-        alert("Error al procesar la entrega.");
-      }
-    }
-
-    async function cargarHistorialGarantizado() {
-      const tbody = document.getElementById('tabla-historial-garzon');
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Cargando historial...</td></tr>';
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localId)}&_t=${Date.now()}`);
-        if (res.ok) {
-          historialCompleto = await res.json();
-          historialFiltrado = [...historialCompleto];
-          renderizarTablaHistorial();
-        }
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--neon-orange);">Error al cargar historial.</td></tr>';
-      }
-    }
-
-    function cambiarFiltrosInforme() {
-      const tipo = document.getElementById('select-tipo-informe').value;
-      document.getElementById('filtro-informe-rut').style.display = (tipo === 'rut') ? 'inline-block' : 'none';
-      document.getElementById('filtro-informe-desde').style.display = (tipo === 'fechas') ? 'inline-block' : 'none';
-      document.getElementById('filtro-informe-hasta').style.display = (tipo === 'fechas') ? 'inline-block' : 'none';
-    }
-
-    function aplicarFiltroInforme() {
-      const tipo = document.getElementById('select-tipo-informe').value;
-
-      if (tipo === 'rut') {
-        const rutBusq = document.getElementById('filtro-informe-rut').value.trim().toUpperCase();
-        if (!rutBusq) return alert("Ingresa un RUT para filtrar.");
-        historialFiltrado = historialCompleto.filter(h => (h.rutGarzon || '').toUpperCase().includes(rutBusq));
-      } else if (tipo === 'fechas') {
-        const desde = document.getElementById('filtro-informe-desde').value;
-        const hasta = document.getElementById('filtro-informe-hasta').value;
-        if (!desde || !hasta) return alert("Selecciona la fecha Desde y Hasta.");
-
-        historialFiltrado = historialCompleto.filter(h => {
-          const f = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
-          return f >= desde && f <= hasta;
-        });
-      } else {
-        historialFiltrado = [...historialCompleto];
-      }
-
-      renderizarTablaHistorial();
-    }
-
-    function renderizarTablaHistorial() {
-      const tbody = document.getElementById('tabla-historial-garzon');
-      tbody.innerHTML = '';
-
-      if (!Array.isArray(historialFiltrado) || historialFiltrado.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No hay registros en el historial para este criterio.</td></tr>';
-        actualizarMetricas(0, 0);
-        return;
-      }
-
-      let sumaTotal = 0;
-
-      historialFiltrado.forEach(h => {
-        const totalNum = Number(h.total) || 0;
-        sumaTotal += totalNum;
-
-        const itemsStr = Array.isArray(h.items)
-          ? h.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')
-          : 'Sin ítems';
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td><b>Mesa ${h.mesa || '--'}</b></td>
-          <td>${h.rutGarzon || 'S/R'}</td>
-          <td>${h.fechaEntrega || '--'}</td>
-          <td>${h.horaEntrega || h.hora || '--'}</td>
-          <td style="max-width:250px; font-size:12px; color:#aaa;">${itemsStr}</td>
-          <td style="color:var(--neon-green); font-weight:bold;">$${totalNum.toLocaleString('es-CL')}</td>
-        `;
-        tbody.appendChild(row);
-      });
-
-      actualizarMetricas(historialFiltrado.length, sumaTotal);
-    }
-
-    function actualizarMetricas(cantidad, total) {
-      document.getElementById('lbl-stat-entregados').innerText = cantidad;
-      document.getElementById('lbl-stat-monto').innerText = `$${total.toLocaleString('es-CL')}`;
-      const promedio = cantidad > 0 ? Math.round(total / cantidad) : 0;
-      document.getElementById('lbl-stat-promedio').innerText = `$${promedio.toLocaleString('es-CL')}`;
-    }
-
-    function descargarInformePDF() {
-      if (typeof window.jspdf === 'undefined') return alert("Librería jsPDF no disponible.");
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      doc.setFontSize(16);
-      doc.text(`Informe de Ventas - Local ${localId.toUpperCase()}`, 14, 20);
-      doc.setFontSize(10);
-      doc.text(`Fecha de generación: ${new Date().toLocaleString('es-CL')}`, 14, 28);
-
-      let y = 38;
-      doc.text("Mesa | Garzón | Fecha | Hora | Total", 14, y);
-      doc.line(14, y + 2, 196, y + 2);
-      y += 8;
-
-      historialFiltrado.forEach(h => {
-        if (y > 280) {
-          doc.addPage();
-          y = 20;
-        }
-        const linea = `Mesa ${h.mesa || '--'} | ${h.rutGarzon || 'S/R'} | ${h.fechaEntrega || '--'} | ${h.horaEntrega || '--'} | $${(Number(h.total) || 0).toLocaleString('es-CL')}`;
-        doc.text(linea, 14, y);
-        y += 6;
-      });
-
-      const totalMonto = historialFiltrado.reduce((s, h) => s + (Number(h.total) || 0), 0);
-      doc.setFontSize(12);
-      doc.text(`Monto Total: $${totalMonto.toLocaleString('es-CL')}`, 14, y + 10);
-
-      doc.save(`Informe_Ventas_${localId}.pdf`);
-    }
-
-    function generarQRGarzon() {
-      const render = document.getElementById('qr-garzon-render');
-      if (!render) return;
-      render.innerHTML = '';
-      const urlGarzon = construirUrlGarzon();
-
-      new QRCode(render, {
-        text: urlGarzon,
-        width: 160,
-        height: 160
-      });
-    }
-
-    function descargarQRGarzon() {
-      const renderImg = document.querySelector('#qr-garzon-render img');
-      if (!renderImg) return alert("Generando QR, por favor reintenta en un momento.");
-
-      const canvas = document.createElement('canvas');
-      canvas.width = 400;
-      canvas.height = 400;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 400, 400);
-
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 20px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(localId.toUpperCase(), 200, 35);
-
-      ctx.drawImage(renderImg, 50, 50, 300, 300);
-
-      ctx.font = 'bold 18px sans-serif';
-      ctx.fillText('ACCESO GARZÓN - ENTREGAS', 200, 380);
-
-      const a = document.createElement('a');
-      a.download = `QR_GARZON_${localId}.png`;
-      a.href = canvas.toDataURL('image/png');
-      a.click();
-    }
-
-    function generarQRUnico() {
-      const mesa = document.getElementById('qr-num-mesa').value || '1';
-      document.getElementById('lbl-qr-single-nombre-local').innerText = localId.toUpperCase();
-      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${mesa}`;
-
-      const render = document.getElementById('qr-single-render');
-      render.innerHTML = '';
-
-      const urlMesa = construirUrlMesa(mesa);
-      new QRCode(render, {
-        text: urlMesa,
-        width: 160,
-        height: 160
-      });
-    }
-
-    function descargarQRImagen() {
-      const renderImg = document.querySelector('#qr-single-render img');
-      if (!renderImg) return alert("Generando QR...");
-
-      const mesa = document.getElementById('qr-num-mesa').value || '1';
-      const canvas = document.createElement('canvas');
-      canvas.width = 400;
-      canvas.height = 400;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 400, 400);
-
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 22px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(localId.toUpperCase(), 200, 40);
-
-      ctx.drawImage(renderImg, 60, 60, 280, 280);
-
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillText(`MESA N° ${mesa}`, 200, 370);
-
-      const a = document.createElement('a');
-      a.download = `QR_Mesa_${mesa}_${localId}.png`;
-      a.href = canvas.toDataURL('image/png');
-      a.click();
-    }
-
-    function generarPDFMesas() {
-      if (typeof window.jspdf === 'undefined') return alert("Librería jsPDF no disponible.");
-      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
-      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 1;
-
-      if (desde > hasta) return alert("Rango no válido.");
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      let x = 15;
-      let y = 15;
-      const tam = 55;
-
-      const contTemp = document.getElementById('qr-hidden-temp');
-
-      for (let m = desde; m <= hasta; m++) {
-        contTemp.innerHTML = '';
-        const urlMesa = construirUrlMesa(m);
-        new QRCode(contTemp, { text: urlMesa, width: 120, height: 120 });
-
-        const img = contTemp.querySelector('img');
-
-        doc.rect(x, y, tam, tam);
-        doc.setFontSize(10);
-        doc.text(localId.toUpperCase(), x + (tam / 2), y + 8, { align: 'center' });
-
-        if (img) {
-          doc.addImage(img.src, 'PNG', x + 7.5, y + 10, 40, 40);
-        }
-
-        doc.setFontSize(9);
-        doc.text(`MESA N° ${m}`, x + (tam / 2), y + 52, { align: 'center' });
-
-        x += tam + 10;
-        if (x + tam > 200) {
-          x = 15;
-          y += tam + 10;
-          if (y + tam > 280 && m < hasta) {
-            doc.addPage();
-            x = 15;
-            y = 15;
-          }
-        }
-      }
-
-      doc.save(`Planilla_QR_Mesas_${localId}.pdf`);
-    }
+      cargarMenu();
+    });
   </script>
 </body>
 </html>

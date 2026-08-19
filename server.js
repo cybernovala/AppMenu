@@ -147,7 +147,7 @@ app.get('/api/locales/verificar/:busqueda', async (req, res) => {
   }
 });
 
-// 3. CONSULTAR LICENCIA Y ESTADO DE LOCAL
+// 3. CONSULTAR LICENCIA Y ESTADO DE LOCAL (RENOVACIÓN Y EVALUACIÓN AUTOMÁTICA)
 app.get('/api/licencia', async (req, res) => {
   try {
     const localId = (req.query.local || '').trim().toLowerCase();
@@ -155,7 +155,27 @@ app.get('/api/licencia', async (req, res) => {
 
     const reg = await Local.findOne({ local: localId });
     if (!reg) {
-      return res.json({ activo: true, nombre: localId, altaRegistrada: false });
+      return res.json({ activo: true, nombre: localId, altaRegistrada: false, serverTime: new Date() });
+    }
+
+    const ahoraServer = new Date();
+    let fechaVenc = reg.fechaVencimiento ? new Date(reg.fechaVencimiento) : null;
+    const esDemo = Boolean(!reg.rut || reg.rut === 'DEMO-30DIAS' || reg.rut === 'SIN-RUT');
+
+    // Lógica de Renovación de Demo o Evaluación de Vencimiento
+    if (fechaVenc && ahoraServer >= fechaVenc) {
+      if (esDemo) {
+        // En modo Demo, al caducar se renueva automáticamente sumando 30 días a la fechaVencimiento previa
+        while (ahoraServer >= fechaVenc) {
+          fechaVenc.setDate(fechaVenc.getDate() + 30);
+        }
+        reg.fechaVencimiento = fechaVenc;
+        await reg.save();
+      } else {
+        // Si no es demo (cuenta oficial), vence y se desactiva
+        reg.activo = false;
+        await reg.save();
+      }
     }
 
     const esAltaOficial = Boolean(reg.rut && reg.rut !== 'DEMO-30DIAS' && reg.rut !== 'SIN-RUT');
@@ -166,7 +186,8 @@ app.get('/api/licencia', async (req, res) => {
       fechaCreacion: reg.fechaCreacion,
       fechaVencimiento: reg.fechaVencimiento,
       anuncio: reg.anuncio || "ok",
-      altaRegistrada: esAltaOficial
+      altaRegistrada: esAltaOficial,
+      serverTime: ahoraServer
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al consultar licencia' });
@@ -215,6 +236,9 @@ app.post('/api/locales/alta', async (req, res) => {
 
     if (fechaVencBody) {
       fechaVencimientoCalculada = new Date(fechaVencBody);
+    } else if (reg && reg.fechaVencimiento) {
+      fechaVencimientoCalculada = new Date(reg.fechaVencimiento);
+      fechaVencimientoCalculada.setDate(fechaVencimientoCalculada.getDate() + 30);
     } else {
       fechaVencimientoCalculada = new Date(ahora);
       fechaVencimientoCalculada.setDate(ahora.getDate() + 30);
