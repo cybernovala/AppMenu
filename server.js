@@ -11,8 +11,9 @@ app.use(express.json());
 
 // --- CONFIGURACIÓN DE BREVO (ENVÍO SIN DOMINIO / SIN BLOQUEOS) ---
 const apiInstance = new Brevo.TransactionalEmailsApi();
-const apiKey = apiInstance.authentications['apiKey'];
-apiKey.apiKey = process.env.BREVO_API_KEY;
+if (process.env.BREVO_API_KEY) {
+  apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+}
 
 // --- CONEXIÓN A MONGODB ATLAS ---
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/appmenu';
@@ -157,7 +158,7 @@ app.get('/api/licencia', async (req, res) => {
       return res.json({ activo: true, nombre: localId, altaRegistrada: false });
     }
 
-    const esAltaOficial = reg.rut && reg.rut !== 'DEMO-30DIAS' && reg.rut !== 'SIN-RUT';
+    const esAltaOficial = Boolean(reg.rut && reg.rut !== 'DEMO-30DIAS' && reg.rut !== 'SIN-RUT');
 
     return res.json({
       activo: reg.activo,
@@ -210,8 +211,8 @@ app.post('/api/locales/alta', async (req, res) => {
     });
 
     const ahora = new Date();
-    
     let fechaVencimientoCalculada;
+
     if (fechaVencBody) {
       fechaVencimientoCalculada = new Date(fechaVencBody);
     } else {
@@ -248,7 +249,7 @@ app.post('/api/locales/alta', async (req, res) => {
 
     // --- ENVIAR CORREO A CUALQUIER CLIENTE EXTERNO CON BREVO ---
     const destinoCorreo = reg.correo;
-    if (destinoCorreo && destinoCorreo !== 'contacto@local.cl') {
+    if (destinoCorreo && destinoCorreo !== 'contacto@local.cl' && process.env.BREVO_API_KEY) {
       try {
         const sendSmtpEmail = new Brevo.SendSmtpEmail();
         sendSmtpEmail.subject = `🎉 ¡Bienvenido a AppMenu! Datos de tu Demo: ${reg.nombre}`;
@@ -583,7 +584,7 @@ app.delete('/api/avisos/:id', async (req, res) => {
   }
 });
 
-// PUERTO DINÁMICO DEL SERVIDOR PARA RENDER
+// PUERTO DINÁMICO DEL SERVIDOR
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en el puerto ${PORT}`);
