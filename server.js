@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const { Resend } = require('resend');
+const Brevo = require('@getbrevo/brevo');
 
 const app = express();
 
@@ -9,8 +9,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- INICIALIZAR RESEND CON VARIABLE DE ENTORNO SEGURA ---
-const resend = new Resend(process.env.RESEND_API_KEY);
+// --- CONFIGURACIÓN DE BREVO (ENVÍO SIN DOMINIO / SIN BLOQUEOS) ---
+const apiInstance = new Brevo.TransactionalEmailsApi();
+const apiKey = apiInstance.authentications['apiKey'];
+apiKey.apiKey = process.env.BREVO_API_KEY;
 
 // --- CONEXIÓN A MONGODB ATLAS ---
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/appmenu';
@@ -193,7 +195,7 @@ app.get('/api/locales', async (req, res) => {
   }
 });
 
-// 5. DAR DE ALTA UN RESTAURANTE Y ENVIAR CORREO DE CONFIRMACIÓN VÍA RESEND
+// 5. DAR DE ALTA UN RESTAURANTE Y ENVIAR CORREO VÍA BREVO
 app.post('/api/locales/alta', async (req, res) => {
   try {
     const { nombre, rut, correo, password, fechaVencimiento: fechaVencBody } = req.body;
@@ -214,7 +216,7 @@ app.post('/api/locales/alta', async (req, res) => {
       fechaVencimientoCalculada = new Date(fechaVencBody);
     } else {
       fechaVencimientoCalculada = new Date(ahora);
-      fechaVencimientoCalculada.setDate(ahora.getDate() + 365);
+      fechaVencimientoCalculada.setDate(ahora.getDate() + 30);
     }
 
     const passwordFinal = password || '123456';
@@ -244,37 +246,38 @@ app.post('/api/locales/alta', async (req, res) => {
       await reg.save();
     }
 
-    // --- ENVIAR CORREO AUTOMÁTICO VÍA RESEND ---
+    // --- ENVIAR CORREO A CUALQUIER CLIENTE EXTERNO CON BREVO ---
     const destinoCorreo = reg.correo;
     if (destinoCorreo && destinoCorreo !== 'contacto@local.cl') {
       try {
-        const respuestaCorreo = await resend.emails.send({
-          from: 'AppMenu Digital <onboarding@resend.dev>',
-          to: destinoCorreo,
-          subject: `🎉 ¡Bienvenido a AppMenu! Datos de tu Demo: ${reg.nombre}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
-              <h2 style="color: #ff5500;">¡Hola, ${reg.nombre}!</h2>
-              <p>Tu cuenta y entorno demo han sido creados exitosamente en nuestra plataforma.</p>
-              <p><strong>Detalles de acceso a tu panel:</strong></p>
-              <ul>
-                <li><strong>Local / ID:</strong> ${reg.local}</li>
-                <li><strong>Contraseña:</strong> ${passwordFinal}</li>
-                <li><strong>Fecha de Vencimiento:</strong> ${new Date(reg.fechaVencimiento).toLocaleDateString()}</li>
-              </ul>
-              <p>Puedes acceder a tu panel de administración en el siguiente enlace:</p>
-              <a href="https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(reg.local)}" 
-                 style="background-color: #ff007f; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                 Ingresar a mi Administración
-              </a>
-              <br><br>
-              <p style="font-size: 12px; color: #a0a0b0;">Soporte: +56966648585 | appmenu26@gmail.com</p>
-            </div>
-          `
-        });
-        console.log("🟢 Correo enviado con éxito vía Resend:", respuestaCorreo);
-      } catch (errResend) {
-        console.error("🔴 Error al enviar correo vía Resend:", errResend);
+        const sendSmtpEmail = new Brevo.SendSmtpEmail();
+        sendSmtpEmail.subject = `🎉 ¡Bienvenido a AppMenu! Datos de tu Demo: ${reg.nombre}`;
+        sendSmtpEmail.htmlContent = `
+          <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #ff5500;">¡Hola, ${reg.nombre}!</h2>
+            <p>Tu cuenta y entorno demo han sido creados exitosamente en nuestra plataforma.</p>
+            <p><strong>Detalles de acceso a tu panel:</strong></p>
+            <ul>
+              <li><strong>Local / ID:</strong> ${reg.local}</li>
+              <li><strong>Contraseña:</strong> ${passwordFinal}</li>
+              <li><strong>Fecha de Vencimiento:</strong> ${new Date(reg.fechaVencimiento).toLocaleDateString()}</li>
+            </ul>
+            <p>Puedes acceder a tu panel de administración en el siguiente enlace:</p>
+            <a href="https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(reg.local)}" 
+               style="background-color: #ff007f; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+               Ingresar a mi Administración
+            </a>
+            <br><br>
+            <p style="font-size: 12px; color: #a0a0b0;">Soporte: +56966648585 | appmenu26@gmail.com</p>
+          </div>
+        `;
+        sendSmtpEmail.sender = { name: "AppMenu Digital", email: "appmenu26@gmail.com" };
+        sendSmtpEmail.to = [{ email: destinoCorreo, name: reg.nombre }];
+
+        const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log("🟢 Correo enviado exitosamente vía Brevo:", data);
+      } catch (errBrevo) {
+        console.error("🔴 Error al enviar correo con Brevo:", errBrevo);
       }
     }
 
@@ -545,7 +548,6 @@ app.post('/api/avisos', async (req, res) => {
   }
 });
 
-// RUTA PARA RESPONDER AVISO DESDE ADMIN.HTML
 app.post('/api/avisos/responder', async (req, res) => {
   try {
     const { local, avisoId, respuesta } = req.body;
