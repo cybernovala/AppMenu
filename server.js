@@ -229,6 +229,7 @@ app.post('/api/locales/demo', async (req, res) => {
     if (reg) {
       reg.nombre = nombre;
       reg.activo = true;
+      reg.fechaCreacion = ahora;
       reg.fechaVencimiento = venc;
       await reg.save();
     } else {
@@ -252,6 +253,51 @@ app.post('/api/locales/demo', async (req, res) => {
   } catch (error) {
     console.error("Error al crear demo:", error);
     res.status(500).json({ error: 'Error al registrar demo' });
+  }
+});
+
+// NUEVO ENDPOINT: RENOVACIÓN DE LICENCIA (REINICIA FECHA DE CREACIÓN Y EXTIENDE 30 DÍAS)
+app.put('/api/locales/renovar', async (req, res) => {
+  try {
+    const { local, dias } = req.body;
+    const localId = (local || '').toLowerCase().trim();
+    if (!localId) return res.status(400).json({ error: 'Identificador del local requerido' });
+
+    const reg = await Local.findOne({ local: localId });
+    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
+
+    const diasASumar = Number(dias) || 30;
+    const ahora = new Date();
+
+    // Determina la base para el cálculo de la nueva expiración
+    let baseFecha = ahora;
+    if (reg.fechaVencimiento) {
+      const fechaVencActual = new Date(reg.fechaVencimiento);
+      if (fechaVencActual > ahora) {
+        baseFecha = fechaVencActual;
+      }
+    }
+
+    const nuevaFechaVenc = new Date(baseFecha);
+    nuevaFechaVenc.setDate(nuevaFechaVenc.getDate() + diasASumar);
+
+    // Actualización de los datos del local
+    reg.fechaCreacion = ahora;
+    reg.fechaVencimiento = nuevaFechaVenc;
+    reg.activo = true;
+
+    await reg.save();
+
+    res.json({
+      ok: true,
+      mensaje: `Licencia renovada por ${diasASumar} días con éxito`,
+      fechaCreacion: reg.fechaCreacion,
+      fechaVencimiento: reg.fechaVencimiento,
+      activo: reg.activo
+    });
+  } catch (error) {
+    console.error("Error al renovar licencia:", error);
+    res.status(500).json({ error: 'Error interno al renovar la licencia' });
   }
 });
 
@@ -300,6 +346,7 @@ app.post('/api/locales/alta', async (req, res) => {
       reg.correo = correo || reg.correo || 'contacto@local.cl';
       if (password) reg.password = password;
       reg.activo = true;
+      reg.fechaCreacion = ahora;
       reg.fechaVencimiento = fechaVencimientoCalculada;
       await reg.save();
     } else {

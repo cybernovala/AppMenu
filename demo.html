@@ -389,7 +389,26 @@
           const idLocal = l.local || l.nombre || 'desconocido';
           const estaActivo = (l.activo !== false);
           const fCreacion = l.fechaCreacion ? new Date(l.fechaCreacion).toLocaleDateString('es-CL') : '--';
-          const fVenc = l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString('es-CL') : '--';
+          
+          let fVenc = '--';
+          let txtDias = '';
+
+          if (l.fechaVencimiento) {
+            const fechaVencObj = new Date(l.fechaVencimiento);
+            fVenc = fechaVencObj.toLocaleDateString('es-CL');
+            
+            const hoy = new Date();
+            const diffTime = fechaVencObj.getTime() - hoy.getTime();
+            const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diasRestantes > 0) {
+              txtDias = `<br><span style="font-size: 11px; color: var(--neon-yellow); font-weight: bold;">(Vence en ${diasRestantes} días)</span>`;
+            } else if (diasRestantes === 0) {
+              txtDias = `<br><span style="font-size: 11px; color: #ff0055; font-weight: bold;">(Vence hoy)</span>`;
+            } else {
+              txtDias = `<br><span style="font-size: 11px; color: #ff0055; font-weight: bold;">(Vencido hace ${Math.abs(diasRestantes)} días)</span>`;
+            }
+          }
 
           return `
             <tr>
@@ -397,7 +416,7 @@
               <td>${l.rut || 'DEMO-30DIAS'}</td>
               <td>${l.correo || 'demo@appmenu.cl'}</td>
               <td>${fCreacion}</td>
-              <td>${fVenc}</td>
+              <td>${fVenc}${txtDias}</td>
               <td>
                 <span class="badge ${estaActivo ? 'badge-success' : 'badge-danger'}">
                   ${estaActivo ? 'ACTIVO' : 'BLOQUEADO'}
@@ -496,10 +515,10 @@
       if (!confirm(`¿Deseas agregar 30 días adicionales de prueba a "${local.toUpperCase()}"?`)) return;
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/locales/alta`, {
-          method: 'POST',
+        const res = await fetch(`${BACKEND_URL}/api/locales/renovar`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ local: local, renovar30Dias: true })
+          body: JSON.stringify({ local, dias: 30 })
         });
 
         if (res.ok) {
