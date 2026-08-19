@@ -2,12 +2,16 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const Brevo = require('@getbrevo/brevo');
+const crypto = require('crypto');
 
 const app = express();
 
 // --- MIDDLEWARES ---
 app.use(cors());
 app.use(express.json());
+
+// Almacenamiento en memoria de sesiones activas (Token -> Local/Admin)
+const sesionesActivas = new Map();
 
 // --- CONFIGURACIÓN DE BREVO ---
 const apiInstance = new Brevo.TransactionalEmailsApi();
@@ -44,7 +48,6 @@ mongoose.connect(MONGO_URI)
 
 // --- ESQUEMAS Y MODELOS DE MONGOOSE ---
 
-// Configuración Global (SuperAdmin)
 const configGlobalSchema = new mongoose.Schema({
   tipo: { type: String, required: true, unique: true },
   password: { type: String, required: true }
@@ -52,7 +55,6 @@ const configGlobalSchema = new mongoose.Schema({
 
 const ConfigGlobal = mongoose.model('ConfigGlobal', configGlobalSchema);
 
-// Locales (Restaurantes / Demos)
 const localSchema = new mongoose.Schema({
   id: Number,
   local: { type: String, required: true, unique: true },
@@ -69,7 +71,6 @@ const localSchema = new mongoose.Schema({
 
 const Local = mongoose.model('Local', localSchema);
 
-// Avisos / Mensajes Globales y Respuestas
 const respuestaAvisoSchema = new mongoose.Schema({
   local: { type: String, required: true },
   texto: { type: String, required: true },
@@ -86,7 +87,6 @@ const avisoSchema = new mongoose.Schema({
 
 const Aviso = mongoose.model('Aviso', avisoSchema);
 
-// Pedidos en Cocina / Pendientes
 const pedidoSchema = new mongoose.Schema({
   local: { type: String, required: true },
   mesa: { type: String, required: true },
@@ -98,7 +98,6 @@ const pedidoSchema = new mongoose.Schema({
 
 const Pedido = mongoose.model('Pedido', pedidoSchema);
 
-// Historial de Entregas (Garzones)
 const historialSchema = new mongoose.Schema({
   id: String,
   local: { type: String, required: true },
@@ -114,12 +113,34 @@ const historialSchema = new mongoose.Schema({
 
 const Historial = mongoose.model('Historial', historialSchema);
 
-// Auxiliar Regex
 function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
 
+// Helper para validar token de sesión
+function verificarAutenticacion(req, res, next) {
+  const token = req.headers['authorization'];
+  if (!token || !sesionesActivas.has(token)) {
+    return res.status(401).json({ ok: false, error: 'Sesión no válida o expirada' });
+  }
+  req.usuarioSesion = sesionesActivas.get(token);
+  next();
+}
+
 // --- RUTAS DE LA API ---
+
+// VERIFICAR ESTADO DE SESIÓN
+app.post('/api/auth/verificar-sesion', (req, res) => {
+  const { token, local } = req.body;
+  if (!token || !sesionesActivas.has(token)) {
+    return res.status(401).json({ ok: false, autenticado: false });
+  }
+  const sesion = sesionesActivas.get(token);
+  if (sesion.tipo !== 'superadmin' && sesion.local !== (local || '').toLowerCase().trim()) {
+    return res.status(403).json({ ok: false, autenticado: false, error: 'Acceso no autorizado para este local' });
+  }
+  res.json({ ok: true, autenticado: true, sesion });
+});
 
 // 1. LOGIN DE ADMINISTRADOR GENERAL
 app.post('/api/admin/login', async (req, res) => {
@@ -127,7 +148,6 @@ app.post('/api/admin/login', async (req, res) => {
     const { password } = req.body;
     if (!password) return res.status(400).json({ ok: false, error: 'Debe ingresar una contraseña' });
 
-    // Consulta la contraseña almacenada en la colección configglobals
     const configAdmin = await ConfigGlobal.findOne({ tipo: 'superadmin' });
     
     if (!configAdmin) {
@@ -135,7 +155,9 @@ app.post('/api/admin/login', async (req, res) => {
     }
 
     if (password === configAdmin.password) {
-      return res.json({ ok: true, mensaje: 'Acceso concedido como Administrador General' });
+      const token = crypto.randomBytes(32).toString('hex');
+      sesionesActivas.set(token, { tipo: 'superadmin', fecha: new Date() });
+      return res.json({ ok: true, mensaje: 'Acceso concedido como Administrador General', token });
     } else {
       return res.status(401).json({ ok: false, error: 'Contraseña incorrecta' });
     }
@@ -171,7 +193,7 @@ app.get('/api/locales/verificar/:busqueda', async (req, res) => {
   }
 });
 
-// 3. CONSULTAR LICENCIA Y ESTADO DE LOCAL (CON VALIDACIÓN Y RENOVACIÓN SERVIDOR)
+// 3. CONSULTAR LICENCIA Y ESTADO DE LOCAL
 app.get('/api/licencia', async (req, res) => {
   try {
     const localId = (req.query.local || '').trim().toLowerCase();
@@ -196,7 +218,6 @@ app.get('/api/licencia', async (req, res) => {
 
     const diferenciaMs = fechaVenc.getTime() - ahoraServidor.getTime();
     const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
-
     const esAltaOficial = Boolean(reg.rut && reg.rut !== 'DEMO-30DIAS' && reg.rut !== 'SIN-RUT');
 
     return res.json({
@@ -272,7 +293,10 @@ app.post('/api/locales/demo', async (req, res) => {
       await reg.save();
     }
 
-    res.status(201).json({ ok: true, local: reg });
+    const token = crypto.randomBytes(32).toString('hex');
+    sesionesActivas.set(token, { tipo: 'local', local: reg.local, fecha: new Date() });
+
+    res.status(201).json({ ok: true, local: reg, token });
   } catch (error) {
     console.error("Error al crear demo:", error);
     res.status(500).json({ error: 'Error al registrar demo' });
@@ -387,6 +411,9 @@ app.post('/api/locales/alta', async (req, res) => {
       await reg.save();
     }
 
+    const token = crypto.randomBytes(32).toString('hex');
+    sesionesActivas.set(token, { tipo: 'local', local: reg.local, fecha: new Date() });
+
     // --- ENVIAR CORREO CON BREVO ---
     const destinoCorreo = reg.correo;
     if (destinoCorreo && destinoCorreo !== 'contacto@local.cl' && process.env.BREVO_API_KEY) {
@@ -422,7 +449,7 @@ app.post('/api/locales/alta', async (req, res) => {
       }
     }
 
-    res.status(201).json({ mensaje: 'Alta/Renovación realizada con éxito', local: reg.local, localId: reg.local, nombre: reg.nombre, fechaVencimiento: reg.fechaVencimiento });
+    res.status(201).json({ mensaje: 'Alta/Renovación realizada con éxito', local: reg.local, localId: reg.local, nombre: reg.nombre, fechaVencimiento: reg.fechaVencimiento, token });
   } catch (error) {
     console.error("Error al dar de alta:", error);
     res.status(500).json({ error: 'Error interno al procesar la alta/renovación' });
@@ -449,11 +476,14 @@ app.put('/api/locales/estado', async (req, res) => {
 app.post('/api/locales/login', async (req, res) => {
   try {
     const { local, password } = req.body;
-    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    const localId = (local || '').toLowerCase().trim();
+    const reg = await Local.findOne({ local: localId });
     if (!reg) return res.status(404).json({ ok: false, error: 'Local no encontrado' });
 
     if (reg.password === password) {
-      res.json({ ok: true, mensaje: 'Acceso autorizado' });
+      const token = crypto.randomBytes(32).toString('hex');
+      sesionesActivas.set(token, { tipo: 'local', local: localId, fecha: new Date() });
+      res.json({ ok: true, mensaje: 'Acceso autorizado', token });
     } else {
       res.status(401).json({ ok: false, error: 'Contraseña incorrecta' });
     }

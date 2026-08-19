@@ -487,7 +487,6 @@
       ? 'http://localhost:3000'
       : 'https://appmenu-tavr.onrender.com';
 
-    // Abrir y cerrar Modales
     function abrirModalAlta() {
       const nombre = document.getElementById('demo-local-nombre').value.trim();
       if (!nombre) return alert("⚠️ Ingresa el nombre para tu local.");
@@ -510,7 +509,6 @@
       document.getElementById('modal-recuperar').style.display = 'none';
     }
 
-    // 1. Validar la contraseña contra MongoDB e ingresar al panel general
     async function ingresarMensajesAdmin() {
       const password = document.getElementById('admin-password').value.trim();
       if (!password) return alert("⚠️ Ingresa la contraseña de Administrador.");
@@ -524,6 +522,9 @@
 
         const data = await res.json();
         if (res.ok && data.ok) {
+          if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+          }
           window.location.href = 'https://appmenu-990c3.web.app/mensajes.html';
         } else {
           alert(`❌ ${data.error || 'Contraseña incorrecta'}`);
@@ -533,7 +534,6 @@
       }
     }
 
-    // 2. Crear un nuevo local con datos de alta completos
     async function crearProbarDemo() {
       const nombre = document.getElementById('demo-local-nombre').value.trim();
       const rut = document.getElementById('alta-rut').value.trim();
@@ -578,6 +578,9 @@
 
         if (res.ok) {
           alert("🎉 Local registrado con éxito.");
+          if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+          }
           const targetLocal = data.local || data.localId || nombre;
           window.location.href = `https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(targetLocal)}`;
         } else {
@@ -589,7 +592,6 @@
       }
     }
 
-    // 3. Verificar en MongoDB si el local existe, validar su contraseña e ingresar
     async function entrarAdminLocal() {
       const busqueda = document.getElementById('existente-local-nombre').value.trim();
       const password = document.getElementById('existente-local-password').value.trim();
@@ -613,10 +615,14 @@
           body: JSON.stringify({ local: localId, password: password })
         });
 
-        if (resLogin.ok) {
+        const dataLogin = await resLogin.json().catch(() => ({}));
+
+        if (resLogin.ok && dataLogin.ok) {
+          if (dataLogin.token) {
+            localStorage.setItem('auth_token', dataLogin.token);
+          }
           window.location.href = `https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(localId)}`;
         } else {
-          const dataErr = await resLogin.json().catch(() => ({}));
           alert(`❌ Contraseña incorrecta para el local ${localId}`);
         }
       } catch (err) {
@@ -624,7 +630,6 @@
       }
     }
 
-    // 4. Solicitar recuperación de contraseña vía Brevo
     async function enviarRecuperacion() {
       const local = document.getElementById('recuperar-local-nombre').value.trim();
       if (!local) return alert("⚠️ Ingresa el nombre o ID de tu local.");
