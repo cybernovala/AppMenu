@@ -322,6 +322,58 @@ app.post('/api/locales/login', async (req, res) => {
   }
 });
 
+// 6.B RECUPERAR CONTRASEÑA DE LOCAL
+app.post('/api/locales/recuperar-password', async (req, res) => {
+  try {
+    const { local, correo } = req.body;
+    if (!local) return res.status(400).json({ ok: false, error: 'El identificador del local es requerido' });
+
+    const localId = local.toLowerCase().trim();
+    const reg = await Local.findOne({ local: localId });
+
+    if (!reg) {
+      return res.status(404).json({ ok: false, error: 'Local no encontrado' });
+    }
+
+    const destinoCorreo = (correo || reg.correo || '').trim();
+    if (!destinoCorreo || destinoCorreo === 'contacto@local.cl') {
+      return res.status(400).json({ ok: false, error: 'El local no tiene un correo válido registrado' });
+    }
+
+    if (process.env.BREVO_API_KEY) {
+      const sendSmtpEmail = new Brevo.SendSmtpEmail();
+      sendSmtpEmail.subject = `🔑 Recuperación de contraseña: ${reg.nombre}`;
+      sendSmtpEmail.htmlContent = `
+        <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
+          <h2 style="color: #ff5500;">Recuperación de Clave</h2>
+          <p>Has solicitado los datos de acceso para tu local <strong>${reg.nombre}</strong>.</p>
+          <p><strong>Tus datos de acceso:</strong></p>
+          <ul>
+            <li><strong>Local / ID:</strong> ${reg.local}</li>
+            <li><strong>Contraseña:</strong> ${reg.password}</li>
+          </ul>
+          <p>Puedes ingresar directamente en el siguiente botón:</p>
+          <a href="https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(reg.local)}" 
+             style="background-color: #ff007f; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+             Ir al Panel Administrador
+          </a>
+          <br><br>
+          <p style="font-size: 12px; color: #a0a0b0;">Soporte: +56966648585 | appmenu26@gmail.com</p>
+        </div>
+      `;
+      sendSmtpEmail.sender = { name: "AppMenu Digital", email: "appmenu26@gmail.com" };
+      sendSmtpEmail.to = [{ email: destinoCorreo, name: reg.nombre }];
+
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
+    }
+
+    res.json({ ok: true, mensaje: 'Se ha enviado la contraseña al correo asociado' });
+  } catch (error) {
+    console.error("Error al recuperar contraseña:", error);
+    res.status(500).json({ ok: false, error: 'Error interno al procesar la recuperación' });
+  }
+});
+
 // 7. MENÚ (Consultar estructurado)
 app.get('/api/menu', async (req, res) => {
   try {
