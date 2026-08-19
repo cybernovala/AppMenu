@@ -244,7 +244,7 @@ app.post('/api/locales/alta', async (req, res) => {
       await reg.save();
     }
 
-    // --- ENVIAR CORREO VÍA API HTTPS (RESEND) ---
+    // --- ENVIAR CORREO AUTOMÁTICO VÍA RESEND ---
     const destinoCorreo = reg.correo;
     if (destinoCorreo && destinoCorreo !== 'contacto@local.cl') {
       try {
@@ -581,7 +581,7 @@ app.delete('/api/avisos/:id', async (req, res) => {
   }
 });
 
-// PUERTO DEL SERVIDOR
+// PUERTO DINÁMICO DEL SERVIDOR PARA RENDER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en el puerto ${PORT}`);
