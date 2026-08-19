@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- CONFIGURACIÓN DE BREVO (ENVÍO SIN DOMINIO / SIN BLOQUEOS) ---
+// --- CONFIGURACIÓN DE BREVO ---
 const apiInstance = new Brevo.TransactionalEmailsApi();
 if (process.env.BREVO_API_KEY) {
   apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
@@ -147,7 +147,7 @@ app.get('/api/locales/verificar/:busqueda', async (req, res) => {
   }
 });
 
-// 3. CONSULTAR LICENCIA Y ESTADO DE LOCAL (RENOVACIÓN Y EVALUACIÓN AUTOMÁTICA)
+// 3. CONSULTAR LICENCIA Y ESTADO DE LOCAL (CON VALIDACIÓN Y RENOVACIÓN SERVIDOR)
 app.get('/api/licencia', async (req, res) => {
   try {
     const localId = (req.query.local || '').trim().toLowerCase();
@@ -155,39 +155,37 @@ app.get('/api/licencia', async (req, res) => {
 
     const reg = await Local.findOne({ local: localId });
     if (!reg) {
-      return res.json({ activo: true, nombre: localId, altaRegistrada: false, serverTime: new Date() });
+      return res.json({ activo: true, nombre: localId, altaRegistrada: false, diasRestantes: 30 });
     }
 
-    const ahoraServer = new Date();
-    let fechaVenc = reg.fechaVencimiento ? new Date(reg.fechaVencimiento) : null;
-    const esDemo = Boolean(!reg.rut || reg.rut === 'DEMO-30DIAS' || reg.rut === 'SIN-RUT');
+    const ahoraServidor = new Date();
+    let fechaVenc = reg.fechaVencimiento ? new Date(reg.fechaVencimiento) : new Date(ahoraServidor.getTime() + (30 * 24 * 60 * 60 * 1000));
+    let estadoActivo = reg.activo;
 
-    // Lógica de Renovación de Demo o Evaluación de Vencimiento
-    if (fechaVenc && ahoraServer >= fechaVenc) {
-      if (esDemo) {
-        // En modo Demo, al caducar se renueva automáticamente sumando 30 días a la fechaVencimiento previa
-        while (ahoraServer >= fechaVenc) {
-          fechaVenc.setDate(fechaVenc.getDate() + 30);
-        }
-        reg.fechaVencimiento = fechaVenc;
-        await reg.save();
-      } else {
-        // Si no es demo (cuenta oficial), vence y se desactiva
+    // Verificar si ha vencido la fecha en el servidor
+    if (ahoraServidor >= fechaVenc) {
+      // Si la cuenta vence y sigue marcada activa, se marca inactiva o requiere acción
+      estadoActivo = false;
+      if (reg.activo !== false) {
         reg.activo = false;
         await reg.save();
       }
     }
 
+    const diferenciaMs = fechaVenc.getTime() - ahoraServidor.getTime();
+    const diasRestantes = Math.max(0, Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24)));
+
     const esAltaOficial = Boolean(reg.rut && reg.rut !== 'DEMO-30DIAS' && reg.rut !== 'SIN-RUT');
 
     return res.json({
-      activo: reg.activo,
+      activo: estadoActivo,
       nombre: reg.nombre,
       fechaCreacion: reg.fechaCreacion,
       fechaVencimiento: reg.fechaVencimiento,
+      diasRestantes: diasRestantes,
+      servidorAhora: ahoraServidor,
       anuncio: reg.anuncio || "ok",
-      altaRegistrada: esAltaOficial,
-      serverTime: ahoraServer
+      altaRegistrada: esAltaOficial
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al consultar licencia' });
@@ -217,10 +215,10 @@ app.get('/api/locales', async (req, res) => {
   }
 });
 
-// 5. DAR DE ALTA UN RESTAURANTE Y ENVIAR CORREO VÍA BREVO
+// 5. DAR DE ALTA O RENOVAR UN RESTAURANTE (SUMA 30 DÍAS DE EXPIRACIÓN)
 app.post('/api/locales/alta', async (req, res) => {
   try {
-    const { nombre, rut, correo, password, fechaVencimiento: fechaVencBody } = req.body;
+    const { nombre, rut, correo, password, fechaVencimiento: fechaVencBody, renovar30Dias } = req.body;
     if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
 
     const nombreLimpio = nombre.trim();
@@ -234,11 +232,13 @@ app.post('/api/locales/alta', async (req, res) => {
     const ahora = new Date();
     let fechaVencimientoCalculada;
 
-    if (fechaVencBody) {
-      fechaVencimientoCalculada = new Date(fechaVencBody);
-    } else if (reg && reg.fechaVencimiento) {
-      fechaVencimientoCalculada = new Date(reg.fechaVencimiento);
+    if (renovar30Dias && reg && reg.fechaVencimiento) {
+      // Si la fecha actual ya venció se cuentan 30 días desde HOY, de lo contrario se suman 30 días a la fecha previa
+      const baseFecha = new Date(reg.fechaVencimiento) > ahora ? new Date(reg.fechaVencimiento) : ahora;
+      fechaVencimientoCalculada = new Date(baseFecha);
       fechaVencimientoCalculada.setDate(fechaVencimientoCalculada.getDate() + 30);
+    } else if (fechaVencBody) {
+      fechaVencimientoCalculada = new Date(fechaVencBody);
     } else {
       fechaVencimientoCalculada = new Date(ahora);
       fechaVencimientoCalculada.setDate(ahora.getDate() + 30);
@@ -271,7 +271,7 @@ app.post('/api/locales/alta', async (req, res) => {
       await reg.save();
     }
 
-    // --- ENVIAR CORREO A CUALQUIER CLIENTE EXTERNO CON BREVO ---
+    // --- ENVIAR CORREO CON BREVO ---
     const destinoCorreo = reg.correo;
     if (destinoCorreo && destinoCorreo !== 'contacto@local.cl' && process.env.BREVO_API_KEY) {
       try {
@@ -280,7 +280,7 @@ app.post('/api/locales/alta', async (req, res) => {
         sendSmtpEmail.htmlContent = `
           <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
             <h2 style="color: #ff5500;">¡Hola, ${reg.nombre}!</h2>
-            <p>Tu cuenta y entorno demo han sido creados exitosamente en nuestra plataforma.</p>
+            <p>Tu cuenta y entorno demo han sido creados/actualizados exitosamente en nuestra plataforma.</p>
             <p><strong>Detalles de acceso a tu panel:</strong></p>
             <ul>
               <li><strong>Local / ID:</strong> ${reg.local}</li>
@@ -306,7 +306,7 @@ app.post('/api/locales/alta', async (req, res) => {
       }
     }
 
-    res.status(201).json({ mensaje: 'Alta realizada con éxito', local: reg.local, localId: reg.local, nombre: reg.nombre });
+    res.status(201).json({ mensaje: 'Alta realizada con éxito', local: reg.local, localId: reg.local, nombre: reg.nombre, fechaVencimiento: reg.fechaVencimiento });
   } catch (error) {
     console.error("Error al dar de alta:", error);
     res.status(500).json({ error: 'Error interno al procesar el alta' });
@@ -405,7 +405,12 @@ app.get('/api/menu', async (req, res) => {
     const reg = await Local.findOne({ local: localId });
 
     if (!reg) return res.json([]);
-    if (reg.activo === false) return res.status(403).json({ error: 'Cuenta bloqueada' });
+    
+    // Verificar estado o vencimiento
+    const ahoraServidor = new Date();
+    if (reg.activo === false || (reg.fechaVencimiento && ahoraServidor >= new Date(reg.fechaVencimiento))) {
+      return res.status(403).json({ error: 'Cuenta bloqueada o licencia expirada' });
+    }
 
     res.json(reg.menu || []);
   } catch (error) {
