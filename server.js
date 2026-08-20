@@ -93,6 +93,7 @@ const pedidoSchema = new mongoose.Schema({
   items: Array,
   total: { type: Number, default: 0 },
   estado: { type: String, default: 'pendiente' },
+  rutGarzon: { type: String, default: null },
   fecha: { type: Date, default: Date.now }
 }, { collection: 'pedidos', timestamps: true });
 
@@ -703,12 +704,58 @@ app.post('/api/pedidos', async (req, res) => {
       mesa: String(mesa),
       items: items || [],
       total: Number(total || 0),
-      estado: 'pendiente'
+      estado: 'pendiente',
+      rutGarzon: null
     });
     await nuevoPedido.save();
     res.status(201).json({ ok: true, pedido: nuevoPedido });
   } catch (error) {
     res.status(500).json({ error: 'Error al registrar pedido' });
+  }
+});
+
+// ASIGNAR GARZÓN Y ENTREGAR PEDIDO CON VALIDACIÓN ATÓMICA DE ASIGNACIÓN UNANIME
+app.put('/api/pedidos/:id/asignar-garzon', async (req, res) => {
+  try {
+    const { rutGarzon } = req.body;
+    const { id } = req.params;
+
+    if (!rutGarzon || !rutGarzon.trim()) {
+      return res.status(400).json({ ok: false, error: 'Debe ingresar un RUT de garzón válido' });
+    }
+
+    const rutLimpio = rutGarzon.trim();
+
+    // 1. Intentar asignar de forma atómica si rutGarzon es null, o si ya es el mismo garzón
+    const pedidoActualizado = await Pedido.findOneAndUpdate(
+      {
+        _id: id,
+        $or: [
+          { rutGarzon: null },
+          { rutGarzon: "" },
+          { rutGarzon: rutLimpio }
+        ]
+      },
+      { $set: { rutGarzon: rutLimpio } },
+      { new: true }
+    );
+
+    // 2. Si no actualizó nada, significa que el pedido ya estaba tomado por OTRO garzón
+    if (!pedidoActualizado) {
+      const pedidoExistente = await Pedido.findById(id);
+      if (pedidoExistente && pedidoExistente.rutGarzon && pedidoExistente.rutGarzon !== rutLimpio) {
+        return res.status(409).json({
+          ok: false,
+          error: `Esta mesa ya está siendo atendida por el garzón con RUT: ${pedidoExistente.rutGarzon}`
+        });
+      }
+      return res.status(404).json({ ok: false, error: 'Pedido no encontrado' });
+    }
+
+    res.json({ ok: true, mensaje: 'Garzón asignado exitosamente', pedido: pedidoActualizado });
+  } catch (error) {
+    console.error("Error al asignar garzón:", error);
+    res.status(500).json({ ok: false, error: 'Error interno al asignar garzón' });
   }
 });
 

@@ -645,11 +645,10 @@
 
       <div id="resumen-pedido-activo" style="display: none;" class="resumen-pedido-cliente">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 8px; margin-bottom: 10px;">
-          <h4 style="color: var(--neon-green); font-size: 16px;">⏳ Pedido Enviado a Cocina</h4>
-          <span style="font-size: 12px; color: var(--text-muted);" id="resumen-pedido-hora">--:--</span>
+          <h4 style="color: var(--neon-green); font-size: 16px;">⏳ Pedidos Enviados a Cocina</h4>
         </div>
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
-          Tu pedido está en preparación. Este resumen permanecerá visible en tu pantalla hasta que el garzón entregue/elimine la orden desde su dispositivo.
+          Tus pedidos están en preparación. Este resumen permanecerá visible en tu pantalla hasta que el garzón entregue/elimine las órdenes desde su dispositivo.
         </p>
         <div id="resumen-pedido-items" style="font-size: 14px; margin-bottom: 12px;"></div>
         <div style="text-align: right; font-weight: bold; font-size: 16px; color: var(--neon-yellow);" id="resumen-pedido-total">
@@ -765,6 +764,27 @@
       </div>
 
       <div class="section-card">
+        <h3>🔍 Informe de Rendimiento por RUT Garzón & Filtros de Fecha</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
+          Por defecto se muestra el mes actual. Puedes buscar por un RUT específico, seleccionar un mes exacto o definir un rango de fechas.
+        </p>
+        <div class="form-inline" style="margin-bottom: 10px;">
+          <input type="text" id="filtro-rut-garzon" placeholder="RUT Garzón (Opcional, Ej: 12345678-9)">
+          <input type="month" id="filtro-mes-garzon" title="Seleccionar Mes Completo">
+        </div>
+        <div class="form-inline">
+          <span style="font-size: 12px; color: var(--text-muted);">Desde:</span>
+          <input type="date" id="filtro-fecha-desde">
+          <span style="font-size: 12px; color: var(--text-muted);">Hasta:</span>
+          <input type="date" id="filtro-fecha-hasta">
+          <button class="btn" onclick="aplicarFiltrosHistorial()">📊 Generar Informe / Filtrar</button>
+          <button class="btn btn-secondary" onclick="limpiarFiltroRut()">🔄 Restablecer (Mes Actual)</button>
+        </div>
+        <div id="resultado-informe-rut" style="margin-top: 15px; display: none; background: #12121c; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+        </div>
+      </div>
+
+      <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
           <h3>📜 Historial de Pedidos Entregados</h3>
           <button class="btn btn-secondary btn-sm" onclick="cargarHistorial()">🔄 Actualizar Historial</button>
@@ -776,14 +796,13 @@
               <tr>
                 <th>Fecha / Hora Entrega</th>
                 <th>Mesa</th>
-                <th>Items Entregados</th>
                 <th>Total</th>
                 <th>RUT Garzón</th>
               </tr>
             </thead>
             <tbody id="tabla-historial-body">
               <tr>
-                <td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando registros...</td>
+                <td colspan="4" style="text-align: center; color: var(--text-muted);">Cargando registros...</td>
               </tr>
             </tbody>
           </table>
@@ -793,10 +812,32 @@
 
   </div>
 
+  <!-- Modal Genérico -->
+  <div id="modal-general" class="modal">
+    <div class="modal-content" id="modal-content-body"></div>
+  </div>
+
   <script>
     const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:3000'
       : 'https://appmenu-tavr.onrender.com';
+
+    // Canal de sincronización en tiempo real para la pestaña actual o el mismo navegador
+    const canalSincronizacion = ('BroadcastChannel' in window) ? new BroadcastChannel('sincronizacion_pedidos') : null;
+
+    if (canalSincronizacion) {
+      canalSincronizacion.onmessage = (event) => {
+        if (event.data && event.data.action === 'PEDIDOS_ACTUALIZADOS') {
+          sincronizarTodoSilencioso();
+        }
+      };
+    }
+
+    function notificarSincronizacion() {
+      if (canalSincronizacion) {
+        canalSincronizacion.postMessage({ action: 'PEDIDOS_ACTUALIZADOS' });
+      }
+    }
 
     // --- PROTECCIÓN GUARDIÁN DE AUTENTICACIÓN ---
     (async function protegerAccesoAdministracion() {
@@ -804,7 +845,6 @@
       const viewMode = urlParams.get('view');
       const localId = (urlParams.get('local') || '').trim().toLowerCase();
 
-      // Las vistas de clientes y garzones no requieren token
       if (viewMode === 'cliente' || viewMode === 'garzon') return;
 
       const token = localStorage.getItem('auth_token');
@@ -837,6 +877,7 @@
     let menuActual = [];
     let carrito = [];
     let mesaActual = '1';
+    let historialGlobalLocal = [];
 
     window.onload = async function() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -862,9 +903,20 @@
       await cargarPedidosCocina();
       await cargarPedidosGarzon();
       await cargarHistorial();
+      await verificarEstadoPedidoCliente();
       generarQRGarzonDefault();
       generarQRUnico();
+
+      setInterval(() => {
+        sincronizarTodoSilencioso();
+      }, 3000);
     };
+
+    async function sincronizarTodoSilencioso() {
+      await cargarPedidosCocina();
+      await cargarPedidosGarzon();
+      await verificarEstadoPedidoCliente();
+    }
 
     function activarPestanaDirecta(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -887,6 +939,7 @@
       await cargarPedidosCocina();
       await cargarPedidosGarzon();
       await cargarHistorial();
+      await verificarEstadoPedidoCliente();
     }
 
     async function verificarLicencia() {
@@ -1264,7 +1317,7 @@
         </div>
         <div style="display: flex; gap: 10px; margin-top: 20px;">
           <button class="btn btn-success" style="flex:1;" onclick="confirmarEnviarPedido()">🚀 Confirmar Pedido</button>
-          <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalGeneral()">Cerrar</button>
+          <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalGeneral()">Agregar mas...</button>
         </div>
       `;
 
@@ -1308,11 +1361,14 @@
         });
 
         if (res.ok) {
-          mostrarResumenPedidoEnviado(carrito, total);
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalGeneral();
-          alert("🎉 Pedido enviado exitosamente a la cocina.");
+          await cargarPedidosCocina();
+          await cargarPedidosGarzon();
+          await verificarEstadoPedidoCliente();
+          notificarSincronizacion();
+          alert("🎉 Pedido enviado a la cocina exitosamente!");
         } else {
           alert("❌ Error al enviar el pedido.");
         }
@@ -1321,211 +1377,109 @@
       }
     }
 
-    function mostrarResumenPedidoEnviado(items, total) {
-      const resumenBox = document.getElementById('resumen-pedido-activo');
-      const itemsBox = document.getElementById('resumen-pedido-items');
-      const totalBox = document.getElementById('resumen-pedido-total');
-      const horaBox = document.getElementById('resumen-pedido-hora');
+    async function verificarEstadoPedidoCliente() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        if (!res.ok) return;
 
-      const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      horaBox.innerText = horaActual;
+        const pedidos = await res.json();
+        const pedidosMesa = pedidos.filter(p => String(p.mesa) === String(mesaActual));
 
-      let itemsHTML = '<ul style="list-style: none; padding-left: 0;">';
-      items.forEach(i => {
-        itemsHTML += `<li style="margin-bottom: 4px;">• <strong>${i.cantidad}x</strong> ${i.nombre} ($${i.precio * i.cantidad})</li>`;
-      });
-      itemsHTML += '</ul>';
+        const boxResumen = document.getElementById('resumen-pedido-activo');
+        const itemsContenedor = document.getElementById('resumen-pedido-items');
+        const totalContenedor = document.getElementById('resumen-pedido-total');
 
-      itemsBox.innerHTML = itemsHTML;
-      totalBox.innerText = `Total: $${total}`;
+        if (pedidosMesa.length > 0) {
+          let html = '';
+          let totalMesa = 0;
 
-      resumenBox.style.display = 'block';
-    }
+          pedidosMesa.forEach((ped, i) => {
+            totalMesa += ped.total || 0;
+            html += `<div style="margin-bottom: 8px; font-weight: bold; color: var(--neon-orange);">Orden #${i + 1}</div>`;
 
-    function mostrarModalGeneral(htmlContent) {
-      let modal = document.getElementById('modal-dinamico');
-      if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'modal-dinamico';
-        modal.className = 'modal';
-        modal.innerHTML = `<div class="modal-content" id="modal-dinamico-content"></div>`;
-        document.body.appendChild(modal);
-      }
-      document.getElementById('modal-dinamico-content').innerHTML = htmlContent;
-      modal.style.display = 'flex';
-    }
-
-    function cerrarModalGeneral() {
-      const modal = document.getElementById('modal-dinamico');
-      if (modal) modal.style.display = 'none';
-    }
-
-    function generarQRGarzonDefault() {
-      const container = document.getElementById('qr-garzon-render');
-      if (!container) return;
-      container.innerHTML = '';
-
-      const urlGarzon = `https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(localActual)}&view=garzon`;
-
-      new QRCode(container, {
-        text: urlGarzon,
-        width: 160,
-        height: 160
-      });
-    }
-
-    function descargarQRGarzon() {
-      const container = document.getElementById('qr-garzon-render');
-      const img = container.querySelector('img');
-      const canvas = container.querySelector('canvas');
-
-      const urlData = img ? img.src : (canvas ? canvas.toDataURL("image/png") : null);
-      if (!urlData) return alert("⚠️ Error al generar el código QR.");
-
-      const link = document.createElement('a');
-      link.download = `QR_GARZON_${localActual}.png`;
-      link.href = urlData;
-      link.click();
-    }
-
-    function generarQRUnico() {
-      const numMesa = document.getElementById('qr-num-mesa').value || '1';
-      document.getElementById('lbl-qr-single-nombre-local').innerText = localActual.toUpperCase();
-      document.getElementById('lbl-qr-single-mesa').innerText = `Mesa N° ${numMesa}`;
-
-      const container = document.getElementById('qr-single-render');
-      container.innerHTML = '';
-
-      const urlMesa = `https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(localActual)}&mesa=${numMesa}&view=cliente`;
-
-      new QRCode(container, {
-        text: urlMesa,
-        width: 150,
-        height: 150
-      });
-    }
-
-    function descargarQRImagen() {
-      const container = document.getElementById('qr-single-render');
-      const img = container.querySelector('img');
-      const canvas = container.querySelector('canvas');
-
-      const urlData = img ? img.src : (canvas ? canvas.toDataURL("image/png") : null);
-      if (!urlData) return alert("⚠️ Error al generar el código QR.");
-
-      const numMesa = document.getElementById('qr-num-mesa').value || '1';
-      const link = document.createElement('a');
-      link.download = `QR_MESA_${numMesa}_${localActual}.png`;
-      link.href = urlData;
-      link.click();
-    }
-
-    function generarPDFMesas() {
-      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
-      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 12;
-
-      if (desde > hasta) return alert("⚠️ El rango 'Desde' debe ser menor o igual a 'Hasta'.");
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      let x = 15;
-      let y = 15;
-      const qrSize = 50;
-
-      for (let m = desde; m <= hasta; m++) {
-        const urlMesa = `https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(localActual)}&mesa=${m}&view=cliente`;
-
-        const divTemp = document.createElement('div');
-        new QRCode(divTemp, { text: urlMesa, width: 200, height: 200 });
-
-        setTimeout(() => {
-          const img = divTemp.querySelector('img');
-          const canvas = divTemp.querySelector('canvas');
-          const imgData = img ? img.src : (canvas ? canvas.toDataURL("image/png") : null);
-
-          if (imgData) {
-            doc.setDrawColor(255, 85, 0);
-            doc.rect(x - 2, y - 2, qrSize + 4, qrSize + 20);
-
-            doc.setFontSize(10);
-            doc.setTextColor(0, 0, 0);
-            doc.text(localActual.toUpperCase(), x + (qrSize / 2), y + 4, { align: 'center' });
-
-            doc.addImage(imgData, 'PNG', x, y + 6, qrSize, qrSize);
-
-            doc.setFontSize(11);
-            doc.text(`MESA N° ${m}`, x + (qrSize / 2), y + qrSize + 12, { align: 'center' });
-          }
-
-          x += qrSize + 15;
-          if (x > 150) {
-            x = 15;
-            y += qrSize + 30;
-            if (y > 230 && m < hasta) {
-              doc.addPage();
-              y = 15;
+            if (ped.items && ped.items.length > 0) {
+              ped.items.forEach(it => {
+                html += `<div style="display: flex; justify-content: space-between; font-size: 13px; color: #ccc;">
+                  <span>- ${it.nombre} x ${it.cantidad}</span>
+                  <span>$${it.precio * it.cantidad}</span>
+                </div>`;
+              });
             }
-          }
+          });
 
-          if (m === hasta) {
-            doc.save(`Planilla_QR_Mesas_${localActual}.pdf`);
-          }
-        }, 100 * (m - desde + 1));
+          itemsContenedor.innerHTML = html;
+          totalContenedor.innerText = `Total Mesa: $${totalMesa}`;
+          boxResumen.style.display = 'block';
+        } else {
+          boxResumen.style.display = 'none';
+        }
+      } catch (err) {
+        console.error("Error al verificar estado del pedido:", err);
       }
     }
 
     async function cargarPedidosCocina() {
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
-        const data = await res.json();
-
         const contenedor = document.getElementById('contenedor-pedidos-cocina');
         contenedor.innerHTML = '';
 
-        if (res.ok && Array.isArray(data) && data.length > 0) {
-          data.forEach(p => {
-            const card = document.createElement('div');
-            card.className = 'card-pedido';
-
-            let itemsHTML = '<ul style="list-style: none; padding-left: 0; margin-bottom: 12px;">';
-            if (p.items && Array.isArray(p.items)) {
-              p.items.forEach(i => {
-                itemsHTML += `<li style="font-size: 13px;">• <strong>${i.cantidad}x</strong> ${i.nombre}</li>`;
-              });
-            }
-            itemsHTML += '</ul>';
-
-            card.innerHTML = `
-              <div>
-                <div class="card-pedido-header">
-                  <span class="card-pedido-mesa">Mesa N° ${p.mesa}</span>
-                  <span style="font-size: 11px; color: var(--text-muted);">${new Date(p.createdAt || p.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                </div>
-                ${itemsHTML}
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 10px;">
-                <span style="font-weight: bold; color: var(--neon-yellow);">$${p.total}</span>
-                <button class="btn btn-danger btn-sm" onclick="eliminarPedido('${p._id}')">🗑️ Eliminar</button>
-              </div>
-            `;
-            contenedor.appendChild(card);
-          });
-        } else {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en la cocina.</p>';
+        if (!res.ok) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Error al cargar pedidos.</p>';
+          return;
         }
+
+        const pedidos = await res.json();
+
+        if (!pedidos || pedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos en preparación.</p>';
+          return;
+        }
+
+        pedidos.forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'card-pedido';
+
+          let itemsHTML = '';
+          if (p.items && p.items.length > 0) {
+            p.items.forEach(it => {
+              itemsHTML += `<div style="font-size: 13px; color: #ddd; margin-bottom: 4px;">• ${it.nombre} x ${it.cantidad}</div>`;
+            });
+          }
+
+          const horaCreacion = new Date(p.createdAt || p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          card.innerHTML = `
+            <div>
+              <div class="card-pedido-header">
+                <span class="card-pedido-mesa">Mesa N° ${p.mesa}</span>
+                <span style="font-size: 12px; color: var(--text-muted);">${horaCreacion}</span>
+              </div>
+              <div style="margin-bottom: 15px;">${itemsHTML}</div>
+            </div>
+            <div>
+              <div style="font-size: 14px; font-weight: bold; color: var(--neon-yellow); margin-bottom: 10px;">Total: $${p.total}</div>
+              <button class="btn btn-danger btn-sm" style="width: 100%;" onclick="cancelarPedidoCocina('${p._id}')">🗑️ Eliminar / Cancelar</button>
+            </div>
+          `;
+
+          contenedor.appendChild(card);
+        });
       } catch (err) {
-        console.error("Error al obtener pedidos de cocina:", err);
+        console.error("Error al obtener pedidos para cocina:", err);
       }
     }
 
-    async function eliminarPedido(id) {
-      if (!confirm("¿Deseas eliminar este pedido de la cocina?")) return;
+    async function cancelarPedidoCocina(id) {
+      if (!confirm("¿Seguro que deseas eliminar/cancelar este pedido?")) return;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
         if (res.ok) {
           await cargarPedidosCocina();
+          await cargarPedidosGarzon();
+          await verificarEstadoPedidoCliente();
+          notificarSincronizacion();
         } else {
           alert("❌ Error al eliminar pedido.");
         }
@@ -1537,88 +1491,124 @@
     async function cargarPedidosGarzon() {
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
-        const data = await res.json();
-
         const contenedor = document.getElementById('contenedor-pedidos-garzon');
         contenedor.innerHTML = '';
 
-        if (res.ok && Array.isArray(data) && data.length > 0) {
-          data.forEach(p => {
-            const card = document.createElement('div');
-            card.className = 'card-pedido';
-
-            let itemsHTML = '<ul style="list-style: none; padding-left: 0; margin-bottom: 12px;">';
-            if (p.items && Array.isArray(p.items)) {
-              p.items.forEach(i => {
-                itemsHTML += `<li style="font-size: 13px;">• <strong>${i.cantidad}x</strong> ${i.nombre} ($${i.precio * i.cantidad})</li>`;
-              });
-            }
-            itemsHTML += '</ul>';
-
-            card.innerHTML = `
-              <div>
-                <div class="card-pedido-header">
-                  <span class="card-pedido-mesa">Mesa N° ${p.mesa}</span>
-                  <span style="font-size: 11px; color: var(--text-muted);">${new Date(p.createdAt || p.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                </div>
-                ${itemsHTML}
-              </div>
-              <div style="border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 10px;">
-                <div style="display: flex; justify-content: space-between; font-weight: bold; color: var(--neon-yellow); margin-bottom: 10px;">
-                  <span>Total:</span>
-                  <span>$${p.total}</span>
-                </div>
-                <button class="btn btn-success btn-sm" style="width: 100%;" onclick="marcarComoEntregado('${p._id}', '${p.mesa}', ${JSON.stringify(p.items).replace(/"/g, '&quot;')}, ${p.total})">
-                  ✅ Entregado a Mesa
-                </button>
-              </div>
-            `;
-            contenedor.appendChild(card);
-          });
-        } else {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay entregas pendientes.</p>';
+        if (!res.ok) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Error al cargar entregas.</p>';
+          return;
         }
+
+        const pedidos = await res.json();
+
+        if (!pedidos || pedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes de entrega.</p>';
+          return;
+        }
+
+        pedidos.forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'card-pedido';
+
+          let itemsHTML = '';
+          if (p.items && p.items.length > 0) {
+            p.items.forEach(it => {
+              itemsHTML += `<div style="font-size: 13px; color: #ddd; margin-bottom: 4px;">• ${it.nombre} x ${it.cantidad}</div>`;
+            });
+          }
+
+          const horaCreacion = new Date(p.createdAt || p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const garzonInfo = p.rutGarzon ? `<div style="font-size: 11px; color: var(--neon-blue); margin-bottom: 6px;">Garzón Asignado: ${p.rutGarzon}</div>` : '';
+
+          card.innerHTML = `
+            <div>
+              <div class="card-pedido-header">
+                <span class="card-pedido-mesa">Mesa N° ${p.mesa}</span>
+                <span style="font-size: 12px; color: var(--text-muted);">${horaCreacion}</span>
+              </div>
+              ${garzonInfo}
+              <div style="margin-bottom: 15px;">${itemsHTML}</div>
+            </div>
+            <div>
+              <div style="font-size: 14px; font-weight: bold; color: var(--neon-yellow); margin-bottom: 10px;">Total: $${p.total}</div>
+              <button class="btn btn-success btn-sm" style="width: 100%;" onclick="confirmarEntregaGarzon('${p._id}')">✅ Marcar como Entregado</button>
+            </div>
+          `;
+
+          contenedor.appendChild(card);
+        });
       } catch (err) {
-        console.error("Error al obtener lista de entregas para garzones:", err);
+        console.error("Error al obtener entregas para garzón:", err);
       }
     }
 
-    async function marcarComoEntregado(pedidoId, mesa, items, total) {
-      const rutGarzon = document.getElementById('garzon-rut').value.trim();
-      if (!rutGarzon) return alert("⚠️ Es obligatorio ingresar el RUT del Garzón antes de entregar.");
+    async function confirmarEntregaGarzon(idPedido) {
+      const rutInput = document.getElementById('garzon-rut');
+      const rutGarzon = rutInput ? rutInput.value.trim() : '';
 
-      const ahora = new Date();
-      const horaEntrega = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const fechaEntrega = ahora.toLocaleDateString();
-
-      const historialPayload = {
-        local: localActual,
-        mesa,
-        items,
-        total,
-        rutGarzon,
-        horaEntrega,
-        fechaEntrega,
-        estado: 'entregado'
-      };
+      if (!rutGarzon) {
+        alert("⚠️ Debe ingresar su RUT de Garzón Responsable antes de marcar una entrega.");
+        if (rutInput) rutInput.focus();
+        return;
+      }
 
       try {
+        // Step 1: Validar/Asignar Garzón de forma atómica en el backend
+        const resAsignar = await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}/asignar-garzon`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rutGarzon })
+        });
+
+        const dataAsignar = await resAsignar.json();
+
+        // Si la mesa ya pertenece a otro garzón, rechazamos la solicitud y mostramos el error del servidor
+        if (!resAsignar.ok) {
+          alert(`⛔ ${dataAsignar.error || 'No se pudo asignar la mesa.'}`);
+          await cargarPedidosGarzon();
+          return;
+        }
+
+        // Step 2: Obtener detalles del pedido asignado
+        const pedido = dataAsignar.pedido;
+        const ahora = new Date();
+
+        const registroHistorial = {
+          id: idPedido,
+          local: localActual,
+          mesa: String(pedido.mesa),
+          items: pedido.items || [],
+          total: Number(pedido.total || 0),
+          estado: 'entregado',
+          hora: new Date(pedido.createdAt || pedido.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          rutGarzon: rutGarzon,
+          horaEntrega: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          fechaEntrega: ahora.toISOString().split('T')[0]
+        };
+
+        // Step 3: Guardar en historial
         const resHist = await fetch(`${BACKEND_URL}/api/historials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(historialPayload)
+          body: JSON.stringify(registroHistorial)
         });
 
         if (resHist.ok) {
-          await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}`, { method: 'DELETE' });
-          alert(`✅ Pedido entregado exitosamente por el garzón ${rutGarzon}`);
-          await cargarPedidosGarzon();
+          // Step 4: Eliminar de lista activa de pedidos
+          await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' });
+
           await cargarPedidosCocina();
+          await cargarPedidosGarzon();
           await cargarHistorial();
+          await verificarEstadoPedidoCliente();
+          notificarSincronizacion();
+
+          alert("✅ Pedido entregado y registrado con éxito.");
         } else {
-          alert("❌ No se pudo guardar el historial de entrega.");
+          alert("❌ Error al guardar el historial de entrega.");
         }
       } catch (err) {
+        console.error("Error al procesar la entrega del garzón:", err);
         alert("❌ Error de comunicación con el servidor.");
       }
     }
@@ -1626,44 +1616,319 @@
     async function cargarHistorial() {
       try {
         const res = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localActual)}`);
-        const data = await res.json();
-
         const tbody = document.getElementById('tabla-historial-body');
         tbody.innerHTML = '';
 
-        let totalVentas = 0;
-        let totalPedidos = 0;
-
-        if (res.ok && Array.isArray(data) && data.length > 0) {
-          totalPedidos = data.length;
-
-          data.forEach(reg => {
-            totalVentas += (reg.total || 0);
-
-            let itemsTxt = '';
-            if (reg.items && Array.isArray(reg.items)) {
-              itemsTxt = reg.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ');
-            }
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>${reg.fechaEntrega || ''} ${reg.horaEntrega || ''}</td>
-              <td>Mesa ${reg.mesa || '--'}</td>
-              <td>${itemsTxt}</td>
-              <td style="color: var(--neon-yellow); font-weight: bold;">$${reg.total || 0}</td>
-              <td>${reg.rutGarzon || 'N/A'}</td>
-            `;
-            tbody.appendChild(tr);
-          });
-        } else {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Sin historial de pedidos entregados.</td></tr>';
+        if (!res.ok) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Error al cargar historial.</td></tr>';
+          return;
         }
 
-        document.getElementById('stat-total-pedidos').innerText = totalPedidos;
-        document.getElementById('stat-total-ventas').innerText = `$${totalVentas}`;
+        historialGlobalLocal = await res.json();
+
+        // Cargar por defecto el filtro del mes actual
+        aplicarFiltrosHistorial();
       } catch (err) {
-        console.error("Error al cargar historial:", err);
+        console.error("Error al obtener historial:", err);
       }
+    }
+
+    function aplicarFiltrosHistorial() {
+      const rutFiltro = document.getElementById('filtro-rut-garzon').value.trim().toLowerCase();
+      const mesFiltro = document.getElementById('filtro-mes-garzon').value;
+      const desdeFiltro = document.getElementById('filtro-fecha-desde').value;
+      const hastaFiltro = document.getElementById('filtro-fecha-hasta').value;
+
+      let filtrados = [...historialGlobalLocal];
+
+      if (rutFiltro) {
+        filtrados = filtrados.filter(h => (h.rutGarzon || '').toLowerCase().includes(rutFiltro));
+      }
+
+      if (mesFiltro) {
+        filtrados = filtrados.filter(h => {
+          const fechaStr = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
+          return fechaStr.startsWith(mesFiltro);
+        });
+      } else if (desdeFiltro || hastaFiltro) {
+        if (desdeFiltro) {
+          filtrados = filtrados.filter(h => {
+            const fechaStr = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
+            return fechaStr >= desdeFiltro;
+          });
+        }
+        if (hastaFiltro) {
+          filtrados = filtrados.filter(h => {
+            const fechaStr = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
+            return fechaStr <= hastaFiltro;
+          });
+        }
+      } else {
+        // Por defecto: mes actual
+        const mesActualStr = new Date().toISOString().slice(0, 7);
+        document.getElementById('filtro-mes-garzon').value = mesActualStr;
+        filtrados = filtrados.filter(h => {
+          const fechaStr = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
+          return fechaStr.startsWith(mesActualStr);
+        });
+      }
+
+      renderizarTablaHistorial(filtrados);
+    }
+
+    function limpiarFiltroRut() {
+      document.getElementById('filtro-rut-garzon').value = '';
+      document.getElementById('filtro-fecha-desde').value = '';
+      document.getElementById('filtro-fecha-hasta').value = '';
+      const mesActualStr = new Date().toISOString().slice(0, 7);
+      document.getElementById('filtro-mes-garzon').value = mesActualStr;
+      aplicarFiltrosHistorial();
+    }
+
+    function renderizarTablaHistorial(registros) {
+      const tbody = document.getElementById('tabla-historial-body');
+      tbody.innerHTML = '';
+
+      let totalPedidos = registros.length;
+      let totalVentas = 0;
+
+      if (!registros || registros.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No se encontraron registros de entregas para los filtros seleccionados.</td></tr>';
+        document.getElementById('stat-total-pedidos').innerText = '0';
+        document.getElementById('stat-total-ventas').innerText = '$0';
+        document.getElementById('resultado-informe-rut').style.display = 'none';
+        return;
+      }
+
+      registros.forEach(r => {
+        totalVentas += (r.total || 0);
+
+        const tr = document.createElement('tr');
+        const fechaDisplay = r.fechaEntrega ? `${r.fechaEntrega} ${r.horaEntrega || ''}` : (r.createdAt ? new Date(r.createdAt).toLocaleString() : '--');
+
+        tr.innerHTML = `
+          <td>${fechaDisplay}</td>
+          <td>Mesa ${r.mesa || '--'}</td>
+          <td style="color: var(--neon-yellow); font-weight: bold;">$${r.total || 0}</td>
+          <td>${r.rutGarzon || 'N/A'}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('stat-total-pedidos').innerText = totalPedidos;
+      document.getElementById('stat-total-ventas').innerText = `$${totalVentas}`;
+
+      const rutBuscado = document.getElementById('filtro-rut-garzon').value.trim();
+      const boxInforme = document.getElementById('resultado-informe-rut');
+
+      if (rutBuscado) {
+        boxInforme.style.display = 'block';
+        boxInforme.innerHTML = `
+          <h4 style="color: var(--neon-green); margin-bottom: 8px;">📊 Informe para Garzón: ${rutBuscado}</h4>
+          <p style="font-size: 14px;"><strong>Entregas Realizadas:</strong> ${totalPedidos}</p>
+          <p style="font-size: 14px;"><strong>Recaudación Asociada:</strong> $${totalVentas}</p>
+        `;
+      } else {
+        boxInforme.style.display = 'none';
+      }
+    }
+
+    function generarQRGarzonDefault() {
+      const target = document.getElementById('qr-garzon-render');
+      if (!target) return;
+      target.innerHTML = '';
+
+      const baseAppUrl = window.location.href.split('?')[0].split('#')[0];
+      const garzonUrl = `${baseAppUrl}?local=${encodeURIComponent(localActual)}&view=garzon`;
+
+      new QRCode(target, {
+        text: garzonUrl,
+        width: 140,
+        height: 140,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function descargarQRGarzon() {
+      const container = document.getElementById('qr-garzon-render');
+      const img = container ? container.querySelector('img') : null;
+
+      if (!img) return alert("⚠️ Generando QR, intente en un segundo.");
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 400, 400);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 22px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(localActual.toUpperCase(), 200, 40);
+
+      ctx.drawImage(img, 75, 60, 250, 250);
+
+      ctx.font = 'bold 18px Arial';
+      ctx.fillText("ACCESO GARZÓN - ENTREGAS", 200, 350);
+
+      const a = document.createElement('a');
+      a.download = `QR_GARZON_${localActual.toUpperCase()}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    }
+
+    function generarQRUnico() {
+      const mesaVal = document.getElementById('qr-num-mesa').value || '1';
+      const target = document.getElementById('qr-single-render');
+      if (!target) return;
+
+      target.innerHTML = '';
+
+      document.getElementById('lbl-qr-single-nombre-local').innerText = localActual.toUpperCase();
+      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${mesaVal}`;
+
+      const baseAppUrl = window.location.href.split('?')[0].split('#')[0];
+      const clienteUrl = `${baseAppUrl}?local=${encodeURIComponent(localActual)}&mesa=${mesaVal}&view=cliente`;
+
+      new QRCode(target, {
+        text: clienteUrl,
+        width: 140,
+        height: 140,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function descargarQRImagen() {
+      const mesaVal = document.getElementById('qr-num-mesa').value || '1';
+      const container = document.getElementById('qr-single-render');
+      const img = container ? container.querySelector('img') : null;
+
+      if (!img) return alert("⚠️ Primero genera el código QR.");
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 400, 400);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(localActual.toUpperCase(), 200, 45);
+
+      ctx.drawImage(img, 75, 65, 250, 250);
+
+      ctx.font = 'bold 22px Arial';
+      ctx.fillText(`MESA N° ${mesaVal}`, 200, 345);
+
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#555555';
+      ctx.fillText("Escanea para hacer tu pedido", 200, 375);
+
+      const a = document.createElement('a');
+      a.download = `QR_MESA_${mesaVal}_${localActual.toUpperCase()}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    }
+
+    async function generarPDFMesas() {
+      const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
+      const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 1;
+
+      if (desde > hasta) return alert("⚠️ El rango 'Desde' debe ser menor o igual a 'Hasta'.");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'cm', format: 'a4' });
+
+      const baseAppUrl = window.location.href.split('?')[0].split('#')[0];
+      let currentX = 1.5;
+      let currentY = 1.5;
+      const qrWidth = 5;
+      const qrHeight = 5;
+      const marginX = 1.5;
+      const marginY = 1.8;
+
+      let count = 0;
+
+      for (let m = desde; m <= hasta; m++) {
+        if (count > 0 && count % 12 === 0) {
+          doc.addPage();
+          currentX = 1.5;
+          currentY = 1.5;
+        }
+
+        const clienteUrl = `${baseAppUrl}?local=${encodeURIComponent(localActual)}&mesa=${m}&view=cliente`;
+
+        const tempDiv = document.createElement('div');
+        tempDiv.style.display = 'none';
+        document.body.appendChild(tempDiv);
+
+        new QRCode(tempDiv, {
+          text: clienteUrl,
+          width: 200,
+          height: 200,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+
+        await new Promise(r => setTimeout(r, 100));
+
+        const qrImg = tempDiv.querySelector('img');
+        const imgData = qrImg ? qrImg.src : null;
+
+        doc.setLineWidth(0.02);
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(currentX, currentY, qrWidth, qrHeight + 1.2);
+
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text(localActual.toUpperCase(), currentX + (qrWidth / 2), currentY + 0.6, { align: 'center' });
+
+        if (imgData) {
+          doc.addImage(imgData, 'PNG', currentX + 0.5, currentY + 0.8, 4, 4);
+        }
+
+        doc.setFontSize(11);
+        doc.text(`MESA N° ${m}`, currentX + (qrWidth / 2), currentY + 5.2, { align: 'center' });
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(7);
+        doc.text("Escanea el QR para pedir", currentX + (qrWidth / 2), currentY + 5.8, { align: 'center' });
+
+        document.body.removeChild(tempDiv);
+
+        currentX += qrWidth + marginX;
+        if (currentX + qrWidth > 20) {
+          currentX = 1.5;
+          currentY += qrHeight + marginY + 1.2;
+        }
+
+        count++;
+      }
+
+      doc.save(`QRs_MESAS_${desde}_AL_${hasta}_${localActual.toUpperCase()}.pdf`);
+    }
+
+    function mostrarModalGeneral(htmlContent) {
+      const modal = document.getElementById('modal-general');
+      const body = document.getElementById('modal-content-body');
+      body.innerHTML = htmlContent;
+      modal.style.display = 'flex';
+    }
+
+    function cerrarModalGeneral() {
+      const modal = document.getElementById('modal-general');
+      modal.style.display = 'none';
     }
   </script>
 </body>
