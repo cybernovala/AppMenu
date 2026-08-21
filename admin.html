@@ -103,14 +103,6 @@
       gap: 10px;
     }
 
-    .respuesta-item-admin {
-      margin-top: 6px;
-      padding-left: 10px;
-      border-left: 2px solid var(--neon-green);
-      color: #e0e0e0;
-      font-size: 13px;
-    }
-
     .header-bar {
       background: rgba(18, 18, 24, 0.95);
       border: 1px solid var(--border-neon);
@@ -431,7 +423,6 @@
     }
 
     .modal-content h3 { color: var(--neon-yellow); margin-bottom: 15px; }
-    .modal-content label { display: block; font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px; }
 
     .cart-item {
       display: flex;
@@ -545,6 +536,9 @@
     body.is-cliente #banner-wrapper,
     body.is-cliente #admin-header,
     body.is-cliente #admin-nav-tabs,
+    body.is-cliente-general #banner-wrapper,
+    body.is-cliente-general #admin-header,
+    body.is-cliente-general #admin-nav-tabs,
     body.is-garzon #banner-wrapper,
     body.is-garzon #admin-header,
     body.is-garzon #admin-nav-tabs {
@@ -558,6 +552,8 @@
       const v = p.get('view');
       if (v === 'cliente') {
         document.documentElement.classList.add('view-cliente');
+      } else if (v === 'cliente_general') {
+        document.documentElement.classList.add('view-cliente-general');
       } else if (v === 'garzon') {
         document.documentElement.classList.add('view-garzon');
       }
@@ -568,6 +564,10 @@
     html.view-cliente #admin-header,
     html.view-cliente #admin-nav-tabs,
     html.view-cliente #tab-admin,
+    html.view-cliente-general #banner-wrapper,
+    html.view-cliente-general #admin-header,
+    html.view-cliente-general #admin-nav-tabs,
+    html.view-cliente-general #tab-admin,
     html.view-garzon #banner-wrapper,
     html.view-garzon #admin-header,
     html.view-garzon #admin-nav-tabs,
@@ -603,6 +603,7 @@
     <div class="nav-tabs" id="admin-nav-tabs">
       <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
+      <button class="tab-btn" id="btn-tab-cliente-general" onclick="cambiarPestana('tab-cliente-general', this)">📱 Vista Previa Cliente General</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Gestor de QR</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
       <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
@@ -657,7 +658,60 @@
       </div>
     </div>
 
+    <!-- PESTAÑA VISTA PREVIA CLIENTE GENERAL (SIN MESA) -->
+    <div id="tab-cliente-general" class="tab-content">
+      <div class="preview-header">
+        <div class="brand-title" id="txt-local-cliente-gen">MENÚ DIGITAL</div>
+        <div class="mesa-badge" style="background: var(--neon-blue); color: #000;">PEDIDO MESÓN GENERAL</div>
+      </div>
+
+      <div class="categories-bar" id="barra-categorias-cliente-gen"></div>
+
+      <div id="lista-productos-cliente-gen" style="margin-top: 15px;">
+        <p style="text-align: center; color: var(--text-muted);">Cargando carta...</p>
+      </div>
+
+      <div class="cart-bar" id="cart-bar-gen">
+        <div>
+          <span style="font-size: 12px; color: #aaa;">Total Pedido:</span><br>
+          <span style="font-size: 18px; font-weight: bold; color: var(--neon-yellow);" id="txt-total-bar-gen">$0</span>
+        </div>
+        <button class="cart-btn" onclick="abrirModalCarritoGeneral()">🛒 Ver Pedido (<span id="txt-count-bar-gen">0</span>)</button>
+      </div>
+
+      <div id="resumen-pedido-activo-gen" style="display: none;" class="resumen-pedido-cliente">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 8px; margin-bottom: 10px;">
+          <h4 style="color: var(--neon-green); font-size: 16px;">⏳ Pedidos Enviados a Cocina</h4>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+          Tus pedidos están en preparación. Serás llamado en el mesón a viva voz por tu Nombre y Apellido.
+        </p>
+        <div id="resumen-pedido-items-gen" style="font-size: 14px; margin-bottom: 12px;"></div>
+        <div style="text-align: right; font-weight: bold; font-size: 16px; color: var(--neon-yellow);" id="resumen-pedido-total-gen">
+          Total: $0
+        </div>
+      </div>
+    </div>
+
     <div id="tab-qr" class="tab-content">
+      <!-- QR CLIENTE GENERAL MESÓN PRINCIPAL -->
+      <div class="section-card" style="border-color: var(--neon-yellow);">
+        <h3>🔲 QR Exclusivo para Cliente General (Mesón Principal)</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+          Código para exponer e imprimir en el mesón principal. Los clientes escanean para hacer pedidos sin estar asignados a una mesa.
+        </p>
+        <div class="qr-card-container">
+          <div class="qr-preview-box" id="box-qr-general-preview" style="text-align: center;">
+            <p id="lbl-qr-gen-nombre-local" style="color: #000; font-weight: 900; margin-bottom: 8px; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px;"></p>
+            <div id="qr-general-render" style="display: flex; justify-content: center;"></div>
+            <p style="color: #000; font-weight: bold; margin-top: 10px; font-size: 12px; max-width: 200px; margin-left: auto; margin-right: auto;">
+              Escanse el qr para hacer su pedido directamente en su movil
+            </p>
+          </div>
+          <button class="btn btn-sm" onclick="descargarQRGeneral()">📥 Descargar QR Cliente General (PNG)</button>
+        </div>
+      </div>
+
       <div class="section-card" style="border-color: var(--neon-blue);">
         <h3>🔲 QR Exclusivo para Garzones</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
@@ -712,7 +766,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div>
             <h3>🍳 Pedidos en Preparación</h3>
-            <p style="color: var(--neon-yellow); font-size: 20px; margin-top: 4px;">
+            <p style="color: var(--neon-yellow); font-size: 18px; margin-top: 4px;">
               Ubicar en el lugar designado el pedido de la mesa cuando esté listo, y avisar al encargado de repartir.
             </p>
           </div>
@@ -730,14 +784,14 @@
         <div class="section-card" style="margin-bottom: 0;">
           <h3>👤 Datos del Garzón</h3>
           <div class="form-group">
-            <label>RUT Garzón Responsable</label>
-            <input type="text" id="garzon-rut" placeholder="Ej: 12345678-9">
+            <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:5px;">RUT Garzón Responsable</label>
+            <input type="text" id="garzon-rut" placeholder="Ej: 12345678-9" oninput="guardarGarzonRutMemoria()">
           </div>
         </div>
         <div class="section-card" style="margin-bottom: 0;">
           <h3>📋 Control de Entregas</h3>
           <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">
-            Ingresa tu RUT antes de confirmar la entrega de un pedido a las mesas.
+            Ingresa tu RUT antes de seleccionar o entregar un pedido.
           </p>
           <button class="btn btn-secondary btn-sm" onclick="cargarPedidosGarzon()">🔄 Refrescar Lista de Entregas</button>
         </div>
@@ -766,7 +820,7 @@
       <div class="section-card">
         <h3>🔍 Informe de Rendimiento por RUT Garzón & Filtros de Fecha</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-          Por defecto se muestra el mes actual. Puedes buscar por un RUT específico, seleccionar un mes exacto o definir un rango de fechas.
+          Por defecto se muestra <span id="lbl-mes-actual">el mes actual</span>. Puedes buscar por un RUT específico, seleccionar un mes exacto o definir un rango de fechas.
         </p>
         <div class="form-inline" style="margin-bottom: 10px;">
           <input type="text" id="filtro-rut-garzon" placeholder="RUT Garzón (Opcional, Ej: 12345678-9)">
@@ -778,6 +832,7 @@
           <span style="font-size: 12px; color: var(--text-muted);">Hasta:</span>
           <input type="date" id="filtro-fecha-hasta">
           <button class="btn" onclick="aplicarFiltrosHistorial()">📊 Generar Informe / Filtrar</button>
+          <button class="btn btn-blue" onclick="descargarInformePDF()">📥 Descargar Informe PDF</button>
           <button class="btn btn-secondary" onclick="limpiarFiltroRut()">🔄 Restablecer (Mes Actual)</button>
         </div>
         <div id="resultado-informe-rut" style="margin-top: 15px; display: none; background: #12121c; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
@@ -795,7 +850,7 @@
             <thead>
               <tr>
                 <th>Fecha / Hora Entrega</th>
-                <th>Mesa</th>
+                <th>Mesa / Cliente</th>
                 <th>Total</th>
                 <th>RUT Garzón</th>
               </tr>
@@ -812,7 +867,6 @@
 
   </div>
 
-  <!-- Modal Genérico -->
   <div id="modal-general" class="modal">
     <div class="modal-content" id="modal-content-body"></div>
   </div>
@@ -822,7 +876,6 @@
       ? 'http://localhost:3000'
       : 'https://appmenu-tavr.onrender.com';
 
-    // Canal de sincronización en tiempo real para la pestaña actual o el mismo navegador
     const canalSincronizacion = ('BroadcastChannel' in window) ? new BroadcastChannel('sincronizacion_pedidos') : null;
 
     if (canalSincronizacion) {
@@ -839,13 +892,12 @@
       }
     }
 
-    // --- PROTECCIÓN GUARDIÁN DE AUTENTICACIÓN ---
     (async function protegerAccesoAdministracion() {
       const urlParams = new URLSearchParams(window.location.search);
       const viewMode = urlParams.get('view');
       const localId = (urlParams.get('local') || '').trim().toLowerCase();
 
-      if (viewMode === 'cliente' || viewMode === 'garzon') return;
+      if (viewMode === 'cliente' || viewMode === 'cliente_general' || viewMode === 'garzon') return;
 
       const token = localStorage.getItem('auth_token');
 
@@ -876,8 +928,33 @@
     let localActual = '';
     let menuActual = [];
     let carrito = [];
+    let carritoGen = [];
     let mesaActual = '1';
     let historialGlobalLocal = [];
+    let historialFiltradoActual = [];
+
+    function obtenerMesAnoActual() {
+      const ahora = new Date();
+      const meses = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+      ];
+      return `${meses[ahora.getMonth()]} de ${ahora.getFullYear()}`;
+    }
+
+    function actualizarEtiquetaMesActual() {
+      const el = document.getElementById('lbl-mes-actual');
+      if (el) {
+        el.innerText = obtenerMesAnoActual();
+      }
+      const filtroMes = document.getElementById('filtro-mes-garzon');
+      if (filtroMes && !filtroMes.value) {
+        const ahora = new Date();
+        const yyyy = ahora.getFullYear();
+        const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+        filtroMes.value = `${yyyy}-${mm}`;
+      }
+    }
 
     window.onload = async function() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -886,12 +963,23 @@
 
       document.getElementById('lbl-local-nombre').innerText = localActual.toUpperCase();
       document.getElementById('txt-local-cliente').innerText = localActual.toUpperCase();
+      document.getElementById('txt-local-cliente-gen').innerText = localActual.toUpperCase();
       document.getElementById('txt-mesa-cliente').innerText = `Mesa N° ${mesaActual}`;
+
+      actualizarEtiquetaMesActual();
+
+      const rutGuardado = localStorage.getItem('garzon_rut_activo');
+      if (rutGuardado && document.getElementById('garzon-rut')) {
+        document.getElementById('garzon-rut').value = rutGuardado;
+      }
 
       const viewParam = urlParams.get('view');
       if (viewParam === 'cliente') {
         document.body.classList.add('is-cliente');
         activarPestanaDirecta('tab-cliente');
+      } else if (viewParam === 'cliente_general') {
+        document.body.classList.add('is-cliente-general');
+        activarPestanaDirecta('tab-cliente-general');
       } else if (viewParam === 'garzon') {
         document.body.classList.add('is-garzon');
         activarPestanaDirecta('tab-garzon');
@@ -904,6 +992,8 @@
       await cargarPedidosGarzon();
       await cargarHistorial();
       await verificarEstadoPedidoCliente();
+      await verificarEstadoPedidoClienteGeneral();
+      generarQRGeneralDefault();
       generarQRGarzonDefault();
       generarQRUnico();
 
@@ -912,10 +1002,18 @@
       }, 3000);
     };
 
+    function guardarGarzonRutMemoria() {
+      const val = document.getElementById('garzon-rut').value.trim();
+      if (val) {
+        localStorage.setItem('garzon_rut_activo', val);
+      }
+    }
+
     async function sincronizarTodoSilencioso() {
       await cargarPedidosCocina();
       await cargarPedidosGarzon();
       await verificarEstadoPedidoCliente();
+      await verificarEstadoPedidoClienteGeneral();
     }
 
     function activarPestanaDirecta(tabId) {
@@ -930,6 +1028,10 @@
 
       document.getElementById(tabId).classList.add('active');
       btn.classList.add('active');
+
+      if (tabId === 'tab-historial') {
+        actualizarEtiquetaMesActual();
+      }
     }
 
     async function recargarTodo() {
@@ -940,6 +1042,8 @@
       await cargarPedidosGarzon();
       await cargarHistorial();
       await verificarEstadoPedidoCliente();
+      await verificarEstadoPedidoClienteGeneral();
+      actualizarEtiquetaMesActual();
     }
 
     async function verificarLicencia() {
@@ -1029,6 +1133,7 @@
 
         renderizarMenuAdmin();
         renderizarMenuCliente();
+        renderizarMenuClienteGeneral();
       } catch (err) {
         console.error("Error al obtener menú:", err);
       }
@@ -1233,7 +1338,7 @@
         chip.className = `cat-chip ${index === 0 ? 'active' : ''}`;
         chip.innerText = catObj.categoria;
         chip.onclick = function() {
-          document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+          document.querySelectorAll('#barra-categorias-cliente .cat-chip').forEach(c => c.classList.remove('active'));
           chip.classList.add('active');
           mostrarCategoriaCliente(catObj.categoria);
         };
@@ -1267,6 +1372,224 @@
       });
     }
 
+    // --- LÓGICA VISTA PREVIA CLIENTE GENERAL ---
+    function renderizarMenuClienteGeneral() {
+      const barraCat = document.getElementById('barra-categorias-cliente-gen');
+      const listaProd = document.getElementById('lista-productos-cliente-gen');
+
+      if (!barraCat || !listaProd) return;
+      barraCat.innerHTML = '';
+      listaProd.innerHTML = '';
+
+      if (!menuActual || menuActual.length === 0) {
+        listaProd.innerHTML = '<p style="text-align: center; color: var(--text-muted);">La carta está vacía.</p>';
+        return;
+      }
+
+      menuActual.forEach((catObj, index) => {
+        const chip = document.createElement('div');
+        chip.className = `cat-chip ${index === 0 ? 'active' : ''}`;
+        chip.innerText = catObj.categoria;
+        chip.onclick = function() {
+          document.querySelectorAll('#barra-categorias-cliente-gen .cat-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          mostrarCategoriaClienteGeneral(catObj.categoria);
+        };
+        barraCat.appendChild(chip);
+      });
+
+      mostrarCategoriaClienteGeneral(menuActual[0].categoria);
+    }
+
+    function mostrarCategoriaClienteGeneral(categoria) {
+      const listaProd = document.getElementById('lista-productos-cliente-gen');
+      if (!listaProd) return;
+      listaProd.innerHTML = '';
+
+      const catObj = menuActual.find(c => c.categoria === categoria);
+      if (!catObj || !catObj.productos || catObj.productos.length === 0) {
+        listaProd.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay ítems en esta categoría.</p>';
+        return;
+      }
+
+      catObj.productos.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-card-client';
+        card.innerHTML = `
+          <div>
+            <div class="product-title">${p.nombre}</div>
+            <div class="product-price">$${p.precio}</div>
+          </div>
+          <button class="btn-add" onclick="agregarAlCarritoGeneral('${catObj.categoria}', '${p.nombre}', ${p.precio})">+ Agregar</button>
+        `;
+        listaProd.appendChild(card);
+      });
+    }
+
+    function agregarAlCarritoGeneral(categoria, nombre, precio) {
+      const existe = carritoGen.find(i => i.nombre === nombre && i.categoria === categoria);
+      if (existe) {
+        existe.cantidad += 1;
+      } else {
+        carritoGen.push({ categoria, nombre, precio, cantidad: 1 });
+      }
+      actualizarBarraCarritoGeneral();
+    }
+
+    function actualizarBarraCarritoGeneral() {
+      const count = carritoGen.reduce((sum, item) => sum + item.cantidad, 0);
+      const total = carritoGen.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+      const countEl = document.getElementById('txt-count-bar-gen');
+      const totalEl = document.getElementById('txt-total-bar-gen');
+      if (countEl) countEl.innerText = count;
+      if (totalEl) totalEl.innerText = `$${total}`;
+    }
+
+    function abrirModalCarritoGeneral() {
+      if (carritoGen.length === 0) return alert("🛒 El carrito está vacío.");
+
+      let contentHTML = `<h3>🛒 Tu Pedido Mesón General</h3>`;
+      let total = 0;
+
+      carritoGen.forEach((item, index) => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+        contentHTML += `
+          <div class="cart-item">
+            <div class="cart-item-info">
+              <span class="cart-item-cat">${item.categoria}</span>
+              <span class="cart-item-title">${item.nombre}</span>
+              <span class="cart-item-price">$${item.precio} c/u</span>
+            </div>
+            <div class="qty-controls">
+              <button class="btn-qty" onclick="modificarCantidadCarritoGeneral(${index}, -1)">-</button>
+              <span class="qty-val">${item.cantidad}</span>
+              <button class="btn-qty" onclick="modificarCantidadCarritoGeneral(${index}, 1)">+</button>
+            </div>
+          </div>
+        `;
+      });
+
+      const clienteGuardado = localStorage.getItem('nombre_cliente_general') || '';
+
+      contentHTML += `
+        <div style="margin-top: 15px; background: #12121c; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <label style="display:block; font-size:12px; color:var(--neon-yellow); margin-bottom:5px; font-weight:bold;">👤 Ingresa tu Nombre y Apellido (Requerido):</label>
+          <input type="text" id="nombre-cliente-general" placeholder="Ej: Juan Pérez" value="${clienteGuardado}" style="width:100%; text-transform:capitalize;">
+          <span style="font-size:11px; color:var(--text-muted);">Serás llamado a viva voz en el mesón principal con este nombre.</span>
+        </div>
+
+        <div style="text-align: right; margin-top: 15px; font-size: 18px; font-weight: bold; color: var(--neon-yellow);">
+          Total: $${total}
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button class="btn btn-secondary" style="flex: 1;" onclick="cerrarModalGeneral()">Seguir pidiendo</button>
+          <button class="btn btn-success" style="flex: 1;" onclick="enviarPedidoACocinaGeneral()">🚀 Enviar a Cocina</button>
+        </div>
+      `;
+
+      abrirModalGeneral(contentHTML);
+    }
+
+    function modificarCantidadCarritoGeneral(index, cambio) {
+      carritoGen[index].cantidad += cambio;
+      if (carritoGen[index].cantidad <= 0) {
+        carritoGen.splice(index, 1);
+      }
+      actualizarBarraCarritoGeneral();
+      if (carritoGen.length === 0) {
+        cerrarModalGeneral();
+      } else {
+        abrirModalCarritoGeneral();
+      }
+    }
+
+    async function enviarPedidoACocinaGeneral() {
+      if (carritoGen.length === 0) return;
+
+      const inputNombre = document.getElementById('nombre-cliente-general');
+      const nombreCliente = inputNombre ? inputNombre.value.trim() : '';
+
+      if (!nombreCliente) {
+        alert("⚠️ ATENCIÓN: Debes ingresar tu Nombre y Apellido para identificarte en el mesón.");
+        if (inputNombre) inputNombre.focus();
+        return;
+      }
+
+      localStorage.setItem('nombre_cliente_general', nombreCliente);
+      const total = carritoGen.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            local: localActual,
+            mesa: 'GENERAL',
+            nombreCliente: nombreCliente,
+            items: carritoGen,
+            total
+          })
+        });
+
+        if (res.ok) {
+          alert("🚀 ¡Pedido enviado a cocina! Atención con el nombre ingresado al ser llamado.");
+          carritoGen = [];
+          actualizarBarraCarritoGeneral();
+          cerrarModalGeneral();
+          notificarSincronizacion();
+          await cargarPedidosCocina();
+          await cargarPedidosGarzon();
+          await verificarEstadoPedidoClienteGeneral();
+        } else {
+          alert("❌ Ocurrió un error al registrar el pedido.");
+        }
+      } catch (err) {
+        alert("❌ Error de comunicación al enviar pedido.");
+      }
+    }
+
+    async function verificarEstadoPedidoClienteGeneral() {
+      try {
+        const nombreGuardado = localStorage.getItem('nombre_cliente_general');
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        if (!res.ok) return;
+
+        const pedidos = await res.json();
+        const misPedidos = pedidos.filter(p => p.mesa === 'GENERAL' && nombreGuardado && (p.nombreCliente || '').toLowerCase() === nombreGuardado.toLowerCase());
+
+        const contenedorResumen = document.getElementById('resumen-pedido-activo-gen');
+        const contenedorItems = document.getElementById('resumen-pedido-items-gen');
+        const txtTotal = document.getElementById('resumen-pedido-total-gen');
+
+        if (!contenedorResumen) return;
+
+        if (misPedidos.length > 0) {
+          contenedorResumen.style.display = 'block';
+          contenedorItems.innerHTML = '';
+          let acumulado = 0;
+
+          misPedidos.forEach((p, idx) => {
+            acumulado += (p.total || 0);
+            let subItems = (p.items || []).map(i => `• ${i.cantidad}x ${i.nombre} ($${i.precio * i.cantidad})`).join('<br>');
+            contenedorItems.innerHTML += `
+              <div style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
+                <strong>Orden Mesón #${idx + 1}</strong> (Cliente: ${p.nombreCliente}):<br>
+                ${subItems}
+              </div>
+            `;
+          });
+
+          txtTotal.innerText = `Total en preparación: $${acumulado}`;
+        } else {
+          contenedorResumen.style.display = 'none';
+        }
+      } catch (err) {
+        console.error("Error al verificar estado cliente general:", err);
+      }
+    }
+
     function agregarAlCarrito(categoria, nombre, precio) {
       const existe = carrito.find(i => i.nombre === nombre && i.categoria === categoria);
       if (existe) {
@@ -1294,13 +1617,12 @@
       carrito.forEach((item, index) => {
         const subtotal = item.precio * item.cantidad;
         total += subtotal;
-
         contentHTML += `
           <div class="cart-item">
             <div class="cart-item-info">
               <span class="cart-item-cat">${item.categoria}</span>
               <span class="cart-item-title">${item.nombre}</span>
-              <span class="cart-item-price">$${item.precio} x ${item.cantidad} = $${subtotal}</span>
+              <span class="cart-item-price">$${item.precio} c/u</span>
             </div>
             <div class="qty-controls">
               <button class="btn-qty" onclick="modificarCantidadCarrito(${index}, -1)">-</button>
@@ -1312,28 +1634,24 @@
       });
 
       contentHTML += `
-        <div style="text-align: right; margin-top: 15px; font-weight: bold; font-size: 16px; color: var(--neon-yellow);">
+        <div style="text-align: right; margin-top: 15px; font-size: 18px; font-weight: bold; color: var(--neon-yellow);">
           Total: $${total}
         </div>
         <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button class="btn btn-success" style="flex:1;" onclick="confirmarEnviarPedido()">🚀 Confirmar Pedido</button>
-          <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalGeneral()">Agregar mas...</button>
+          <button class="btn btn-secondary" style="flex: 1;" onclick="cerrarModalGeneral()">Seguir pidiendo</button>
+          <button class="btn btn-success" style="flex: 1;" onclick="enviarPedidoACocina()">🚀 Enviar a Cocina</button>
         </div>
       `;
 
-      mostrarModalGeneral(contentHTML);
+      abrirModalGeneral(contentHTML);
     }
 
     function modificarCantidadCarrito(index, cambio) {
-      if (!carrito[index]) return;
       carrito[index].cantidad += cambio;
-
       if (carrito[index].cantidad <= 0) {
         carrito.splice(index, 1);
       }
-
       actualizarBarraCarrito();
-
       if (carrito.length === 0) {
         cerrarModalGeneral();
       } else {
@@ -1341,39 +1659,236 @@
       }
     }
 
-    async function confirmarEnviarPedido() {
+    async function enviarPedidoACocina() {
       if (carrito.length === 0) return;
 
       const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-
-      const payload = {
-        local: localActual,
-        mesa: mesaActual,
-        items: carrito,
-        total: total
-      };
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            local: localActual,
+            mesa: mesaActual,
+            items: carrito,
+            total
+          })
         });
 
         if (res.ok) {
+          alert("🚀 ¡Pedido enviado a cocina!");
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalGeneral();
+          notificarSincronizacion();
           await cargarPedidosCocina();
           await cargarPedidosGarzon();
           await verificarEstadoPedidoCliente();
-          notificarSincronizacion();
-          alert("🎉 Pedido enviado a la cocina exitosamente!");
         } else {
-          alert("❌ Error al enviar el pedido.");
+          alert("❌ Ocurrió un error al registrar el pedido.");
         }
       } catch (err) {
-        alert("❌ Error de comunicación con el servidor.");
+        alert("❌ Error de comunicación al enviar pedido.");
+      }
+    }
+
+    async function cargarPedidosCocina() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        const pedidos = await res.json();
+
+        const contenedor = document.getElementById('contenedor-pedidos-cocina');
+        contenedor.innerHTML = '';
+
+        if (!res.ok || !Array.isArray(pedidos) || pedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en la cocina.</p>';
+          return;
+        }
+
+        pedidos.forEach(p => {
+          let itemsHTML = '';
+          (p.items || []).forEach(i => {
+            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre} ($${i.precio})</div>`;
+          });
+
+          const esGeneral = p.mesa === 'GENERAL' || p.nombreCliente;
+          const identificadorMesa = esGeneral ? `CLIENTE: ${p.nombreCliente || 'General'}` : `MESA N° ${p.mesa}`;
+
+          const card = document.createElement('div');
+          card.className = 'card-pedido';
+          card.innerHTML = `
+            <div>
+              <div class="card-pedido-header">
+                <span class="card-pedido-mesa" style="${esGeneral ? 'color: var(--neon-blue);' : ''}">${identificadorMesa}</span>
+                <span style="font-size:11px; color:var(--text-muted);">${new Date(p.createdAt || Date.now()).toLocaleTimeString()}</span>
+              </div>
+              <div style="margin-bottom:10px;">${itemsHTML}</div>
+            </div>
+            <div style="border-top:1px dashed #333; padding-top:10px; margin-top:10px;">
+              <div style="font-weight:bold; color:var(--neon-yellow); font-size:15px; margin-bottom:8px;">Total: $${p.total}</div>
+              <button class="btn btn-danger btn-sm" style="width:100%;" onclick="cancelarPedidoCocina('${p._id}')">🗑️ Cancelar Pedido</button>
+            </div>
+          `;
+          contenedor.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Error al cargar pedidos cocina:", err);
+      }
+    }
+
+    async function cancelarPedidoCocina(id) {
+      if (!confirm("¿Deseas eliminar este pedido de la cocina?")) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          notificarSincronizacion();
+          await cargarPedidosCocina();
+          await cargarPedidosGarzon();
+        }
+      } catch (err) {
+        alert("❌ Error al cancelar pedido.");
+      }
+    }
+
+    async function cargarPedidosGarzon() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        const pedidos = await res.json();
+
+        const contenedor = document.getElementById('contenedor-pedidos-garzon');
+        contenedor.innerHTML = '';
+
+        if (!res.ok || !Array.isArray(pedidos) || pedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes para entregar.</p>';
+          return;
+        }
+
+        const rutSesion = localStorage.getItem('garzon_rut_activo') || (document.getElementById('garzon-rut') ? document.getElementById('garzon-rut').value.trim() : '');
+
+        pedidos.forEach(p => {
+          let itemsHTML = '';
+          (p.items || []).forEach(i => {
+            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre}</div>`;
+          });
+
+          const esGeneral = p.mesa === 'GENERAL' || p.nombreCliente;
+          const identificadorMesa = esGeneral ? `MESÓN: ${p.nombreCliente || 'Cliente General'}` : `MESA N° ${p.mesa}`;
+
+          const asignadoAOtro = p.rutGarzon && p.rutGarzon !== rutSesion;
+          const asignadoAMi = p.rutGarzon && p.rutGarzon === rutSesion;
+
+          let estadoTexto = '🔴 Pedido Libre (Sin Asignar)';
+          let botonAccion = `<button class="btn btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon || ''}')">👁️ Ver Pedido / Atender</button>`;
+
+          if (asignadoAMi) {
+            estadoTexto = `🟢 Atendido por Ti (RUT: ${p.rutGarzon})`;
+            botonAccion = `<button class="btn btn-success btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon}')">✅ Finalizar & Entregar</button>`;
+          } else if (asignadoAOtro) {
+            estadoTexto = `🔒 Ocupado por Garzón: ${p.rutGarzon}`;
+            botonAccion = `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.5; cursor:not-allowed;" disabled>🔒 Atendido por otro Garzón</button>`;
+          }
+
+          const card = document.createElement('div');
+          card.className = 'card-pedido';
+          card.style.borderColor = asignadoAMi ? 'var(--neon-green)' : (asignadoAOtro ? '#444' : 'var(--neon-orange)');
+          card.innerHTML = `
+            <div>
+              <div class="card-pedido-header">
+                <span class="card-pedido-mesa" style="${esGeneral ? 'color: var(--neon-blue);' : ''}">${identificadorMesa}</span>
+                <span style="font-size:11px; color:var(--neon-yellow);">${estadoTexto}</span>
+              </div>
+              <div style="margin-bottom:10px;">${itemsHTML}</div>
+            </div>
+            <div style="border-top:1px dashed #333; padding-top:10px; margin-top:10px;">
+              <div style="font-weight:bold; color:var(--neon-yellow); font-size:15px; margin-bottom:8px;">Total: $${p.total}</div>
+              ${botonAccion}
+            </div>
+          `;
+          contenedor.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Error al cargar entregas garzón:", err);
+      }
+    }
+
+    async function tomarOEntregarPedido(pedidoId, rutAsignadoActualmente) {
+      const inputRut = document.getElementById('garzon-rut');
+      const rutIngresado = inputRut ? inputRut.value.trim() : '';
+
+      if (!rutIngresado) {
+        alert("⚠️ ATENCIÓN: Debe ingresar su RUT de garzón en la casilla superior antes de atender o entregar la mesa.");
+        if (inputRut) inputRut.focus();
+        return;
+      }
+
+      localStorage.setItem('garzon_rut_activo', rutIngresado);
+
+      if (rutAsignadoActualmente === rutIngresado) {
+        if (!confirm(`¿Confirmas la entrega final de este pedido con el RUT ${rutIngresado}?`)) return;
+
+        try {
+          const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+          const listaP = await resPedido.json();
+          const p = listaP.find(item => item._id === pedidoId);
+
+          if (!p) return alert("❌ El pedido ya no existe o fue entregado.");
+
+          const ahora = new Date();
+          const resHistorial = await fetch(`${BACKEND_URL}/api/historials`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: p._id,
+              local: localActual,
+              mesa: p.mesa,
+              nombreCliente: p.nombreCliente || null,
+              items: p.items,
+              total: p.total,
+              estado: 'entregado',
+              hora: new Date(p.createdAt).toLocaleTimeString(),
+              rutGarzon: rutIngresado,
+              horaEntrega: ahora.toLocaleTimeString(),
+              fechaEntrega: ahora.toISOString().split('T')[0]
+            })
+          });
+
+          if (resHistorial.ok) {
+            await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}`, { method: 'DELETE' });
+            alert("✅ Pedido entregado y registrado exitosamente en el historial.");
+            notificarSincronizacion();
+            await cargarPedidosGarzon();
+            await cargarPedidosCocina();
+            await cargarHistorial();
+          }
+        } catch (err) {
+          alert("❌ Error al finalizar la entrega.");
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}/asignar-garzon`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rutGarzon: rutIngresado })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          alert(`✅ Pedido asignado exitosamente a tu RUT (${rutIngresado}). Ahora puedes gestionarlo.`);
+          notificarSincronizacion();
+          await cargarPedidosGarzon();
+        } else if (res.status === 409) {
+          alert(`⛔ IMPOSIBLE INGRESAR: ${data.error || 'Otro garzón ya ha ingresado a este pedido.'}`);
+          await cargarPedidosGarzon();
+        } else {
+          alert(`❌ ${data.error || 'No se pudo asignar el pedido.'}`);
+        }
+      } catch (err) {
+        alert("❌ Error de servidor al intentar tomar el pedido.");
       }
     }
 
@@ -1383,355 +1898,243 @@
         if (!res.ok) return;
 
         const pedidos = await res.json();
-        const pedidosMesa = pedidos.filter(p => String(p.mesa) === String(mesaActual));
+        const misPedidos = pedidos.filter(p => String(p.mesa) === String(mesaActual));
 
-        const boxResumen = document.getElementById('resumen-pedido-activo');
-        const itemsContenedor = document.getElementById('resumen-pedido-items');
-        const totalContenedor = document.getElementById('resumen-pedido-total');
+        const contenedorResumen = document.getElementById('resumen-pedido-activo');
+        const contenedorItems = document.getElementById('resumen-pedido-items');
+        const txtTotal = document.getElementById('resumen-pedido-total');
 
-        if (pedidosMesa.length > 0) {
-          let html = '';
-          let totalMesa = 0;
+        if (misPedidos.length > 0) {
+          contenedorResumen.style.display = 'block';
+          contenedorItems.innerHTML = '';
+          let acumulado = 0;
 
-          pedidosMesa.forEach((ped, i) => {
-            totalMesa += ped.total || 0;
-            html += `<div style="margin-bottom: 8px; font-weight: bold; color: var(--neon-orange);">Orden #${i + 1}</div>`;
-
-            if (ped.items && ped.items.length > 0) {
-              ped.items.forEach(it => {
-                html += `<div style="display: flex; justify-content: space-between; font-size: 13px; color: #ccc;">
-                  <span>- ${it.nombre} x ${it.cantidad}</span>
-                  <span>$${it.precio * it.cantidad}</span>
-                </div>`;
-              });
-            }
+          misPedidos.forEach((p, idx) => {
+            acumulado += (p.total || 0);
+            let subItems = (p.items || []).map(i => `• ${i.cantidad}x ${i.nombre} ($${i.precio * i.cantidad})`).join('<br>');
+            contenedorItems.innerHTML += `
+              <div style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
+                <strong>Orden #${idx + 1}</strong> (${p.rutGarzon ? 'Atendido por: ' + p.rutGarzon : 'Esperando Garzón'}):<br>
+                ${subItems}
+              </div>
+            `;
           });
 
-          itemsContenedor.innerHTML = html;
-          totalContenedor.innerText = `Total Mesa: $${totalMesa}`;
-          boxResumen.style.display = 'block';
+          txtTotal.innerText = `Total en preparación: $${acumulado}`;
         } else {
-          boxResumen.style.display = 'none';
+          contenedorResumen.style.display = 'none';
         }
       } catch (err) {
-        console.error("Error al verificar estado del pedido:", err);
-      }
-    }
-
-    async function cargarPedidosCocina() {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
-        const contenedor = document.getElementById('contenedor-pedidos-cocina');
-        contenedor.innerHTML = '';
-
-        if (!res.ok) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Error al cargar pedidos.</p>';
-          return;
-        }
-
-        const pedidos = await res.json();
-
-        if (!pedidos || pedidos.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos en preparación.</p>';
-          return;
-        }
-
-        pedidos.forEach(p => {
-          const card = document.createElement('div');
-          card.className = 'card-pedido';
-
-          let itemsHTML = '';
-          if (p.items && p.items.length > 0) {
-            p.items.forEach(it => {
-              itemsHTML += `<div style="font-size: 13px; color: #ddd; margin-bottom: 4px;">• ${it.nombre} x ${it.cantidad}</div>`;
-            });
-          }
-
-          const horaCreacion = new Date(p.createdAt || p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-          card.innerHTML = `
-            <div>
-              <div class="card-pedido-header">
-                <span class="card-pedido-mesa">Mesa N° ${p.mesa}</span>
-                <span style="font-size: 12px; color: var(--text-muted);">${horaCreacion}</span>
-              </div>
-              <div style="margin-bottom: 15px;">${itemsHTML}</div>
-            </div>
-            <div>
-              <div style="font-size: 14px; font-weight: bold; color: var(--neon-yellow); margin-bottom: 10px;">Total: $${p.total}</div>
-              <button class="btn btn-danger btn-sm" style="width: 100%;" onclick="cancelarPedidoCocina('${p._id}')">🗑️ Eliminar / Cancelar</button>
-            </div>
-          `;
-
-          contenedor.appendChild(card);
-        });
-      } catch (err) {
-        console.error("Error al obtener pedidos para cocina:", err);
-      }
-    }
-
-    async function cancelarPedidoCocina(id) {
-      if (!confirm("¿Seguro que deseas eliminar/cancelar este pedido?")) return;
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          await cargarPedidosCocina();
-          await cargarPedidosGarzon();
-          await verificarEstadoPedidoCliente();
-          notificarSincronizacion();
-        } else {
-          alert("❌ Error al eliminar pedido.");
-        }
-      } catch (err) {
-        alert("❌ Error de comunicación con el servidor.");
-      }
-    }
-
-    async function cargarPedidosGarzon() {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
-        const contenedor = document.getElementById('contenedor-pedidos-garzon');
-        contenedor.innerHTML = '';
-
-        if (!res.ok) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Error al cargar entregas.</p>';
-          return;
-        }
-
-        const pedidos = await res.json();
-
-        if (!pedidos || pedidos.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes de entrega.</p>';
-          return;
-        }
-
-        pedidos.forEach(p => {
-          const card = document.createElement('div');
-          card.className = 'card-pedido';
-
-          let itemsHTML = '';
-          if (p.items && p.items.length > 0) {
-            p.items.forEach(it => {
-              itemsHTML += `<div style="font-size: 13px; color: #ddd; margin-bottom: 4px;">• ${it.nombre} x ${it.cantidad}</div>`;
-            });
-          }
-
-          const horaCreacion = new Date(p.createdAt || p.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const garzonInfo = p.rutGarzon ? `<div style="font-size: 11px; color: var(--neon-blue); margin-bottom: 6px;">Garzón Asignado: ${p.rutGarzon}</div>` : '';
-
-          card.innerHTML = `
-            <div>
-              <div class="card-pedido-header">
-                <span class="card-pedido-mesa">Mesa N° ${p.mesa}</span>
-                <span style="font-size: 12px; color: var(--text-muted);">${horaCreacion}</span>
-              </div>
-              ${garzonInfo}
-              <div style="margin-bottom: 15px;">${itemsHTML}</div>
-            </div>
-            <div>
-              <div style="font-size: 14px; font-weight: bold; color: var(--neon-yellow); margin-bottom: 10px;">Total: $${p.total}</div>
-              <button class="btn btn-success btn-sm" style="width: 100%;" onclick="confirmarEntregaGarzon('${p._id}')">✅ Marcar como Entregado</button>
-            </div>
-          `;
-
-          contenedor.appendChild(card);
-        });
-      } catch (err) {
-        console.error("Error al obtener entregas para garzón:", err);
-      }
-    }
-
-    async function confirmarEntregaGarzon(idPedido) {
-      const rutInput = document.getElementById('garzon-rut');
-      const rutGarzon = rutInput ? rutInput.value.trim() : '';
-
-      if (!rutGarzon) {
-        alert("⚠️ Debe ingresar su RUT de Garzón Responsable antes de marcar una entrega.");
-        if (rutInput) rutInput.focus();
-        return;
-      }
-
-      try {
-        // Step 1: Validar/Asignar Garzón de forma atómica en el backend
-        const resAsignar = await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}/asignar-garzon`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rutGarzon })
-        });
-
-        const dataAsignar = await resAsignar.json();
-
-        // Si la mesa ya pertenece a otro garzón, rechazamos la solicitud y mostramos el error del servidor
-        if (!resAsignar.ok) {
-          alert(`⛔ ${dataAsignar.error || 'No se pudo asignar la mesa.'}`);
-          await cargarPedidosGarzon();
-          return;
-        }
-
-        // Step 2: Obtener detalles del pedido asignado
-        const pedido = dataAsignar.pedido;
-        const ahora = new Date();
-
-        const registroHistorial = {
-          id: idPedido,
-          local: localActual,
-          mesa: String(pedido.mesa),
-          items: pedido.items || [],
-          total: Number(pedido.total || 0),
-          estado: 'entregado',
-          hora: new Date(pedido.createdAt || pedido.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          rutGarzon: rutGarzon,
-          horaEntrega: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          fechaEntrega: ahora.toISOString().split('T')[0]
-        };
-
-        // Step 3: Guardar en historial
-        const resHist = await fetch(`${BACKEND_URL}/api/historials`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(registroHistorial)
-        });
-
-        if (resHist.ok) {
-          // Step 4: Eliminar de lista activa de pedidos
-          await fetch(`${BACKEND_URL}/api/pedidos/${idPedido}`, { method: 'DELETE' });
-
-          await cargarPedidosCocina();
-          await cargarPedidosGarzon();
-          await cargarHistorial();
-          await verificarEstadoPedidoCliente();
-          notificarSincronizacion();
-
-          alert("✅ Pedido entregado y registrado con éxito.");
-        } else {
-          alert("❌ Error al guardar el historial de entrega.");
-        }
-      } catch (err) {
-        console.error("Error al procesar la entrega del garzón:", err);
-        alert("❌ Error de comunicación con el servidor.");
+        console.error("Error al verificar estado de cliente:", err);
       }
     }
 
     async function cargarHistorial() {
       try {
         const res = await fetch(`${BACKEND_URL}/api/historials?local=${encodeURIComponent(localActual)}`);
-        const tbody = document.getElementById('tabla-historial-body');
-        tbody.innerHTML = '';
+        const registros = await res.json();
 
-        if (!res.ok) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Error al cargar historial.</td></tr>';
-          return;
+        if (res.ok && Array.isArray(registros)) {
+          historialGlobalLocal = registros;
+          aplicarFiltrosHistorial();
         }
-
-        historialGlobalLocal = await res.json();
-
-        // Cargar por defecto el filtro del mes actual
-        aplicarFiltrosHistorial();
       } catch (err) {
         console.error("Error al obtener historial:", err);
       }
     }
 
-    function aplicarFiltrosHistorial() {
-      const rutFiltro = document.getElementById('filtro-rut-garzon').value.trim().toLowerCase();
-      const mesFiltro = document.getElementById('filtro-mes-garzon').value;
-      const desdeFiltro = document.getElementById('filtro-fecha-desde').value;
-      const hastaFiltro = document.getElementById('filtro-fecha-hasta').value;
-
-      let filtrados = [...historialGlobalLocal];
-
-      if (rutFiltro) {
-        filtrados = filtrados.filter(h => (h.rutGarzon || '').toLowerCase().includes(rutFiltro));
-      }
-
-      if (mesFiltro) {
-        filtrados = filtrados.filter(h => {
-          const fechaStr = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
-          return fechaStr.startsWith(mesFiltro);
-        });
-      } else if (desdeFiltro || hastaFiltro) {
-        if (desdeFiltro) {
-          filtrados = filtrados.filter(h => {
-            const fechaStr = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
-            return fechaStr >= desdeFiltro;
-          });
-        }
-        if (hastaFiltro) {
-          filtrados = filtrados.filter(h => {
-            const fechaStr = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
-            return fechaStr <= hastaFiltro;
-          });
-        }
-      } else {
-        // Por defecto: mes actual
-        const mesActualStr = new Date().toISOString().slice(0, 7);
-        document.getElementById('filtro-mes-garzon').value = mesActualStr;
-        filtrados = filtrados.filter(h => {
-          const fechaStr = h.fechaEntrega || (h.createdAt ? h.createdAt.split('T')[0] : '');
-          return fechaStr.startsWith(mesActualStr);
-        });
-      }
-
-      renderizarTablaHistorial(filtrados);
-    }
-
-    function limpiarFiltroRut() {
-      document.getElementById('filtro-rut-garzon').value = '';
-      document.getElementById('filtro-fecha-desde').value = '';
-      document.getElementById('filtro-fecha-hasta').value = '';
-      const mesActualStr = new Date().toISOString().slice(0, 7);
-      document.getElementById('filtro-mes-garzon').value = mesActualStr;
-      aplicarFiltrosHistorial();
-    }
-
-    function renderizarTablaHistorial(registros) {
+    function renderizarHistorialTabla(registros) {
       const tbody = document.getElementById('tabla-historial-body');
       tbody.innerHTML = '';
 
-      let totalPedidos = registros.length;
-      let totalVentas = 0;
-
-      if (!registros || registros.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No se encontraron registros de entregas para los filtros seleccionados.</td></tr>';
-        document.getElementById('stat-total-pedidos').innerText = '0';
-        document.getElementById('stat-total-ventas').innerText = '$0';
-        document.getElementById('resultado-informe-rut').style.display = 'none';
+      if (registros.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Sin registros.</td></tr>';
         return;
       }
 
       registros.forEach(r => {
-        totalVentas += (r.total || 0);
+        const esGen = r.mesa === 'GENERAL' || r.nombreCliente;
+        const ident = esGen ? `Cliente: ${r.nombreCliente || 'General'}` : `Mesa ${r.mesa || '--'}`;
 
         const tr = document.createElement('tr');
-        const fechaDisplay = r.fechaEntrega ? `${r.fechaEntrega} ${r.horaEntrega || ''}` : (r.createdAt ? new Date(r.createdAt).toLocaleString() : '--');
-
         tr.innerHTML = `
-          <td>${fechaDisplay}</td>
-          <td>Mesa ${r.mesa || '--'}</td>
-          <td style="color: var(--neon-yellow); font-weight: bold;">$${r.total || 0}</td>
+          <td>${r.fechaEntrega || ''} ${r.horaEntrega || ''}</td>
+          <td>${ident}</td>
+          <td>$${r.total || 0}</td>
           <td>${r.rutGarzon || 'N/A'}</td>
         `;
-
         tbody.appendChild(tr);
       });
+    }
+
+    function calcularMetricas(registros) {
+      const totalPedidos = registros.length;
+      const totalVentas = registros.reduce((sum, r) => sum + (r.total || 0), 0);
 
       document.getElementById('stat-total-pedidos').innerText = totalPedidos;
       document.getElementById('stat-total-ventas').innerText = `$${totalVentas}`;
+    }
 
-      const rutBuscado = document.getElementById('filtro-rut-garzon').value.trim();
-      const boxInforme = document.getElementById('resultado-informe-rut');
+    function aplicarFiltrosHistorial() {
+      const rut = document.getElementById('filtro-rut-garzon').value.trim();
+      const mes = document.getElementById('filtro-mes-garzon').value;
+      const desde = document.getElementById('filtro-fecha-desde').value;
+      const hasta = document.getElementById('filtro-fecha-hasta').value;
 
-      if (rutBuscado) {
-        boxInforme.style.display = 'block';
-        boxInforme.innerHTML = `
-          <h4 style="color: var(--neon-green); margin-bottom: 8px;">📊 Informe para Garzón: ${rutBuscado}</h4>
-          <p style="font-size: 14px;"><strong>Entregas Realizadas:</strong> ${totalPedidos}</p>
-          <p style="font-size: 14px;"><strong>Recaudación Asociada:</strong> $${totalVentas}</p>
+      let filtrados = [...historialGlobalLocal];
+
+      if (rut) {
+        filtrados = filtrados.filter(r => (r.rutGarzon || '').toLowerCase().includes(rut.toLowerCase()));
+      }
+
+      if (mes) {
+        filtrados = filtrados.filter(r => (r.fechaEntrega || '').startsWith(mes));
+      } else if (desde || hasta) {
+        if (desde) filtrados = filtrados.filter(r => (r.fechaEntrega || '') >= desde);
+        if (hasta) filtrados = filtrados.filter(r => (r.fechaEntrega || '') <= hasta);
+      }
+
+      historialFiltradoActual = filtrados;
+      renderizarHistorialTabla(filtrados);
+      calcularMetricas(filtrados);
+
+      const boxInfo = document.getElementById('resultado-informe-rut');
+      if (rut) {
+        const vTotales = filtrados.reduce((s, r) => s + (r.total || 0), 0);
+        boxInfo.style.display = 'block';
+        boxInfo.innerHTML = `
+          <h4 style="color:var(--neon-green)">📊 Resumen Rendimiento RUT: ${rut}</h4>
+          <p style="margin-top:5px; font-size:14px;">Pedidos Atendidos: <strong>${filtrados.length}</strong> | Total Generado: <strong style="color:var(--neon-yellow)">$${vTotales}</strong></p>
         `;
       } else {
-        boxInforme.style.display = 'none';
+        boxInfo.style.display = 'none';
       }
+    }
+
+    function limpiarFiltroRut() {
+      document.getElementById('filtro-rut-garzon').value = '';
+      const ahora = new Date();
+      const yyyy = ahora.getFullYear();
+      const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+      document.getElementById('filtro-mes-garzon').value = `${yyyy}-${mm}`;
+      document.getElementById('filtro-fecha-desde').value = '';
+      document.getElementById('filtro-fecha-hasta').value = '';
+      document.getElementById('resultado-informe-rut').style.display = 'none';
+      aplicarFiltrosHistorial();
+    }
+
+    function descargarInformePDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const rut = document.getElementById('filtro-rut-garzon').value.trim();
+      const mes = document.getElementById('filtro-mes-garzon').value;
+      const desde = document.getElementById('filtro-fecha-desde').value;
+      const hasta = document.getElementById('filtro-fecha-hasta').value;
+
+      const totalPedidos = historialFiltradoActual.length;
+      const totalRecaudado = historialFiltradoActual.reduce((sum, r) => sum + (r.total || 0), 0);
+
+      doc.setFontSize(18);
+      doc.text(`INFORME DE RENDIMIENTO - ${localActual.toUpperCase()}`, 14, 20);
+
+      doc.setFontSize(11);
+      doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, 28);
+      
+      let filtroInfo = "Filtro Aplicado: ";
+      if (rut) filtroInfo += `RUT Garzón: ${rut} | `;
+      if (mes) filtroInfo += `Mes: ${mes} | `;
+      if (desde || hasta) filtroInfo += `Rango: ${desde || 'Inicio'} a ${hasta || 'Hoy'}`;
+      if (!rut && !mes && !desde && !hasta) filtroInfo += "General (Todos los registros)";
+      
+      doc.text(filtroInfo, 14, 35);
+
+      doc.setDrawColor(200, 200, 200);
+      doc.line(14, 39, 196, 39);
+
+      doc.setFontSize(13);
+      doc.text(`Resumen de Resultados:`, 14, 48);
+      doc.setFontSize(11);
+      doc.text(`• Total Pedidos Entregados: ${totalPedidos}`, 14, 55);
+      doc.text(`• Recaudación Total: $${totalRecaudado}`, 14, 62);
+
+      doc.line(14, 67, 196, 67);
+
+      doc.setFontSize(12);
+      doc.text("Detalle de Pedidos:", 14, 76);
+
+      let y = 85;
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text("Fecha / Hora Entrega", 14, y);
+      doc.text("Mesa / Cliente", 80, y);
+      doc.text("Total", 125, y);
+      doc.text("RUT Garzón", 160, y);
+
+      y += 4;
+      doc.line(14, y, 196, y);
+      doc.setFont(undefined, 'normal');
+
+      if (historialFiltradoActual.length === 0) {
+        y += 10;
+        doc.text("No existen registros que coincidan con el filtro seleccionado.", 14, y);
+      } else {
+        historialFiltradoActual.forEach((r) => {
+          y += 8;
+          if (y > 275) {
+            doc.addPage();
+            y = 20;
+            doc.setFont(undefined, 'bold');
+            doc.text("Fecha / Hora Entrega", 14, y);
+            doc.text("Mesa / Cliente", 80, y);
+            doc.text("Total", 125, y);
+            doc.text("RUT Garzón", 160, y);
+            y += 4;
+            doc.line(14, y, 196, y);
+            doc.setFont(undefined, 'normal');
+            y += 8;
+          }
+
+          const fechaHora = `${r.fechaEntrega || ''} ${r.horaEntrega || ''}`.trim() || 'N/A';
+          const esGen = r.mesa === 'GENERAL' || r.nombreCliente;
+          const mesaStr = esGen ? `Cli: ${r.nombreCliente || 'Gen'}` : `Mesa ${r.mesa || '--'}`;
+          const totalStr = `$${r.total || 0}`;
+          const rutStr = r.rutGarzon || 'N/A';
+
+          doc.text(fechaHora, 14, y);
+          doc.text(mesaStr, 80, y);
+          doc.text(totalStr, 125, y);
+          doc.text(rutStr, 160, y);
+        });
+      }
+
+      doc.save(`Informe_Rendimiento_${localActual}_${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    // --- QR CLIENTE GENERAL ---
+    function generarQRGeneralDefault() {
+      const target = document.getElementById('qr-general-render');
+      const lblNombre = document.getElementById('lbl-qr-gen-nombre-local');
+      if (!target) return;
+      target.innerHTML = '';
+      if (lblNombre) lblNombre.innerText = localActual;
+
+      const urlAcceso = `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localActual)}&view=cliente_general`;
+      new QRCode(target, {
+        text: urlAcceso,
+        width: 160,
+        height: 160
+      });
+    }
+
+    function descargarQRGeneral() {
+      const canvas = document.querySelector('#qr-general-render canvas');
+      if (!canvas) return alert("❌ No se ha generado el código QR aún.");
+
+      const link = document.createElement('a');
+      link.download = `QR_CLIENTE_GENERAL_${localActual.toUpperCase()}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
     }
 
     function generarQRGarzonDefault() {
@@ -1739,196 +2142,104 @@
       if (!target) return;
       target.innerHTML = '';
 
-      const baseAppUrl = window.location.href.split('?')[0].split('#')[0];
-      const garzonUrl = `${baseAppUrl}?local=${encodeURIComponent(localActual)}&view=garzon`;
-
+      const urlAcceso = `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localActual)}&view=garzon`;
       new QRCode(target, {
-        text: garzonUrl,
-        width: 140,
-        height: 140,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
+        text: urlAcceso,
+        width: 160,
+        height: 160
       });
     }
 
     function descargarQRGarzon() {
-      const container = document.getElementById('qr-garzon-render');
-      const img = container ? container.querySelector('img') : null;
+      const canvas = document.querySelector('#qr-garzon-render canvas');
+      if (!canvas) return alert("❌ No se ha generado el código QR aún.");
 
-      if (!img) return alert("⚠️ Generando QR, intente en un segundo.");
-
-      const canvas = document.createElement('canvas');
-      canvas.width = 400;
-      canvas.height = 400;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 400, 400);
-
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 22px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(localActual.toUpperCase(), 200, 40);
-
-      ctx.drawImage(img, 75, 60, 250, 250);
-
-      ctx.font = 'bold 18px Arial';
-      ctx.fillText("ACCESO GARZÓN - ENTREGAS", 200, 350);
-
-      const a = document.createElement('a');
-      a.download = `QR_GARZON_${localActual.toUpperCase()}.png`;
-      a.href = canvas.toDataURL('image/png');
-      a.click();
+      const link = document.createElement('a');
+      link.download = `QR_GARZON_${localActual.toUpperCase()}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
     }
 
     function generarQRUnico() {
-      const mesaVal = document.getElementById('qr-num-mesa').value || '1';
-      const target = document.getElementById('qr-single-render');
-      if (!target) return;
+      const numMesa = document.getElementById('qr-num-mesa').value || '1';
+      const render = document.getElementById('qr-single-render');
+      if (!render) return;
 
-      target.innerHTML = '';
+      render.innerHTML = '';
+      document.getElementById('lbl-qr-single-nombre-local').innerText = localActual;
+      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${numMesa}`;
 
-      document.getElementById('lbl-qr-single-nombre-local').innerText = localActual.toUpperCase();
-      document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${mesaVal}`;
+      const urlMesa = `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localActual)}&mesa=${numMesa}&view=cliente`;
 
-      const baseAppUrl = window.location.href.split('?')[0].split('#')[0];
-      const clienteUrl = `${baseAppUrl}?local=${encodeURIComponent(localActual)}&mesa=${mesaVal}&view=cliente`;
-
-      new QRCode(target, {
-        text: clienteUrl,
-        width: 140,
-        height: 140,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
+      new QRCode(render, {
+        text: urlMesa,
+        width: 150,
+        height: 150
       });
     }
 
     function descargarQRImagen() {
-      const mesaVal = document.getElementById('qr-num-mesa').value || '1';
-      const container = document.getElementById('qr-single-render');
-      const img = container ? container.querySelector('img') : null;
+      const canvas = document.querySelector('#qr-single-render canvas');
+      if (!canvas) return alert("❌ No se ha generado el código QR aún.");
 
-      if (!img) return alert("⚠️ Primero genera el código QR.");
-
-      const canvas = document.createElement('canvas');
-      canvas.width = 400;
-      canvas.height = 400;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 400, 400);
-
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 24px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(localActual.toUpperCase(), 200, 45);
-
-      ctx.drawImage(img, 75, 65, 250, 250);
-
-      ctx.font = 'bold 22px Arial';
-      ctx.fillText(`MESA N° ${mesaVal}`, 200, 345);
-
-      ctx.font = '14px Arial';
-      ctx.fillStyle = '#555555';
-      ctx.fillText("Escanea para hacer tu pedido", 200, 375);
-
-      const a = document.createElement('a');
-      a.download = `QR_MESA_${mesaVal}_${localActual.toUpperCase()}.png`;
-      a.href = canvas.toDataURL('image/png');
-      a.click();
+      const numMesa = document.getElementById('qr-num-mesa').value || '1';
+      const link = document.createElement('a');
+      link.download = `QR_${localActual}_Mesa_${numMesa}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
     }
 
-    async function generarPDFMesas() {
+    function generarPDFMesas() {
       const desde = parseInt(document.getElementById('qr-rango-desde').value) || 1;
       const hasta = parseInt(document.getElementById('qr-rango-hasta').value) || 1;
 
-      if (desde > hasta) return alert("⚠️ El rango 'Desde' debe ser menor o igual a 'Hasta'.");
+      if (desde > hasta) return alert("⚠️ La mesa inicial debe ser menor o igual a la final.");
 
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit: 'cm', format: 'a4' });
-
-      const baseAppUrl = window.location.href.split('?')[0].split('#')[0];
-      let currentX = 1.5;
-      let currentY = 1.5;
-      const qrWidth = 5;
-      const qrHeight = 5;
-      const marginX = 1.5;
-      const marginY = 1.8;
-
-      let count = 0;
+      const doc = new jsPDF();
+      let x = 10, y = 10;
+      const ancho = 50, alto = 50;
 
       for (let m = desde; m <= hasta; m++) {
-        if (count > 0 && count % 12 === 0) {
-          doc.addPage();
-          currentX = 1.5;
-          currentY = 1.5;
-        }
-
-        const clienteUrl = `${baseAppUrl}?local=${encodeURIComponent(localActual)}&mesa=${m}&view=cliente`;
-
         const tempDiv = document.createElement('div');
-        tempDiv.style.display = 'none';
-        document.body.appendChild(tempDiv);
+        const urlMesa = `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localActual)}&mesa=${m}&view=cliente`;
 
-        new QRCode(tempDiv, {
-          text: clienteUrl,
-          width: 200,
-          height: 200,
-          colorDark: "#000000",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H
-        });
+        new QRCode(tempDiv, { text: urlMesa, width: 100, height: 100 });
 
-        await new Promise(r => setTimeout(r, 100));
+        setTimeout(() => {
+          const canvas = tempDiv.querySelector('canvas');
+          if (canvas) {
+            const imgData = canvas.toDataURL('image/png');
+            doc.rect(x, y, ancho, alto);
+            doc.setFontSize(8);
+            doc.text(localActual.toUpperCase(), x + 5, y + 6);
+            doc.addImage(imgData, 'PNG', x + 5, y + 8, 35, 35);
+            doc.text(`MESA N° ${m}`, x + 15, y + 47);
 
-        const qrImg = tempDiv.querySelector('img');
-        const imgData = qrImg ? qrImg.src : null;
-
-        doc.setLineWidth(0.02);
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(currentX, currentY, qrWidth, qrHeight + 1.2);
-
-        doc.setFont("Helvetica", "bold");
-        doc.setFontSize(10);
-        doc.text(localActual.toUpperCase(), currentX + (qrWidth / 2), currentY + 0.6, { align: 'center' });
-
-        if (imgData) {
-          doc.addImage(imgData, 'PNG', currentX + 0.5, currentY + 0.8, 4, 4);
-        }
-
-        doc.setFontSize(11);
-        doc.text(`MESA N° ${m}`, currentX + (qrWidth / 2), currentY + 5.2, { align: 'center' });
-
-        doc.setFont("Helvetica", "normal");
-        doc.setFontSize(7);
-        doc.text("Escanea el QR para pedir", currentX + (qrWidth / 2), currentY + 5.8, { align: 'center' });
-
-        document.body.removeChild(tempDiv);
-
-        currentX += qrWidth + marginX;
-        if (currentX + qrWidth > 20) {
-          currentX = 1.5;
-          currentY += qrHeight + marginY + 1.2;
-        }
-
-        count++;
+            x += 55;
+            if (x > 150) {
+              x = 10;
+              y += 55;
+              if (y > 230) {
+                doc.addPage();
+                y = 10;
+              }
+            }
+          }
+          if (m === hasta) {
+            doc.save(`Planilla_QR_${localActual}_Mesas_${desde}_a_${hasta}.pdf`);
+          }
+        }, 100);
       }
-
-      doc.save(`QRs_MESAS_${desde}_AL_${hasta}_${localActual.toUpperCase()}.pdf`);
     }
 
-    function mostrarModalGeneral(htmlContent) {
-      const modal = document.getElementById('modal-general');
-      const body = document.getElementById('modal-content-body');
-      body.innerHTML = htmlContent;
-      modal.style.display = 'flex';
+    function abrirModalGeneral(html) {
+      document.getElementById('modal-content-body').innerHTML = html;
+      document.getElementById('modal-general').style.display = 'flex';
     }
 
     function cerrarModalGeneral() {
-      const modal = document.getElementById('modal-general');
-      modal.style.display = 'none';
+      document.getElementById('modal-general').style.display = 'none';
     }
   </script>
 </body>
