@@ -547,7 +547,7 @@
     (function() {
       const p = new URLSearchParams(window.location.search);
       const v = p.get('view');
-      if (v === 'cliente') {
+      if (v === 'cliente' || v === 'clientegeneral') {
         document.documentElement.classList.add('view-cliente');
       } else if (v === 'garzon') {
         document.documentElement.classList.add('view-garzon');
@@ -594,6 +594,7 @@
     <div class="nav-tabs" id="admin-nav-tabs">
       <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
+      <button class="tab-btn" id="btn-tab-cliente-general" onclick="cambiarPestana('tab-cliente-general', this)">📱 Vista Previa Cliente General</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Gestor de QR</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
       <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
@@ -614,6 +615,7 @@
       </div>
     </div>
 
+    <!-- PESTAÑA VISTA PREVIA CLIENTE MESA -->
     <div id="tab-cliente" class="tab-content">
       <div class="preview-header">
         <div class="brand-title" id="txt-local-cliente">MENÚ DIGITAL</div>
@@ -631,7 +633,7 @@
           <span style="font-size: 12px; color: #aaa;">Total Pedido:</span><br>
           <span style="font-size: 18px; font-weight: bold; color: var(--neon-yellow);" id="txt-total-bar">$0</span>
         </div>
-        <button class="cart-btn" onclick="abrirModalCarrito()">🛒 Ver Pedido (<span id="txt-count-bar">0</span>)</button>
+        <button class="cart-btn" onclick="abrirModalCarrito(false)">🛒 Ver Pedido (<span id="txt-count-bar">0</span>)</button>
       </div>
 
       <div id="resumen-pedido-activo" style="display: none;" class="resumen-pedido-cliente">
@@ -648,18 +650,82 @@
       </div>
     </div>
 
-    <div id="tab-qr" class="tab-content">
-      <div class="section-card" style="border-color: var(--neon-blue);">
-        <h3>🔲 QR Exclusivo para Garzones</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Código permanentemente listo para descargar e imprimir (Etiqueta 5x5 cm).
+    <!-- PESTAÑA VISTA PREVIA CLIENTE GENERAL -->
+    <div id="tab-cliente-general" class="tab-content">
+      <div class="preview-header">
+        <div class="brand-title" id="txt-local-cliente-gen">MENÚ DIGITAL</div>
+        <div class="mesa-badge" style="background: var(--neon-blue);">MESÓN PRINCIPAL</div>
+      </div>
+
+      <div class="section-card" style="margin-top: 15px;">
+        <h3>👤 Datos del Cliente</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">
+          Ingresa tu Nombre y Apellido para ser llamado en el mesón a viva voz.
         </p>
-        <div class="qr-card-container">
-          <div class="qr-preview-box">
-            <div id="qr-garzon-render"></div>
-            <p style="color: #000; font-weight: bold; margin-top: 8px; font-size: 13px;">ACCESO GARZÓN - ENTREGAS</p>
+        <input type="text" id="txt-nombre-cliente-gen" placeholder="Nombre y Apellido (Ej: Juan Pérez)">
+      </div>
+
+      <div class="categories-bar" id="barra-categorias-cliente-gen"></div>
+
+      <div id="lista-productos-cliente-gen" style="margin-top: 15px;">
+        <p style="text-align: center; color: var(--text-muted);">Cargando carta...</p>
+      </div>
+
+      <div class="cart-bar" id="cart-bar-gen">
+        <div>
+          <span style="font-size: 12px; color: #aaa;">Total Pedido:</span><br>
+          <span style="font-size: 18px; font-weight: bold; color: var(--neon-yellow);" id="txt-total-bar-gen">$0</span>
+        </div>
+        <button class="cart-btn" onclick="abrirModalCarrito(true)">🛒 Ver Pedido (<span id="txt-count-bar-gen">0</span>)</button>
+      </div>
+
+      <div id="resumen-pedido-activo-gen" style="display: none;" class="resumen-pedido-cliente">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 8px; margin-bottom: 10px;">
+          <h4 style="color: var(--neon-green); font-size: 16px;">⏳ Pedidos Enviados a Cocina</h4>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+          Tu pedido está en preparación. Atento a ser llamado por tu nombre en el mesón.
+        </p>
+        <div id="resumen-pedido-items-gen" style="font-size: 14px; margin-bottom: 12px;"></div>
+        <div style="text-align: right; font-weight: bold; font-size: 16px; color: var(--neon-yellow);" id="resumen-pedido-total-gen">
+          Total: $0
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-qr" class="tab-content">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+        <!-- QR GARZÓN -->
+        <div class="section-card" style="border-color: var(--neon-blue);">
+          <h3>🔲 QR Exclusivo para Garzones</h3>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+            Código permanentemente listo para descargar e imprimir (Etiqueta 5x5 cm).
+          </p>
+          <div class="qr-card-container">
+            <div class="qr-preview-box">
+              <div id="qr-garzon-render"></div>
+              <p style="color: #000; font-weight: bold; margin-top: 8px; font-size: 13px;">ACCESO GARZÓN - ENTREGAS</p>
+            </div>
+            <button class="btn btn-blue btn-sm" onclick="descargarQRGarzon()">📥 Descargar QR Garzón (PNG Imprimible)</button>
           </div>
-          <button class="btn btn-blue btn-sm" onclick="descargarQRGarzon()">📥 Descargar QR Garzón (PNG Imprimible)</button>
+        </div>
+
+        <!-- QR MESÓN CLIENTE GENERAL (NUEVO) -->
+        <div class="section-card" style="border-color: var(--neon-green);">
+          <h3>🔲 QR Mesón Principal (Cliente General)</h3>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+            QR impreso para expender en el mesón principal del local.
+          </p>
+          <div class="qr-card-container">
+            <div class="qr-preview-box" id="box-qr-meson" style="text-align: center;">
+              <p id="lbl-qr-meson-nombre-local" style="color: #000; font-weight: 900; margin-bottom: 8px; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px;"></p>
+              <div id="qr-meson-render" style="display:flex; justify-content:center;"></div>
+              <p style="color: #000; font-weight: bold; margin-top: 8px; font-size: 12px; max-width: 200px; line-height: 1.2;">
+                Escanee el qr para hacer su pedido directamente en su movil
+              </p>
+            </div>
+            <button class="btn btn-success btn-sm" onclick="descargarQRMeson()">📥 Descargar QR Mesón (PNG Imprimible)</button>
+          </div>
         </div>
       </div>
 
@@ -704,7 +770,7 @@
           <div>
             <h3>🍳 Pedidos en Preparación</h3>
             <p style="color: var(--neon-yellow); font-size: 18px; margin-top: 4px;">
-              Ubicar en el lugar designado el pedido de la mesa cuando esté listo, y avisar al encargado de repartir.
+              Ubicar en el lugar designado el pedido de la mesa o cliente cuando esté listo, y avisar al encargado de repartir.
             </p>
           </div>
           <button class="btn btn-secondary btn-sm" onclick="cargarPedidosCocina()">🔄 Actualizar Pedidos</button>
@@ -787,7 +853,7 @@
             <thead>
               <tr>
                 <th>Fecha / Hora Entrega</th>
-                <th>Mesa</th>
+                <th>Mesa / Cliente</th>
                 <th>Total</th>
                 <th>RUT Garzón</th>
               </tr>
@@ -834,7 +900,7 @@
       const viewMode = urlParams.get('view');
       const localId = (urlParams.get('local') || '').trim().toLowerCase();
 
-      if (viewMode === 'cliente' || viewMode === 'garzon') return;
+      if (viewMode === 'cliente' || viewMode === 'clientegeneral' || viewMode === 'garzon') return;
 
       const token = localStorage.getItem('auth_token');
 
@@ -899,6 +965,7 @@
 
       document.getElementById('lbl-local-nombre').innerText = localActual.toUpperCase();
       document.getElementById('txt-local-cliente').innerText = localActual.toUpperCase();
+      document.getElementById('txt-local-cliente-gen').innerText = localActual.toUpperCase();
       document.getElementById('txt-mesa-cliente').innerText = `Mesa N° ${mesaActual}`;
 
       actualizarEtiquetaMesActual();
@@ -912,6 +979,9 @@
       if (viewParam === 'cliente') {
         document.body.classList.add('is-cliente');
         activarPestanaDirecta('tab-cliente');
+      } else if (viewParam === 'clientegeneral') {
+        document.body.classList.add('is-cliente');
+        activarPestanaDirecta('tab-cliente-general');
       } else if (viewParam === 'garzon') {
         document.body.classList.add('is-garzon');
         activarPestanaDirecta('tab-garzon');
@@ -925,6 +995,7 @@
       await cargarHistorial();
       await verificarEstadoPedidoCliente();
       generarQRGarzonDefault();
+      generarQRMesonDefault();
       generarQRUnico();
 
       setInterval(() => {
@@ -1061,6 +1132,7 @@
 
         renderizarMenuAdmin();
         renderizarMenuCliente();
+        renderizarMenuClienteGeneral();
       } catch (err) {
         console.error("Error al obtener menú:", err);
       }
@@ -1265,7 +1337,7 @@
         chip.className = `cat-chip ${index === 0 ? 'active' : ''}`;
         chip.innerText = catObj.categoria;
         chip.onclick = function() {
-          document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+          document.querySelectorAll('#barra-categorias-cliente .cat-chip').forEach(c => c.classList.remove('active'));
           chip.classList.add('active');
           mostrarCategoriaCliente(catObj.categoria);
         };
@@ -1277,6 +1349,59 @@
 
     function mostrarCategoriaCliente(categoria) {
       const listaProd = document.getElementById('lista-productos-cliente');
+      listaProd.innerHTML = '';
+
+      const catObj = menuActual.find(c => c.categoria === categoria);
+      if (!catObj || !catObj.productos || catObj.productos.length === 0) {
+        listaProd.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay ítems en esta categoría.</p>';
+        return;
+      }
+
+      catObj.productos.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-card-client';
+        card.innerHTML = `
+          <div>
+            <div class="product-title">${p.nombre}</div>
+            <div class="product-price">$${p.precio}</div>
+          </div>
+          <button class="btn-add" onclick="agregarAlCarrito('${catObj.categoria}', '${p.nombre}', ${p.precio})">+ Agregar</button>
+        `;
+        listaProd.appendChild(card);
+      });
+    }
+
+    function renderizarMenuClienteGeneral() {
+      const barraCat = document.getElementById('barra-categorias-cliente-gen');
+      const listaProd = document.getElementById('lista-productos-cliente-gen');
+
+      if (!barraCat || !listaProd) return;
+
+      barraCat.innerHTML = '';
+      listaProd.innerHTML = '';
+
+      if (!menuActual || menuActual.length === 0) {
+        listaProd.innerHTML = '<p style="text-align: center; color: var(--text-muted);">La carta está vacía.</p>';
+        return;
+      }
+
+      menuActual.forEach((catObj, index) => {
+        const chip = document.createElement('div');
+        chip.className = `cat-chip ${index === 0 ? 'active' : ''}`;
+        chip.innerText = catObj.categoria;
+        chip.onclick = function() {
+          document.querySelectorAll('#barra-categorias-cliente-gen .cat-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          mostrarCategoriaClienteGeneral(catObj.categoria);
+        };
+        barraCat.appendChild(chip);
+      });
+
+      mostrarCategoriaClienteGeneral(menuActual[0].categoria);
+    }
+
+    function mostrarCategoriaClienteGeneral(categoria) {
+      const listaProd = document.getElementById('lista-productos-cliente-gen');
       listaProd.innerHTML = '';
 
       const catObj = menuActual.find(c => c.categoria === categoria);
@@ -1315,12 +1440,18 @@
 
       document.getElementById('txt-count-bar').innerText = count;
       document.getElementById('txt-total-bar').innerText = `$${total}`;
+
+      const elCountGen = document.getElementById('txt-count-bar-gen');
+      const elTotalGen = document.getElementById('txt-total-bar-gen');
+      if (elCountGen) elCountGen.innerText = count;
+      if (elTotalGen) elTotalGen.innerText = `$${total}`;
     }
 
-    function abrirModalCarrito() {
+    function abrirModalCarrito(esClienteGeneral = false) {
       if (carrito.length === 0) return alert("🛒 El carrito está vacío.");
 
-      let contentHTML = `<h3>🛒 Tu Pedido (Mesa N° ${mesaActual})</h3>`;
+      let identificacion = esClienteGeneral ? 'Mesón General' : `Mesa N° ${mesaActual}`;
+      let contentHTML = `<h3>🛒 Tu Pedido (${identificacion})</h3>`;
       let total = 0;
 
       carrito.forEach((item, index) => {
@@ -1334,9 +1465,9 @@
               <span class="cart-item-price">$${item.precio} c/u</span>
             </div>
             <div class="qty-controls">
-              <button class="btn-qty" onclick="modificarCantidadCarrito(${index}, -1)">-</button>
+              <button class="btn-qty" onclick="modificarCantidadCarrito(${index}, -1, ${esClienteGeneral})">-</button>
               <span class="qty-val">${item.cantidad}</span>
-              <button class="btn-qty" onclick="modificarCantidadCarrito(${index}, 1)">+</button>
+              <button class="btn-qty" onclick="modificarCantidadCarrito(${index}, 1, ${esClienteGeneral})">+</button>
             </div>
           </div>
         `;
@@ -1348,14 +1479,14 @@
         </div>
         <div style="display: flex; gap: 10px; margin-top: 20px;">
           <button class="btn btn-secondary" style="flex: 1;" onclick="cerrarModalGeneral()">Seguir pidiendo</button>
-          <button class="btn btn-success" style="flex: 1;" onclick="enviarPedidoACocina()">🚀 Enviar a Cocina</button>
+          <button class="btn btn-success" style="flex: 1;" onclick="enviarPedidoACocina(${esClienteGeneral})">🚀 Enviar a Cocina</button>
         </div>
       `;
 
       abrirModalGeneral(contentHTML);
     }
 
-    function modificarCantidadCarrito(index, cambio) {
+    function modificarCantidadCarrito(index, cambio, esClienteGeneral = false) {
       carrito[index].cantidad += cambio;
       if (carrito[index].cantidad <= 0) {
         carrito.splice(index, 1);
@@ -1364,12 +1495,23 @@
       if (carrito.length === 0) {
         cerrarModalGeneral();
       } else {
-        abrirModalCarrito();
+        abrirModalCarrito(esClienteGeneral);
       }
     }
 
-    async function enviarPedidoACocina() {
+    async function enviarPedidoACocina(esClienteGeneral = false) {
       if (carrito.length === 0) return;
+
+      let nombreClienteGeneral = '';
+      if (esClienteGeneral) {
+        const inputNombre = document.getElementById('txt-nombre-cliente-gen');
+        nombreClienteGeneral = inputNombre ? inputNombre.value.trim() : '';
+        if (!nombreClienteGeneral) {
+          alert("⚠️ Por favor ingresa tu Nombre y Apellido para ser llamado en el mesón.");
+          if (inputNombre) inputNombre.focus();
+          return;
+        }
+      }
 
       const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
@@ -1379,7 +1521,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             local: localActual,
-            mesa: mesaActual,
+            mesa: esClienteGeneral ? 'GENERAL' : mesaActual,
+            nombreCliente: esClienteGeneral ? nombreClienteGeneral : null,
             items: carrito,
             total
           })
@@ -1421,12 +1564,16 @@
             itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre} ($${i.precio})</div>`;
           });
 
+          const tituloUbicacion = (p.mesa === 'GENERAL' || p.nombreCliente) 
+            ? `CLIENTE: ${(p.nombreCliente || 'GENERAL').toUpperCase()}`
+            : `MESA N° ${p.mesa}`;
+
           const card = document.createElement('div');
           card.className = 'card-pedido';
           card.innerHTML = `
             <div>
               <div class="card-pedido-header">
-                <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
+                <span class="card-pedido-mesa">${tituloUbicacion}</span>
                 <span style="font-size:11px; color:var(--text-muted);">${new Date(p.createdAt || Date.now()).toLocaleTimeString()}</span>
               </div>
               <div style="margin-bottom:10px;">${itemsHTML}</div>
@@ -1483,15 +1630,19 @@
           const asignadoAMi = p.rutGarzon && p.rutGarzon === rutSesion;
 
           let estadoTexto = '🔴 Pedido Libre (Sin Asignar)';
-          let botonAccion = `<button class="btn btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon || ''}')">👁️ Ver Pedido / Atender Mesa</button>`;
+          let botonAccion = `<button class="btn btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon || ''}')">👁️ Ver Pedido / Atender</button>`;
 
           if (asignadoAMi) {
             estadoTexto = `🟢 Atendido por Ti (RUT: ${p.rutGarzon})`;
-            botonAccion = `<button class="btn btn-success btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon}')">✅ Finalizar & Entregar Mesa</button>`;
+            botonAccion = `<button class="btn btn-success btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon}')">✅ Finalizar & Entregar</button>`;
           } else if (asignadoAOtro) {
             estadoTexto = `🔒 Ocupado por Garzón: ${p.rutGarzon}`;
             botonAccion = `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.5; cursor:not-allowed;" disabled>🔒 Atendido por otro Garzón</button>`;
           }
+
+          const tituloUbicacion = (p.mesa === 'GENERAL' || p.nombreCliente) 
+            ? `CLIENTE: ${(p.nombreCliente || 'GENERAL').toUpperCase()}`
+            : `MESA N° ${p.mesa}`;
 
           const card = document.createElement('div');
           card.className = 'card-pedido';
@@ -1499,7 +1650,7 @@
           card.innerHTML = `
             <div>
               <div class="card-pedido-header">
-                <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
+                <span class="card-pedido-mesa">${tituloUbicacion}</span>
                 <span style="font-size:11px; color:var(--neon-yellow);">${estadoTexto}</span>
               </div>
               <div style="margin-bottom:10px;">${itemsHTML}</div>
@@ -1521,7 +1672,7 @@
       const rutIngresado = inputRut ? inputRut.value.trim() : '';
 
       if (!rutIngresado) {
-        alert("⚠️ ATENCIÓN: Debe ingresar su RUT de garzón en la casilla superior antes de atender o entregar la mesa.");
+        alert("⚠️ ATENCIÓN: Debe ingresar su RUT de garzón en la casilla superior antes de atender o entregar la mesa/cliente.");
         if (inputRut) inputRut.focus();
         return;
       }
@@ -1529,7 +1680,7 @@
       localStorage.setItem('garzon_rut_activo', rutIngresado);
 
       if (rutAsignadoActualmente === rutIngresado) {
-        if (!confirm(`¿Confirmas la entrega final de este pedido a la mesa con el RUT ${rutIngresado}?`)) return;
+        if (!confirm(`¿Confirmas la entrega final de este pedido con el RUT ${rutIngresado}?`)) return;
 
         try {
           const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
@@ -1546,6 +1697,7 @@
               id: p._id,
               local: localActual,
               mesa: p.mesa,
+              nombreCliente: p.nombreCliente || null,
               items: p.items,
               total: p.total,
               estado: 'entregado',
@@ -1600,18 +1752,19 @@
         if (!res.ok) return;
 
         const pedidos = await res.json();
-        const misPedidos = pedidos.filter(p => String(p.mesa) === String(mesaActual));
-
+        
+        // Mesa Regular
+        const misPedidosMesa = pedidos.filter(p => String(p.mesa) === String(mesaActual));
         const contenedorResumen = document.getElementById('resumen-pedido-activo');
         const contenedorItems = document.getElementById('resumen-pedido-items');
         const txtTotal = document.getElementById('resumen-pedido-total');
 
-        if (misPedidos.length > 0) {
+        if (misPedidosMesa.length > 0) {
           contenedorResumen.style.display = 'block';
           contenedorItems.innerHTML = '';
           let acumulado = 0;
 
-          misPedidos.forEach((p, idx) => {
+          misPedidosMesa.forEach((p, idx) => {
             acumulado += (p.total || 0);
             let subItems = (p.items || []).map(i => `• ${i.cantidad}x ${i.nombre} ($${i.precio * i.cantidad})`).join('<br>');
             contenedorItems.innerHTML += `
@@ -1625,6 +1778,38 @@
           txtTotal.innerText = `Total en preparación: $${acumulado}`;
         } else {
           contenedorResumen.style.display = 'none';
+        }
+
+        // Cliente General
+        const inputNombre = document.getElementById('txt-nombre-cliente-gen');
+        const nombreVal = inputNombre ? inputNombre.value.trim().toLowerCase() : '';
+        const contenedorResumenGen = document.getElementById('resumen-pedido-activo-gen');
+        const contenedorItemsGen = document.getElementById('resumen-pedido-items-gen');
+        const txtTotalGen = document.getElementById('resumen-pedido-total-gen');
+
+        if (nombreVal && contenedorResumenGen) {
+          const misPedidosGen = pedidos.filter(p => p.nombreCliente && p.nombreCliente.toLowerCase() === nombreVal);
+
+          if (misPedidosGen.length > 0) {
+            contenedorResumenGen.style.display = 'block';
+            contenedorItemsGen.innerHTML = '';
+            let acumuladoGen = 0;
+
+            misPedidosGen.forEach((p, idx) => {
+              acumuladoGen += (p.total || 0);
+              let subItems = (p.items || []).map(i => `• ${i.cantidad}x ${i.nombre} ($${i.precio * i.cantidad})`).join('<br>');
+              contenedorItemsGen.innerHTML += `
+                <div style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
+                  <strong>Orden General #${idx + 1}</strong> (${p.rutGarzon ? 'Atendido por: ' + p.rutGarzon : 'En cocina'}):<br>
+                  ${subItems}
+                </div>
+              `;
+            });
+
+            txtTotalGen.innerText = `Total en preparación: $${acumuladoGen}`;
+          } else {
+            contenedorResumenGen.style.display = 'none';
+          }
         }
       } catch (err) {
         console.error("Error al verificar estado de cliente:", err);
@@ -1656,9 +1841,10 @@
 
       registros.forEach(r => {
         const tr = document.createElement('tr');
+        const ubicacionStr = r.nombreCliente ? `Cliente: ${r.nombreCliente}` : `Mesa ${r.mesa || '--'}`;
         tr.innerHTML = `
           <td>${r.fechaEntrega || ''} ${r.horaEntrega || ''}</td>
-          <td>Mesa ${r.mesa || '--'}</td>
+          <td>${ubicacionStr}</td>
           <td>$${r.total || 0}</td>
           <td>${r.rutGarzon || 'N/A'}</td>
         `;
@@ -1766,7 +1952,7 @@
       doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
       doc.text("Fecha / Hora Entrega", 14, y);
-      doc.text("Mesa", 80, y);
+      doc.text("Mesa / Cliente", 80, y);
       doc.text("Total", 110, y);
       doc.text("RUT Garzón", 150, y);
 
@@ -1785,7 +1971,7 @@
             y = 20;
             doc.setFont(undefined, 'bold');
             doc.text("Fecha / Hora Entrega", 14, y);
-            doc.text("Mesa", 80, y);
+            doc.text("Mesa / Cliente", 80, y);
             doc.text("Total", 110, y);
             doc.text("RUT Garzón", 150, y);
             y += 4;
@@ -1795,7 +1981,7 @@
           }
 
           const fechaHora = `${r.fechaEntrega || ''} ${r.horaEntrega || ''}`.trim() || 'N/A';
-          const mesaStr = `Mesa ${r.mesa || '--'}`;
+          const mesaStr = r.nombreCliente ? `Cli: ${r.nombreCliente}` : `Mesa ${r.mesa || '--'}`;
           const totalStr = `$${r.total || 0}`;
           const rutStr = r.rutGarzon || 'N/A';
 
@@ -1828,6 +2014,32 @@
 
       const link = document.createElement('a');
       link.download = `QR_GARZON_${localActual.toUpperCase()}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+
+    function generarQRMesonDefault() {
+      const target = document.getElementById('qr-meson-render');
+      const lblLocal = document.getElementById('lbl-qr-meson-nombre-local');
+      if (!target) return;
+
+      target.innerHTML = '';
+      if (lblLocal) lblLocal.innerText = localActual.toUpperCase();
+
+      const urlAccesoGen = `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localActual)}&view=clientegeneral`;
+      new QRCode(target, {
+        text: urlAccesoGen,
+        width: 150,
+        height: 150
+      });
+    }
+
+    function descargarQRMeson() {
+      const canvas = document.querySelector('#qr-meson-render canvas');
+      if (!canvas) return alert("❌ No se ha generado el código QR aún.");
+
+      const link = document.createElement('a');
+      link.download = `QR_MESON_GENERAL_${localActual.toUpperCase()}.png`;
       link.href = canvas.toDataURL();
       link.click();
     }

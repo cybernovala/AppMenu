@@ -90,6 +90,7 @@ const Aviso = mongoose.model('Aviso', avisoSchema);
 const pedidoSchema = new mongoose.Schema({
   local: { type: String, required: true },
   mesa: { type: String, required: true },
+  nombreCliente: { type: String, default: null }, // Nuevo campo para cliente general sin mesa
   items: Array,
   total: { type: Number, default: 0 },
   estado: { type: String, default: 'pendiente' },
@@ -103,6 +104,7 @@ const historialSchema = new mongoose.Schema({
   id: String,
   local: { type: String, required: true },
   mesa: String,
+  nombreCliente: { type: String, default: null }, // Nuevo campo para historial de cliente general
   items: Array,
   total: Number,
   estado: { type: String, default: 'entregado' },
@@ -517,19 +519,7 @@ app.post('/api/locales/recuperar-password', async (req, res) => {
       sendSmtpEmail.htmlContent = `
         <div style="font-family: Arial, sans-serif; background-color: #08070d; color: #ffffff; padding: 20px; border-radius: 10px;">
           <h2 style="color: #ff5500;">Recuperación de Clave</h2>
-          <p>Has solicitado los datos de acceso para tu local <strong>${reg.nombre}</strong>.</p>
-          <p><strong>Tus datos de acceso:</strong></p>
-          <ul>
-            <li><strong>Local / ID:</strong> ${reg.local}</li>
-            <li><strong>Contraseña:</strong> ${reg.password}</li>
-          </ul>
-          <p>Puedes ingresar directamente en el siguiente botón:</p>
-          <a href="https://appmenu-990c3.web.app/admin.html?local=${encodeURIComponent(reg.local)}" 
-             style="background-color: #ff007f; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-             Ir al Panel Administrador
-          </a>
-          <br><br>
-          <p style="font-size: 12px; color: #a0a0b0;">Soporte: +56966648585 | appmenu26@gmail.com</p>
+          <p>Tu contraseña actual es: <strong>${reg.password}</strong></p>
         </div>
       `;
       sendSmtpEmail.sender = { name: "AppMenu Digital", email: "appmenu26@gmail.com" };
@@ -538,158 +528,126 @@ app.post('/api/locales/recuperar-password', async (req, res) => {
       await apiInstance.sendTransacEmail(sendSmtpEmail);
     }
 
-    res.json({ ok: true, mensaje: 'Se ha enviado la contraseña al correo asociado' });
+    res.json({ ok: true, mensaje: 'Instrucciones enviadas al correo' });
   } catch (error) {
-    console.error("Error al recuperar contraseña:", error);
-    res.status(500).json({ ok: false, error: 'Error interno al procesar la recuperación' });
+    res.status(500).json({ ok: false, error: 'Error al procesar la solicitud' });
   }
 });
 
-// 7. MENÚ
+// --- RUTAS DE GESTIÓN DE MENÚ ---
 app.get('/api/menu', async (req, res) => {
   try {
-    const localId = (req.query.local || '').trim().toLowerCase();
+    const localId = (req.query.local || '').toLowerCase().trim();
     const reg = await Local.findOne({ local: localId });
-
-    if (!reg) return res.json([]);
-    
-    const ahoraServidor = new Date();
-    if (reg.activo === false || (reg.fechaVencimiento && ahoraServidor >= new Date(reg.fechaVencimiento))) {
-      return res.status(403).json({ error: 'Cuenta bloqueada o licencia expirada' });
-    }
-
+    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
     res.json(reg.menu || []);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener el menú' });
+    res.status(500).json({ error: 'Error al obtener menú' });
   }
 });
 
-// AGREGAR CATEGORÍA A MENÚ
 app.post('/api/menu/categoria', async (req, res) => {
   try {
     const { local, categoria } = req.body;
-    if (!categoria || !categoria.trim()) return res.status(400).json({ error: 'Nombre de categoría requerido' });
-
-    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    const localId = (local || '').toLowerCase().trim();
+    const reg = await Local.findOne({ local: localId });
     if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
 
     if (!reg.menu) reg.menu = [];
-    const existe = reg.menu.some(c => c.categoria.toLowerCase() === categoria.trim().toLowerCase());
-    if (!existe) {
-      reg.menu.push({ categoria: categoria.trim(), productos: [] });
-      reg.markModified('menu');
-      await reg.save();
-    }
+    reg.menu.push({ categoria, productos: [] });
+    await reg.save();
+
     res.json({ ok: true, menu: reg.menu });
   } catch (error) {
-    console.error("Error al crear categoría:", error);
-    res.status(500).json({ error: 'Error al crear la categoría' });
+    res.status(500).json({ error: 'Error al crear categoría' });
   }
 });
 
-// ELIMINAR CATEGORÍA
 app.delete('/api/menu/categoria', async (req, res) => {
   try {
     const { local, categoria } = req.query;
-    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    const localId = (local || '').toLowerCase().trim();
+    const reg = await Local.findOne({ local: localId });
     if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
 
     reg.menu = (reg.menu || []).filter(c => c.categoria !== categoria);
-    reg.markModified('menu');
     await reg.save();
+
     res.json({ ok: true, menu: reg.menu });
   } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar la categoría' });
+    res.status(500).json({ error: 'Error al eliminar categoría' });
   }
 });
 
-// ACTUALIZAR O GUARDAR ESTRUCTURA COMPLETA DE MENÚ
 app.post('/api/menu', async (req, res) => {
   try {
-    const { local, menu, categoria, nombre, precio } = req.body;
-    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
-    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
-
-    if (Array.isArray(menu)) {
-      reg.menu = menu;
-      reg.markModified('menu');
-      await reg.save();
-      return res.json({ ok: true, menu: reg.menu });
-    }
-
-    if (categoria && nombre) {
-      if (!reg.menu) reg.menu = [];
-      let catObj = reg.menu.find(c => c.categoria === categoria);
-      if (!catObj) {
-        catObj = { categoria, productos: [] };
-        reg.menu.push(catObj);
-      }
-      if (!catObj.productos) catObj.productos = [];
-      catObj.productos.push({ nombre, precio: Number(precio || 0) });
-      reg.markModified('menu');
-      await reg.save();
-      return res.json({ ok: true, menu: reg.menu });
-    }
-
-    res.status(400).json({ error: 'Parámetros no válidos' });
-  } catch (error) {
-    console.error("Error al guardar en el menú:", error);
-    res.status(500).json({ error: 'Error al actualizar el menú' });
-  }
-});
-
-// ELIMINAR PRODUCTO DE MENÚ
-app.delete('/api/menu/del', async (req, res) => {
-  try {
-    const { local, categoria, index } = req.query;
-    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    const { local, categoria, nombre, precio } = req.body;
+    const localId = (local || '').toLowerCase().trim();
+    const reg = await Local.findOne({ local: localId });
     if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
 
     const catObj = (reg.menu || []).find(c => c.categoria === categoria);
-    if (catObj && catObj.productos) {
-      catObj.productos.splice(Number(index), 1);
-      reg.markModified('menu');
-      await reg.save();
-    }
+    if (!catObj) return res.status(404).json({ error: 'Categoría no encontrada' });
+
+    if (!catObj.productos) catObj.productos = [];
+    catObj.productos.push({ nombre, precio });
+
+    reg.markModified('menu');
+    await reg.save();
+
+    res.json({ ok: true, menu: reg.menu });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al agregar producto' });
+  }
+});
+
+app.delete('/api/menu/del', async (req, res) => {
+  try {
+    const { local, categoria, index } = req.query;
+    const localId = (local || '').toLowerCase().trim();
+    const reg = await Local.findOne({ local: localId });
+    if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
+
+    const catObj = (reg.menu || []).find(c => c.categoria === categoria);
+    if (!catObj || !catObj.productos) return res.status(404).json({ error: 'Producto no encontrado' });
+
+    catObj.productos.splice(Number(index), 1);
+
+    reg.markModified('menu');
+    await reg.save();
+
     res.json({ ok: true, menu: reg.menu });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar producto' });
   }
 });
 
-// EDITAR PRODUCTO DE MENÚ
 app.put('/api/menu/edit', async (req, res) => {
   try {
-    const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaCategoria } = req.body;
-    const reg = await Local.findOne({ local: (local || '').toLowerCase().trim() });
+    const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio } = req.body;
+    const localId = (local || '').toLowerCase().trim();
+    const reg = await Local.findOne({ local: localId });
     if (!reg) return res.status(404).json({ error: 'Local no encontrado' });
 
     const catObj = (reg.menu || []).find(c => c.categoria === categoriaOriginal);
-    if (catObj && catObj.productos && catObj.productos[indexOriginal]) {
-      catObj.productos[indexOriginal] = { nombre: nuevoNombre, precio: Number(nuevoPrecio) };
-      if (nuevaCategoria && nuevaCategoria !== categoriaOriginal) {
-        const prodEditado = catObj.productos.splice(indexOriginal, 1)[0];
-        let destinoCat = reg.menu.find(c => c.categoria === nuevaCategoria);
-        if (!destinoCat) {
-          destinoCat = { categoria: nuevaCategoria, productos: [] };
-          reg.menu.push(destinoCat);
-        }
-        destinoCat.productos.push(prodEditado);
-      }
-      reg.markModified('menu');
-      await reg.save();
-    }
+    if (!catObj || !catObj.productos[indexOriginal]) return res.status(404).json({ error: 'Producto no encontrado' });
+
+    catObj.productos[indexOriginal] = { nombre: nuevoNombre, precio: nuevoPrecio };
+
+    reg.markModified('menu');
+    await reg.save();
+
     res.json({ ok: true, menu: reg.menu });
   } catch (error) {
     res.status(500).json({ error: 'Error al editar producto' });
   }
 });
 
-// 8. PEDIDOS
+// --- RUTAS DE PEDIDOS ---
 app.get('/api/pedidos', async (req, res) => {
   try {
-    const localId = (req.query.local || '').trim().toLowerCase();
-    const pedidos = await Pedido.find({ local: localId, estado: { $ne: 'entregado' } }).sort({ createdAt: -1 });
+    const localId = (req.query.local || '').toLowerCase().trim();
+    const pedidos = await Pedido.find({ local: localId }).sort({ createdAt: 1 });
     res.json(pedidos);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener pedidos' });
@@ -698,82 +656,59 @@ app.get('/api/pedidos', async (req, res) => {
 
 app.post('/api/pedidos', async (req, res) => {
   try {
-    const { local, mesa, items, total } = req.body;
+    const { local, mesa, nombreCliente, items, total } = req.body;
+    const localId = (local || '').toLowerCase().trim();
+
     const nuevoPedido = new Pedido({
-      local: (local || '').toLowerCase().trim(),
-      mesa: String(mesa),
-      items: items || [],
-      total: Number(total || 0),
-      estado: 'pendiente',
-      rutGarzon: null
+      local: localId,
+      mesa: mesa || 'GENERAL',
+      nombreCliente: nombreCliente || null,
+      items,
+      total,
+      estado: 'pendiente'
     });
+
     await nuevoPedido.save();
     res.status(201).json({ ok: true, pedido: nuevoPedido });
   } catch (error) {
-    res.status(500).json({ error: 'Error al registrar pedido' });
-  }
-});
-
-// ASIGNAR GARZÓN Y ENTREGAR PEDIDO CON VALIDACIÓN ATÓMICA DE ASIGNACIÓN UNANIME
-app.put('/api/pedidos/:id/asignar-garzon', async (req, res) => {
-  try {
-    const { rutGarzon } = req.body;
-    const { id } = req.params;
-
-    if (!rutGarzon || !rutGarzon.trim()) {
-      return res.status(400).json({ ok: false, error: 'Debe ingresar un RUT de garzón válido' });
-    }
-
-    const rutLimpio = rutGarzon.trim();
-
-    // 1. Intentar asignar de forma atómica si rutGarzon es null, o si ya es el mismo garzón
-    const pedidoActualizado = await Pedido.findOneAndUpdate(
-      {
-        _id: id,
-        $or: [
-          { rutGarzon: null },
-          { rutGarzon: "" },
-          { rutGarzon: rutLimpio }
-        ]
-      },
-      { $set: { rutGarzon: rutLimpio } },
-      { new: true }
-    );
-
-    // 2. Si no actualizó nada, significa que el pedido ya estaba tomado por OTRO garzón
-    if (!pedidoActualizado) {
-      const pedidoExistente = await Pedido.findById(id);
-      if (pedidoExistente && pedidoExistente.rutGarzon && pedidoExistente.rutGarzon !== rutLimpio) {
-        return res.status(409).json({
-          ok: false,
-          error: `Esta mesa ya está siendo atendida por el garzón con RUT: ${pedidoExistente.rutGarzon}`
-        });
-      }
-      return res.status(404).json({ ok: false, error: 'Pedido no encontrado' });
-    }
-
-    res.json({ ok: true, mensaje: 'Garzón asignado exitosamente', pedido: pedidoActualizado });
-  } catch (error) {
-    console.error("Error al asignar garzón:", error);
-    res.status(500).json({ ok: false, error: 'Error interno al asignar garzón' });
+    res.status(500).json({ error: 'Error al crear pedido' });
   }
 });
 
 app.delete('/api/pedidos/:id', async (req, res) => {
   try {
     await Pedido.findByIdAndDelete(req.params.id);
-    res.json({ ok: true, mensaje: 'Pedido eliminado' });
+    res.json({ ok: true });
   } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar pedido' });
+    res.status(500).json({ error: 'Error al borrar pedido' });
   }
 });
 
-// 9. HISTORIAL
+app.put('/api/pedidos/:id/asignar-garzon', async (req, res) => {
+  try {
+    const { rutGarzon } = req.body;
+    const p = await Pedido.findById(req.params.id);
+    if (!p) return res.status(404).json({ ok: false, error: 'Pedido no encontrado' });
+
+    if (p.rutGarzon && p.rutGarzon !== rutGarzon) {
+      return res.status(409).json({ ok: false, error: 'Pedido asignado a otro garzón' });
+    }
+
+    p.rutGarzon = rutGarzon;
+    await p.save();
+
+    res.json({ ok: true, pedido: p });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: 'Error al asignar garzón' });
+  }
+});
+
+// --- RUTAS DE HISTORIAL ---
 app.get('/api/historials', async (req, res) => {
   try {
-    const localId = (req.query.local || '').trim().toLowerCase();
-    const registros = await Historial.find({ local: localId }).sort({ createdAt: -1 });
-    res.json(registros);
+    const localId = (req.query.local || '').toLowerCase().trim();
+    const historial = await Historial.find({ local: localId }).sort({ createdAt: -1 });
+    res.json(historial);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener historial' });
   }
@@ -781,83 +716,61 @@ app.get('/api/historials', async (req, res) => {
 
 app.post('/api/historials', async (req, res) => {
   try {
-    const nuevoHistorial = new Historial(req.body);
-    await nuevoHistorial.save();
-    res.status(201).json({ ok: true, historial: nuevoHistorial });
+    const { id, local, mesa, nombreCliente, items, total, estado, hora, rutGarzon, horaEntrega, fechaEntrega } = req.body;
+
+    const registro = new Historial({
+      id,
+      local: (local || '').toLowerCase().trim(),
+      mesa,
+      nombreCliente: nombreCliente || null,
+      items,
+      total,
+      estado,
+      hora,
+      rutGarzon,
+      horaEntrega,
+      fechaEntrega
+    });
+
+    await registro.save();
+    res.status(201).json({ ok: true, registro });
   } catch (error) {
-    res.status(500).json({ error: 'Error al guardar historial' });
+    res.status(500).json({ error: 'Error al guardar en historial' });
   }
 });
 
-// 10. AVISOS
+// --- RUTAS DE AVISOS ---
 app.get('/api/avisos', async (req, res) => {
   try {
-    const localId = (req.query.local || '').trim().toLowerCase();
-    let query = {};
-    if (localId) {
-      query = { $or: [{ destinatario: 'todos' }, { destinatario: localId }] };
-    }
-    const avisos = await Aviso.find(query).sort({ fecha: -1 });
+    const localId = (req.query.local || '').toLowerCase().trim();
+    const avisos = await Aviso.find({
+      $or: [{ destinatario: 'todos' }, { destinatario: localId }]
+    }).sort({ fecha: -1 });
     res.json(avisos);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener los avisos' });
-  }
-});
-
-app.post('/api/avisos', async (req, res) => {
-  try {
-    const { destinatario, asunto, texto } = req.body;
-    if (!texto) return res.status(400).json({ error: 'El contenido del aviso es requerido' });
-
-    const nuevoAviso = new Aviso({
-      destinatario: (destinatario || 'todos').toLowerCase().trim(),
-      asunto: asunto || 'Aviso del Sistema',
-      texto,
-      respuestas: []
-    });
-    await nuevoAviso.save();
-    res.status(201).json({ ok: true, aviso: nuevoAviso });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al guardar el aviso' });
+    res.status(500).json({ error: 'Error al obtener avisos' });
   }
 });
 
 app.post('/api/avisos/responder', async (req, res) => {
   try {
     const { local, avisoId, respuesta } = req.body;
-    if (!avisoId || !respuesta) {
-      return res.status(400).json({ error: 'Parámetros incompletos' });
-    }
-
     const aviso = await Aviso.findById(avisoId);
-    if (!aviso) {
-      return res.status(404).json({ error: 'Aviso no encontrado' });
-    }
+    if (!aviso) return res.status(404).json({ error: 'Aviso no encontrado' });
 
     aviso.respuestas.push({
-      local: (local || 'desconocido').toLowerCase().trim(),
-      texto: respuesta.trim(),
+      local: (local || '').toLowerCase().trim(),
+      texto: respuesta,
       fecha: new Date()
     });
 
     await aviso.save();
-    res.json({ ok: true, mensaje: 'Respuesta guardada con éxito', aviso });
+    res.json({ ok: true });
   } catch (error) {
-    console.error("Error al responder aviso:", error);
-    res.status(500).json({ error: 'Error interno al guardar la respuesta' });
+    res.status(500).json({ error: 'Error al responder aviso' });
   }
 });
 
-app.delete('/api/avisos/:id', async (req, res) => {
-  try {
-    await Aviso.findByIdAndDelete(req.params.id);
-    res.json({ ok: true, mensaje: 'Aviso eliminado' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar el aviso' });
-  }
-});
-
-// PUERTO DINÁMICO DEL SERVIDOR
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en el puerto ${PORT}`);
