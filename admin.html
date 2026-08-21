@@ -595,6 +595,7 @@
       <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
       <button class="tab-btn" id="btn-tab-cliente-general" onclick="cambiarPestana('tab-cliente-general', this)">📱 Vista Previa Cliente General</button>
+      <button class="tab-btn" id="btn-tab-caja" onclick="cambiarPestana('tab-caja', this)">💵 Caja</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Gestor de QR</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
       <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
@@ -689,6 +690,25 @@
         <div id="resumen-pedido-items-gen" style="font-size: 14px; margin-bottom: 12px;"></div>
         <div style="text-align: right; font-weight: bold; font-size: 16px; color: var(--neon-yellow);" id="resumen-pedido-total-gen">
           Total: $0
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA CAJA -->
+    <div id="tab-caja" class="tab-content">
+      <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3>💵 Módulo de Caja & Cobros</h3>
+            <p style="color: var(--neon-yellow); font-size: 14px; margin-top: 4px;">
+              Listado de todos los pedidos por Mesa X y Cliente General. Marca los pedidos como pagados para darles máxima prioridad en la cocina.
+            </p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="cargarPedidosCaja()">🔄 Actualizar Caja</button>
+        </div>
+
+        <div id="contenedor-pedidos-caja" class="grid-pedidos" style="margin-top: 20px;">
+          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando pedidos para cobro...</p>
         </div>
       </div>
     </div>
@@ -991,6 +1011,7 @@
       await cargarAvisosSistema();
       await cargarMenu();
       await cargarPedidosCocina();
+      await cargarPedidosCaja();
       await cargarPedidosGarzon();
       await cargarHistorial();
       await verificarEstadoPedidoCliente();
@@ -1012,6 +1033,7 @@
 
     async function sincronizarTodoSilencioso() {
       await cargarPedidosCocina();
+      await cargarPedidosCaja();
       await cargarPedidosGarzon();
       await verificarEstadoPedidoCliente();
     }
@@ -1039,6 +1061,7 @@
       await cargarAvisosSistema();
       await cargarMenu();
       await cargarPedidosCocina();
+      await cargarPedidosCaja();
       await cargarPedidosGarzon();
       await cargarHistorial();
       await verificarEstadoPedidoCliente();
@@ -1535,6 +1558,7 @@
           cerrarModalGeneral();
           notificarSincronizacion();
           await cargarPedidosCocina();
+          await cargarPedidosCaja();
           await cargarPedidosGarzon();
           await verificarEstadoPedidoCliente();
         } else {
@@ -1545,10 +1569,91 @@
       }
     }
 
-    async function cargarPedidosCocina() {
+    async function cargarPedidosCaja() {
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
         const pedidos = await res.json();
+
+        const contenedor = document.getElementById('contenedor-pedidos-caja');
+        if (!contenedor) return;
+        contenedor.innerHTML = '';
+
+        if (!res.ok || !Array.isArray(pedidos) || pedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos en caja.</p>';
+          return;
+        }
+
+        pedidos.forEach(p => {
+          let itemsHTML = '';
+          (p.items || []).forEach(i => {
+            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre} ($${i.precio})</div>`;
+          });
+
+          const esGeneral = p.mesa === 'GENERAL' || p.nombreCliente;
+          const tituloUbicacion = esGeneral 
+            ? `CLIENTE: ${(p.nombreCliente || 'GENERAL').toUpperCase()}`
+            : `MESA N° ${p.mesa}`;
+
+          const estaPagado = Boolean(p.pagado);
+          const estadoPagoBadge = estaPagado 
+            ? `<span style="color:var(--neon-green); font-size:12px; font-weight:bold;">🟢 PAGADO (Prioridad Cocina)</span>`
+            : `<span style="color:#ff3344; font-size:12px; font-weight:bold;">🔴 PENDIENTE DE PAGO</span>`;
+
+          const botonPago = estaPagado
+            ? `<button class="btn btn-secondary btn-sm" style="width:100%; cursor:default;" disabled>✅ Pedido Ya Pagado</button>`
+            : `<button class="btn btn-success btn-sm" style="width:100%; font-weight:bold;" onclick="marcarPedidoPagado('${p._id}')">💳 Marcar como Pagado & Priorizar</button>`;
+
+          const card = document.createElement('div');
+          card.className = 'card-pedido';
+          card.style.borderColor = estaPagado ? 'var(--neon-green)' : 'var(--neon-orange)';
+          card.innerHTML = `
+            <div>
+              <div class="card-pedido-header">
+                <span class="card-pedido-mesa">${tituloUbicacion}</span>
+                <span style="font-size:11px; color:var(--text-muted);">${new Date(p.createdAt || Date.now()).toLocaleTimeString()}</span>
+              </div>
+              <div style="margin-bottom:8px;">${estadoPagoBadge}</div>
+              <div style="margin-bottom:10px;">${itemsHTML}</div>
+            </div>
+            <div style="border-top:1px dashed #333; padding-top:10px; margin-top:10px;">
+              <div style="font-weight:bold; color:var(--neon-yellow); font-size:16px; margin-bottom:8px;">Valor Total: $${p.total}</div>
+              ${botonPago}
+            </div>
+          `;
+          contenedor.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Error al cargar pedidos caja:", err);
+      }
+    }
+
+    async function marcarPedidoPagado(id) {
+      if (!confirm("¿Confirmas que este pedido ha sido pagado en Caja? Pasará al tope de la fila de cocina.")) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos/${id}/marcar-pagado`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (res.ok) {
+          alert("✅ Pedido marcado como PAGADO. Asignada prioridad a cocina.");
+          notificarSincronizacion();
+          await cargarPedidosCaja();
+          await cargarPedidosCocina();
+          await cargarPedidosGarzon();
+        } else {
+          alert("❌ No se pudo actualizar el estado del pago.");
+        }
+      } catch (err) {
+        alert("❌ Error al comunicarse con la caja.");
+      }
+    }
+
+    async function cargarPedidosCocina() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        let pedidos = await res.json();
 
         const contenedor = document.getElementById('contenedor-pedidos-cocina');
         contenedor.innerHTML = '';
@@ -1557,6 +1662,23 @@
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes en la cocina.</p>';
           return;
         }
+
+        // Fila Virtual en Cocina:
+        // 1. Primero los pagados, ordenados cronológicamente por su prioridadOrden o fecha de pago.
+        // 2. Luego los NO pagados (mesas sin pagar aún) ordenados por fecha de llegada.
+        pedidos.sort((a, b) => {
+          const pagA = Boolean(a.pagado);
+          const pagB = Boolean(b.pagado);
+
+          if (pagA && !pagB) return -1;
+          if (!pagA && pagB) return 1;
+
+          if (pagA && pagB) {
+            return (a.prioridadOrden || 0) - (b.prioridadOrden || 0);
+          }
+
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
 
         pedidos.forEach(p => {
           let itemsHTML = '';
@@ -1568,12 +1690,20 @@
             ? `CLIENTE: ${(p.nombreCliente || 'GENERAL').toUpperCase()}`
             : `MESA N° ${p.mesa}`;
 
+          const tagPrioridad = p.pagado 
+            ? `<span style="background:var(--neon-green); color:#000; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; margin-left:5px;">🔥 PAGADO (PRIORIDAD)</span>`
+            : `<span style="background:#444; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; margin-left:5px;">⏳ POR PAGAR</span>`;
+
           const card = document.createElement('div');
           card.className = 'card-pedido';
+          card.style.borderColor = p.pagado ? 'var(--neon-green)' : 'var(--neon-orange)';
           card.innerHTML = `
             <div>
               <div class="card-pedido-header">
-                <span class="card-pedido-mesa">${tituloUbicacion}</span>
+                <div>
+                  <span class="card-pedido-mesa">${tituloUbicacion}</span>
+                  ${tagPrioridad}
+                </div>
                 <span style="font-size:11px; color:var(--text-muted);">${new Date(p.createdAt || Date.now()).toLocaleTimeString()}</span>
               </div>
               <div style="margin-bottom:10px;">${itemsHTML}</div>
@@ -1598,6 +1728,7 @@
         if (res.ok) {
           notificarSincronizacion();
           await cargarPedidosCocina();
+          await cargarPedidosCaja();
           await cargarPedidosGarzon();
         }
       } catch (err) {
@@ -1714,6 +1845,7 @@
             notificarSincronizacion();
             await cargarPedidosGarzon();
             await cargarPedidosCocina();
+            await cargarPedidosCaja();
             await cargarHistorial();
           }
         } catch (err) {
