@@ -536,9 +536,6 @@
     body.is-cliente #banner-wrapper,
     body.is-cliente #admin-header,
     body.is-cliente #admin-nav-tabs,
-    body.is-cliente-general #banner-wrapper,
-    body.is-cliente-general #admin-header,
-    body.is-cliente-general #admin-nav-tabs,
     body.is-garzon #banner-wrapper,
     body.is-garzon #admin-header,
     body.is-garzon #admin-nav-tabs {
@@ -552,8 +549,6 @@
       const v = p.get('view');
       if (v === 'cliente') {
         document.documentElement.classList.add('view-cliente');
-      } else if (v === 'cliente_general') {
-        document.documentElement.classList.add('view-cliente-general');
       } else if (v === 'garzon') {
         document.documentElement.classList.add('view-garzon');
       }
@@ -564,10 +559,6 @@
     html.view-cliente #admin-header,
     html.view-cliente #admin-nav-tabs,
     html.view-cliente #tab-admin,
-    html.view-cliente-general #banner-wrapper,
-    html.view-cliente-general #admin-header,
-    html.view-cliente-general #admin-nav-tabs,
-    html.view-cliente-general #tab-admin,
     html.view-garzon #banner-wrapper,
     html.view-garzon #admin-header,
     html.view-garzon #admin-nav-tabs,
@@ -603,7 +594,6 @@
     <div class="nav-tabs" id="admin-nav-tabs">
       <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
-      <button class="tab-btn" id="btn-tab-cliente-general" onclick="cambiarPestana('tab-cliente-general', this)">📱 Vista Previa Cliente General</button>
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Gestor de QR</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
       <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
@@ -658,60 +648,7 @@
       </div>
     </div>
 
-    <!-- PESTAÑA VISTA PREVIA CLIENTE GENERAL (SIN MESA) -->
-    <div id="tab-cliente-general" class="tab-content">
-      <div class="preview-header">
-        <div class="brand-title" id="txt-local-cliente-gen">MENÚ DIGITAL</div>
-        <div class="mesa-badge" style="background: var(--neon-blue); color: #000;">PEDIDO MESÓN GENERAL</div>
-      </div>
-
-      <div class="categories-bar" id="barra-categorias-cliente-gen"></div>
-
-      <div id="lista-productos-cliente-gen" style="margin-top: 15px;">
-        <p style="text-align: center; color: var(--text-muted);">Cargando carta...</p>
-      </div>
-
-      <div class="cart-bar" id="cart-bar-gen">
-        <div>
-          <span style="font-size: 12px; color: #aaa;">Total Pedido:</span><br>
-          <span style="font-size: 18px; font-weight: bold; color: var(--neon-yellow);" id="txt-total-bar-gen">$0</span>
-        </div>
-        <button class="cart-btn" onclick="abrirModalCarritoGeneral()">🛒 Ver Pedido (<span id="txt-count-bar-gen">0</span>)</button>
-      </div>
-
-      <div id="resumen-pedido-activo-gen" style="display: none;" class="resumen-pedido-cliente">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 8px; margin-bottom: 10px;">
-          <h4 style="color: var(--neon-green); font-size: 16px;">⏳ Pedidos Enviados a Cocina</h4>
-        </div>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
-          Tus pedidos están en preparación. Serás llamado en el mesón a viva voz por tu Nombre y Apellido.
-        </p>
-        <div id="resumen-pedido-items-gen" style="font-size: 14px; margin-bottom: 12px;"></div>
-        <div style="text-align: right; font-weight: bold; font-size: 16px; color: var(--neon-yellow);" id="resumen-pedido-total-gen">
-          Total: $0
-        </div>
-      </div>
-    </div>
-
     <div id="tab-qr" class="tab-content">
-      <!-- QR CLIENTE GENERAL MESÓN PRINCIPAL -->
-      <div class="section-card" style="border-color: var(--neon-yellow);">
-        <h3>🔲 QR Exclusivo para Cliente General (Mesón Principal)</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-          Código para exponer e imprimir en el mesón principal. Los clientes escanean para hacer pedidos sin estar asignados a una mesa.
-        </p>
-        <div class="qr-card-container">
-          <div class="qr-preview-box" id="box-qr-general-preview" style="text-align: center;">
-            <p id="lbl-qr-gen-nombre-local" style="color: #000; font-weight: 900; margin-bottom: 8px; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px;"></p>
-            <div id="qr-general-render" style="display: flex; justify-content: center;"></div>
-            <p style="color: #000; font-weight: bold; margin-top: 10px; font-size: 12px; max-width: 200px; margin-left: auto; margin-right: auto;">
-              Escanse el qr para hacer su pedido directamente en su movil
-            </p>
-          </div>
-          <button class="btn btn-sm" onclick="descargarQRGeneral()">📥 Descargar QR Cliente General (PNG)</button>
-        </div>
-      </div>
-
       <div class="section-card" style="border-color: var(--neon-blue);">
         <h3>🔲 QR Exclusivo para Garzones</h3>
         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
@@ -850,7 +787,7 @@
             <thead>
               <tr>
                 <th>Fecha / Hora Entrega</th>
-                <th>Mesa / Cliente</th>
+                <th>Mesa</th>
                 <th>Total</th>
                 <th>RUT Garzón</th>
               </tr>
@@ -897,7 +834,7 @@
       const viewMode = urlParams.get('view');
       const localId = (urlParams.get('local') || '').trim().toLowerCase();
 
-      if (viewMode === 'cliente' || viewMode === 'cliente_general' || viewMode === 'garzon') return;
+      if (viewMode === 'cliente' || viewMode === 'garzon') return;
 
       const token = localStorage.getItem('auth_token');
 
@@ -928,7 +865,6 @@
     let localActual = '';
     let menuActual = [];
     let carrito = [];
-    let carritoGen = [];
     let mesaActual = '1';
     let historialGlobalLocal = [];
     let historialFiltradoActual = [];
@@ -963,7 +899,6 @@
 
       document.getElementById('lbl-local-nombre').innerText = localActual.toUpperCase();
       document.getElementById('txt-local-cliente').innerText = localActual.toUpperCase();
-      document.getElementById('txt-local-cliente-gen').innerText = localActual.toUpperCase();
       document.getElementById('txt-mesa-cliente').innerText = `Mesa N° ${mesaActual}`;
 
       actualizarEtiquetaMesActual();
@@ -977,9 +912,6 @@
       if (viewParam === 'cliente') {
         document.body.classList.add('is-cliente');
         activarPestanaDirecta('tab-cliente');
-      } else if (viewParam === 'cliente_general') {
-        document.body.classList.add('is-cliente-general');
-        activarPestanaDirecta('tab-cliente-general');
       } else if (viewParam === 'garzon') {
         document.body.classList.add('is-garzon');
         activarPestanaDirecta('tab-garzon');
@@ -992,8 +924,6 @@
       await cargarPedidosGarzon();
       await cargarHistorial();
       await verificarEstadoPedidoCliente();
-      await verificarEstadoPedidoClienteGeneral();
-      generarQRGeneralDefault();
       generarQRGarzonDefault();
       generarQRUnico();
 
@@ -1013,7 +943,6 @@
       await cargarPedidosCocina();
       await cargarPedidosGarzon();
       await verificarEstadoPedidoCliente();
-      await verificarEstadoPedidoClienteGeneral();
     }
 
     function activarPestanaDirecta(tabId) {
@@ -1042,7 +971,6 @@
       await cargarPedidosGarzon();
       await cargarHistorial();
       await verificarEstadoPedidoCliente();
-      await verificarEstadoPedidoClienteGeneral();
       actualizarEtiquetaMesActual();
     }
 
@@ -1133,7 +1061,6 @@
 
         renderizarMenuAdmin();
         renderizarMenuCliente();
-        renderizarMenuClienteGeneral();
       } catch (err) {
         console.error("Error al obtener menú:", err);
       }
@@ -1338,7 +1265,7 @@
         chip.className = `cat-chip ${index === 0 ? 'active' : ''}`;
         chip.innerText = catObj.categoria;
         chip.onclick = function() {
-          document.querySelectorAll('#barra-categorias-cliente .cat-chip').forEach(c => c.classList.remove('active'));
+          document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
           chip.classList.add('active');
           mostrarCategoriaCliente(catObj.categoria);
         };
@@ -1370,224 +1297,6 @@
         `;
         listaProd.appendChild(card);
       });
-    }
-
-    // --- LÓGICA VISTA PREVIA CLIENTE GENERAL ---
-    function renderizarMenuClienteGeneral() {
-      const barraCat = document.getElementById('barra-categorias-cliente-gen');
-      const listaProd = document.getElementById('lista-productos-cliente-gen');
-
-      if (!barraCat || !listaProd) return;
-      barraCat.innerHTML = '';
-      listaProd.innerHTML = '';
-
-      if (!menuActual || menuActual.length === 0) {
-        listaProd.innerHTML = '<p style="text-align: center; color: var(--text-muted);">La carta está vacía.</p>';
-        return;
-      }
-
-      menuActual.forEach((catObj, index) => {
-        const chip = document.createElement('div');
-        chip.className = `cat-chip ${index === 0 ? 'active' : ''}`;
-        chip.innerText = catObj.categoria;
-        chip.onclick = function() {
-          document.querySelectorAll('#barra-categorias-cliente-gen .cat-chip').forEach(c => c.classList.remove('active'));
-          chip.classList.add('active');
-          mostrarCategoriaClienteGeneral(catObj.categoria);
-        };
-        barraCat.appendChild(chip);
-      });
-
-      mostrarCategoriaClienteGeneral(menuActual[0].categoria);
-    }
-
-    function mostrarCategoriaClienteGeneral(categoria) {
-      const listaProd = document.getElementById('lista-productos-cliente-gen');
-      if (!listaProd) return;
-      listaProd.innerHTML = '';
-
-      const catObj = menuActual.find(c => c.categoria === categoria);
-      if (!catObj || !catObj.productos || catObj.productos.length === 0) {
-        listaProd.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay ítems en esta categoría.</p>';
-        return;
-      }
-
-      catObj.productos.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'product-card-client';
-        card.innerHTML = `
-          <div>
-            <div class="product-title">${p.nombre}</div>
-            <div class="product-price">$${p.precio}</div>
-          </div>
-          <button class="btn-add" onclick="agregarAlCarritoGeneral('${catObj.categoria}', '${p.nombre}', ${p.precio})">+ Agregar</button>
-        `;
-        listaProd.appendChild(card);
-      });
-    }
-
-    function agregarAlCarritoGeneral(categoria, nombre, precio) {
-      const existe = carritoGen.find(i => i.nombre === nombre && i.categoria === categoria);
-      if (existe) {
-        existe.cantidad += 1;
-      } else {
-        carritoGen.push({ categoria, nombre, precio, cantidad: 1 });
-      }
-      actualizarBarraCarritoGeneral();
-    }
-
-    function actualizarBarraCarritoGeneral() {
-      const count = carritoGen.reduce((sum, item) => sum + item.cantidad, 0);
-      const total = carritoGen.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-
-      const countEl = document.getElementById('txt-count-bar-gen');
-      const totalEl = document.getElementById('txt-total-bar-gen');
-      if (countEl) countEl.innerText = count;
-      if (totalEl) totalEl.innerText = `$${total}`;
-    }
-
-    function abrirModalCarritoGeneral() {
-      if (carritoGen.length === 0) return alert("🛒 El carrito está vacío.");
-
-      let contentHTML = `<h3>🛒 Tu Pedido Mesón General</h3>`;
-      let total = 0;
-
-      carritoGen.forEach((item, index) => {
-        const subtotal = item.precio * item.cantidad;
-        total += subtotal;
-        contentHTML += `
-          <div class="cart-item">
-            <div class="cart-item-info">
-              <span class="cart-item-cat">${item.categoria}</span>
-              <span class="cart-item-title">${item.nombre}</span>
-              <span class="cart-item-price">$${item.precio} c/u</span>
-            </div>
-            <div class="qty-controls">
-              <button class="btn-qty" onclick="modificarCantidadCarritoGeneral(${index}, -1)">-</button>
-              <span class="qty-val">${item.cantidad}</span>
-              <button class="btn-qty" onclick="modificarCantidadCarritoGeneral(${index}, 1)">+</button>
-            </div>
-          </div>
-        `;
-      });
-
-      const clienteGuardado = localStorage.getItem('nombre_cliente_general') || '';
-
-      contentHTML += `
-        <div style="margin-top: 15px; background: #12121c; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
-          <label style="display:block; font-size:12px; color:var(--neon-yellow); margin-bottom:5px; font-weight:bold;">👤 Ingresa tu Nombre y Apellido (Requerido):</label>
-          <input type="text" id="nombre-cliente-general" placeholder="Ej: Juan Pérez" value="${clienteGuardado}" style="width:100%; text-transform:capitalize;">
-          <span style="font-size:11px; color:var(--text-muted);">Serás llamado a viva voz en el mesón principal con este nombre.</span>
-        </div>
-
-        <div style="text-align: right; margin-top: 15px; font-size: 18px; font-weight: bold; color: var(--neon-yellow);">
-          Total: $${total}
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button class="btn btn-secondary" style="flex: 1;" onclick="cerrarModalGeneral()">Seguir pidiendo</button>
-          <button class="btn btn-success" style="flex: 1;" onclick="enviarPedidoACocinaGeneral()">🚀 Enviar a Cocina</button>
-        </div>
-      `;
-
-      abrirModalGeneral(contentHTML);
-    }
-
-    function modificarCantidadCarritoGeneral(index, cambio) {
-      carritoGen[index].cantidad += cambio;
-      if (carritoGen[index].cantidad <= 0) {
-        carritoGen.splice(index, 1);
-      }
-      actualizarBarraCarritoGeneral();
-      if (carritoGen.length === 0) {
-        cerrarModalGeneral();
-      } else {
-        abrirModalCarritoGeneral();
-      }
-    }
-
-    async function enviarPedidoACocinaGeneral() {
-      if (carritoGen.length === 0) return;
-
-      const inputNombre = document.getElementById('nombre-cliente-general');
-      const nombreCliente = inputNombre ? inputNombre.value.trim() : '';
-
-      if (!nombreCliente) {
-        alert("⚠️ ATENCIÓN: Debes ingresar tu Nombre y Apellido para identificarte en el mesón.");
-        if (inputNombre) inputNombre.focus();
-        return;
-      }
-
-      localStorage.setItem('nombre_cliente_general', nombreCliente);
-      const total = carritoGen.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            local: localActual,
-            mesa: 'GENERAL',
-            nombreCliente: nombreCliente,
-            items: carritoGen,
-            total
-          })
-        });
-
-        if (res.ok) {
-          alert("🚀 ¡Pedido enviado a cocina! Atención con el nombre ingresado al ser llamado.");
-          carritoGen = [];
-          actualizarBarraCarritoGeneral();
-          cerrarModalGeneral();
-          notificarSincronizacion();
-          await cargarPedidosCocina();
-          await cargarPedidosGarzon();
-          await verificarEstadoPedidoClienteGeneral();
-        } else {
-          alert("❌ Ocurrió un error al registrar el pedido.");
-        }
-      } catch (err) {
-        alert("❌ Error de comunicación al enviar pedido.");
-      }
-    }
-
-    async function verificarEstadoPedidoClienteGeneral() {
-      try {
-        const nombreGuardado = localStorage.getItem('nombre_cliente_general');
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
-        if (!res.ok) return;
-
-        const pedidos = await res.json();
-        const misPedidos = pedidos.filter(p => p.mesa === 'GENERAL' && nombreGuardado && (p.nombreCliente || '').toLowerCase() === nombreGuardado.toLowerCase());
-
-        const contenedorResumen = document.getElementById('resumen-pedido-activo-gen');
-        const contenedorItems = document.getElementById('resumen-pedido-items-gen');
-        const txtTotal = document.getElementById('resumen-pedido-total-gen');
-
-        if (!contenedorResumen) return;
-
-        if (misPedidos.length > 0) {
-          contenedorResumen.style.display = 'block';
-          contenedorItems.innerHTML = '';
-          let acumulado = 0;
-
-          misPedidos.forEach((p, idx) => {
-            acumulado += (p.total || 0);
-            let subItems = (p.items || []).map(i => `• ${i.cantidad}x ${i.nombre} ($${i.precio * i.cantidad})`).join('<br>');
-            contenedorItems.innerHTML += `
-              <div style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
-                <strong>Orden Mesón #${idx + 1}</strong> (Cliente: ${p.nombreCliente}):<br>
-                ${subItems}
-              </div>
-            `;
-          });
-
-          txtTotal.innerText = `Total en preparación: $${acumulado}`;
-        } else {
-          contenedorResumen.style.display = 'none';
-        }
-      } catch (err) {
-        console.error("Error al verificar estado cliente general:", err);
-      }
     }
 
     function agregarAlCarrito(categoria, nombre, precio) {
@@ -1712,15 +1421,12 @@
             itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre} ($${i.precio})</div>`;
           });
 
-          const esGeneral = p.mesa === 'GENERAL' || p.nombreCliente;
-          const identificadorMesa = esGeneral ? `CLIENTE: ${p.nombreCliente || 'General'}` : `MESA N° ${p.mesa}`;
-
           const card = document.createElement('div');
           card.className = 'card-pedido';
           card.innerHTML = `
             <div>
               <div class="card-pedido-header">
-                <span class="card-pedido-mesa" style="${esGeneral ? 'color: var(--neon-blue);' : ''}">${identificadorMesa}</span>
+                <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
                 <span style="font-size:11px; color:var(--text-muted);">${new Date(p.createdAt || Date.now()).toLocaleTimeString()}</span>
               </div>
               <div style="margin-bottom:10px;">${itemsHTML}</div>
@@ -1773,18 +1479,15 @@
             itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre}</div>`;
           });
 
-          const esGeneral = p.mesa === 'GENERAL' || p.nombreCliente;
-          const identificadorMesa = esGeneral ? `MESÓN: ${p.nombreCliente || 'Cliente General'}` : `MESA N° ${p.mesa}`;
-
           const asignadoAOtro = p.rutGarzon && p.rutGarzon !== rutSesion;
           const asignadoAMi = p.rutGarzon && p.rutGarzon === rutSesion;
 
           let estadoTexto = '🔴 Pedido Libre (Sin Asignar)';
-          let botonAccion = `<button class="btn btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon || ''}')">👁️ Ver Pedido / Atender</button>`;
+          let botonAccion = `<button class="btn btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon || ''}')">👁️ Ver Pedido / Atender Mesa</button>`;
 
           if (asignadoAMi) {
             estadoTexto = `🟢 Atendido por Ti (RUT: ${p.rutGarzon})`;
-            botonAccion = `<button class="btn btn-success btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon}')">✅ Finalizar & Entregar</button>`;
+            botonAccion = `<button class="btn btn-success btn-sm" style="width:100%;" onclick="tomarOEntregarPedido('${p._id}', '${p.rutGarzon}')">✅ Finalizar & Entregar Mesa</button>`;
           } else if (asignadoAOtro) {
             estadoTexto = `🔒 Ocupado por Garzón: ${p.rutGarzon}`;
             botonAccion = `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.5; cursor:not-allowed;" disabled>🔒 Atendido por otro Garzón</button>`;
@@ -1796,7 +1499,7 @@
           card.innerHTML = `
             <div>
               <div class="card-pedido-header">
-                <span class="card-pedido-mesa" style="${esGeneral ? 'color: var(--neon-blue);' : ''}">${identificadorMesa}</span>
+                <span class="card-pedido-mesa">MESA N° ${p.mesa}</span>
                 <span style="font-size:11px; color:var(--neon-yellow);">${estadoTexto}</span>
               </div>
               <div style="margin-bottom:10px;">${itemsHTML}</div>
@@ -1826,7 +1529,7 @@
       localStorage.setItem('garzon_rut_activo', rutIngresado);
 
       if (rutAsignadoActualmente === rutIngresado) {
-        if (!confirm(`¿Confirmas la entrega final de este pedido con el RUT ${rutIngresado}?`)) return;
+        if (!confirm(`¿Confirmas la entrega final de este pedido a la mesa con el RUT ${rutIngresado}?`)) return;
 
         try {
           const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
@@ -1843,7 +1546,6 @@
               id: p._id,
               local: localActual,
               mesa: p.mesa,
-              nombreCliente: p.nombreCliente || null,
               items: p.items,
               total: p.total,
               estado: 'entregado',
@@ -1953,13 +1655,10 @@
       }
 
       registros.forEach(r => {
-        const esGen = r.mesa === 'GENERAL' || r.nombreCliente;
-        const ident = esGen ? `Cliente: ${r.nombreCliente || 'General'}` : `Mesa ${r.mesa || '--'}`;
-
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${r.fechaEntrega || ''} ${r.horaEntrega || ''}</td>
-          <td>${ident}</td>
+          <td>Mesa ${r.mesa || '--'}</td>
           <td>$${r.total || 0}</td>
           <td>${r.rutGarzon || 'N/A'}</td>
         `;
@@ -2067,9 +1766,9 @@
       doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
       doc.text("Fecha / Hora Entrega", 14, y);
-      doc.text("Mesa / Cliente", 80, y);
-      doc.text("Total", 125, y);
-      doc.text("RUT Garzón", 160, y);
+      doc.text("Mesa", 80, y);
+      doc.text("Total", 110, y);
+      doc.text("RUT Garzón", 150, y);
 
       y += 4;
       doc.line(14, y, 196, y);
@@ -2086,9 +1785,9 @@
             y = 20;
             doc.setFont(undefined, 'bold');
             doc.text("Fecha / Hora Entrega", 14, y);
-            doc.text("Mesa / Cliente", 80, y);
-            doc.text("Total", 125, y);
-            doc.text("RUT Garzón", 160, y);
+            doc.text("Mesa", 80, y);
+            doc.text("Total", 110, y);
+            doc.text("RUT Garzón", 150, y);
             y += 4;
             doc.line(14, y, 196, y);
             doc.setFont(undefined, 'normal');
@@ -2096,45 +1795,18 @@
           }
 
           const fechaHora = `${r.fechaEntrega || ''} ${r.horaEntrega || ''}`.trim() || 'N/A';
-          const esGen = r.mesa === 'GENERAL' || r.nombreCliente;
-          const mesaStr = esGen ? `Cli: ${r.nombreCliente || 'Gen'}` : `Mesa ${r.mesa || '--'}`;
+          const mesaStr = `Mesa ${r.mesa || '--'}`;
           const totalStr = `$${r.total || 0}`;
           const rutStr = r.rutGarzon || 'N/A';
 
           doc.text(fechaHora, 14, y);
           doc.text(mesaStr, 80, y);
-          doc.text(totalStr, 125, y);
-          doc.text(rutStr, 160, y);
+          doc.text(totalStr, 110, y);
+          doc.text(rutStr, 150, y);
         });
       }
 
       doc.save(`Informe_Rendimiento_${localActual}_${new Date().toISOString().split('T')[0]}.pdf`);
-    }
-
-    // --- QR CLIENTE GENERAL ---
-    function generarQRGeneralDefault() {
-      const target = document.getElementById('qr-general-render');
-      const lblNombre = document.getElementById('lbl-qr-gen-nombre-local');
-      if (!target) return;
-      target.innerHTML = '';
-      if (lblNombre) lblNombre.innerText = localActual;
-
-      const urlAcceso = `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localActual)}&view=cliente_general`;
-      new QRCode(target, {
-        text: urlAcceso,
-        width: 160,
-        height: 160
-      });
-    }
-
-    function descargarQRGeneral() {
-      const canvas = document.querySelector('#qr-general-render canvas');
-      if (!canvas) return alert("❌ No se ha generado el código QR aún.");
-
-      const link = document.createElement('a');
-      link.download = `QR_CLIENTE_GENERAL_${localActual.toUpperCase()}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
     }
 
     function generarQRGarzonDefault() {
