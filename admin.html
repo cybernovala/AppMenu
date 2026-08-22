@@ -657,7 +657,7 @@
           <input type="text" id="caja-rut" placeholder="RUT Cajera/o (Ej: 12345678-9)" oninput="guardarCajaRutMemoria()">
         </div>
 
-        <div id="contenedor-cajas" class="grid-pedidos" style="margin-top: 10px;">
+        <div id="contenedor-cajas" style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px;">
           <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando cajas...</p>
         </div>
       </div>
@@ -1688,40 +1688,44 @@
         contenedor.innerHTML = '';
 
         const rutSesion = obtenerRutCajaActiva();
+        const miCaja = lista.find(c => c.abierto && c.rutCajera && c.rutCajera === rutSesion);
 
-        lista.sort((a, b) => a.numero - b.numero).forEach(c => {
+        // Si tengo una caja abierta, muestro SOLO esa; si no, muestro las 5
+        const cajasAMostrar = miCaja ? [miCaja] : [...lista].sort((a, b) => a.numero - b.numero);
+
+        cajasAMostrar.forEach(c => {
           const ocupadaPorOtro = c.abierto && c.rutCajera && c.rutCajera !== rutSesion;
           const mia = c.abierto && c.rutCajera && c.rutCajera === rutSesion;
 
-          let estadoTexto = '🔴 Libre (Sin Asignar)';
-          let botonAccion = `<button class="btn btn-sm" style="width:100%;" onclick="abrirCaja(${c.numero})">🔓 Abrir Caja ${c.numero}</button>`;
+          let estadoTexto = '🔴 Libre';
+          let botonAccion = `<button class="btn btn-sm" style="width:100%; padding:6px 10px;" onclick="abrirCaja(${c.numero})">🔓 Abrir Caja ${c.numero}</button>`;
 
           if (mia) {
-            estadoTexto = `🟢 Abierta por Ti`;
-            botonAccion = `<button class="btn btn-danger btn-sm" style="width:100%;" onclick="cerrarCaja(${c.numero})">🔒 Cerrar Mi Caja</button>`;
+            estadoTexto = '🟢 Abierta por Ti';
+            botonAccion = `<button class="btn btn-danger btn-sm" style="width:100%; padding:6px 10px;" onclick="cerrarCaja(${c.numero})">🔒 Cerrar Mi Caja</button>`;
           } else if (ocupadaPorOtro) {
-            estadoTexto = `🔒 Ocupada por RUT: ${c.rutCajera}`;
-            botonAccion = `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.5; cursor:not-allowed;" disabled>🔒 Ocupada por otra persona</button>`;
+            estadoTexto = `🔒 RUT ${c.rutCajera}`;
+            botonAccion = `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.5; cursor:not-allowed; padding:6px 10px;" disabled>Ocupada</button>`;
           }
 
           let infoHora = '';
           if (c.abierto && c.horaApertura) {
-            infoHora = `<div style="font-size:11px; color:var(--text-muted); margin-top:6px;">Abierta desde: ${new Date(c.horaApertura).toLocaleTimeString()}</div>`;
+            infoHora = `<div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Desde ${new Date(c.horaApertura).toLocaleTimeString()}</div>`;
           }
 
           const card = document.createElement('div');
           card.className = 'card-pedido';
-          card.style.borderColor = mia ? 'var(--neon-green)' : (ocupadaPorOtro ? '#444' : 'var(--neon-orange)');
+          card.style.cssText = `padding: 10px 12px; border-color: ${mia ? 'var(--neon-green)' : (ocupadaPorOtro ? '#444' : 'var(--neon-orange)')};`;
           card.innerHTML = `
             <div>
-              <div class="card-pedido-header">
-                <span class="card-pedido-mesa">🏦 CAJA N° ${c.numero}</span>
-                <span style="font-size:11px; color:var(--neon-yellow);">${estadoTexto}</span>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; border-bottom:1px dashed rgba(255,255,255,0.2); padding-bottom:6px; margin-bottom:8px;">
+                <span style="font-size:14px; font-weight:bold; color:var(--neon-yellow);">CAJA N° ${c.numero}</span>
+                <span style="font-size:10px; color:var(--neon-yellow);">${estadoTexto}</span>
               </div>
               ${infoHora}
-              ${mia ? '<div style="font-size:12px; color:var(--neon-green); margin-top:4px;">✅ Puedes cobrar en esta caja</div>' : ''}
+              ${mia ? '<div style="font-size:11px; color:var(--neon-green); margin-top:4px;">✅ Puedes cobrar</div>' : ''}
             </div>
-            <div style="border-top:1px dashed #333; padding-top:10px; margin-top:10px;">
+            <div style="padding-top:8px;">
               ${botonAccion}
             </div>
           `;
@@ -1828,6 +1832,14 @@
           return;
         }
 
+        // EN CAJA: pendientes primero (arriba), pagados quedan abajo
+        pedidos.sort((a, b) => {
+          const pa = a.pagado ? 1 : 0;
+          const pb = b.pagado ? 1 : 0;
+          if (pa !== pb) return pa - pb;
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+
         pedidos.forEach(p => {
           const tituloUbicacion = (p.mesa === 'GENERAL' || p.nombreCliente) 
             ? `CLIENTE: ${(p.nombreCliente || 'GENERAL').toUpperCase()}`
@@ -1837,6 +1849,10 @@
           const badge = esPagado 
             ? `<span class="badge-pagado">PAGADO</span>` 
             : `<span class="badge-pendiente">PENDIENTE</span>`;
+
+          const detallePago = esPagado && p.rutCajeroPago
+            ? `<span style="font-size:11px; color:var(--neon-green);">💳 Cobró: RUT ${p.rutCajeroPago}${p.numeroCajaPago ? ' · Caja N° ' + p.numeroCajaPago : ''}</span>`
+            : '';
 
           const botonPago = esPagado 
             ? `<button class="btn btn-secondary btn-sm" style="opacity:0.6;" disabled>✅ Pedido Ya Pagado</button>`
@@ -1848,9 +1864,12 @@
           fila.className = `card-pedido ${esPagado ? 'pagado' : ''}`;
           fila.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;';
           fila.innerHTML = `
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <span class="card-pedido-mesa">${tituloUbicacion}</span>
-              ${badge}
+            <div style="display:flex; flex-direction:column; gap:3px;">
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <span class="card-pedido-mesa">${tituloUbicacion}</span>
+                ${badge}
+              </div>
+              ${detallePago}
             </div>
             <div style="font-weight:bold; color:var(--neon-yellow); font-size:16px;">Total: $${p.total}</div>
             ${botonPago}

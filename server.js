@@ -97,6 +97,8 @@ const pedidoSchema = new mongoose.Schema({
   rutGarzon: { type: String, default: null },
   pagado: { type: Boolean, default: false },
   prioridadPriorizada: { type: Number, default: 0 },
+  rutCajeroPago: { type: String, default: null },
+  numeroCajaPago: { type: Number, default: null },
   fecha: { type: Date, default: Date.now }
 }, { collection: 'pedidos', timestamps: true });
 
@@ -539,8 +541,10 @@ app.put('/api/pedidos/:id/pagar', async (req, res) => {
 
     const rutCajera = req.body ? req.body.rutCajera : null;
 
+    let cajaActiva = null;
+
     if (rutCajera) {
-      const cajaActiva = await Caja.findOne({
+      cajaActiva = await Caja.findOne({
         local: pedido.local,
         abierto: true,
         rutCajera: String(rutCajera).trim()
@@ -553,6 +557,12 @@ app.put('/api/pedidos/:id/pagar', async (req, res) => {
 
     pedido.pagado = true;
     pedido.prioridadPriorizada = Date.now();
+
+    if (cajaActiva) {
+      pedido.rutCajeroPago = String(rutCajera).trim();
+      pedido.numeroCajaPago = cajaActiva.numero;
+    }
+
     await pedido.save();
 
     res.json({ ok: true, pedido });
