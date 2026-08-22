@@ -152,13 +152,53 @@ function limpiarItems(items) {
   }));
 }
 
-// Helper para validar token de sesión
+// Helper para validar token de sesión (con expiración automática a las 12 h)
+const DURACION_SESION_MS = 12 * 60 * 60 * 1000;
+
+function obtenerSesion(token) {
+  if (!token) return null;
+  const sesion = sesionesActivas.get(token);
+  if (!sesion) return null;
+  if (Date.now() - new Date(sesion.fecha).getTime() > DURACION_SESION_MS) {
+    sesionesActivas.delete(token);
+    return null;
+  }
+  return sesion;
+}
+
 function verificarAutenticacion(req, res, next) {
-  const token = req.headers['authorization'];
-  if (!token || !sesionesActivas.has(token)) {
+  const sesion = obtenerSesion(req.headers['authorization']);
+  if (!sesion) {
     return res.status(401).json({ ok: false, error: 'Sesión no válida o expirada' });
   }
-  req.usuarioSesion = sesionesActivas.get(token);
+  req.usuarioSesion = sesion;
+  next();
+}
+
+// Solo Administrador General (demo.html, mensajes.html)
+function requerirSuperAdmin(req, res, next) {
+  const sesion = obtenerSesion(req.headers['authorization']);
+  if (!sesion || sesion.tipo !== 'superadmin') {
+    return res.status(401).json({ ok: false, error: '🔒 Acceso exclusivo del Administrador General. Ingrese la contraseña SuperAdmin.' });
+  }
+  req.usuarioSesion = sesion;
+  next();
+}
+
+// Sesión de local válida (panel admin: mutaciones de menú). El SuperAdmin también pasa.
+function requerirSesionLocal(req, res, next) {
+  const sesion = obtenerSesion(req.headers['authorization']);
+  if (!sesion || (sesion.tipo !== 'local' && sesion.tipo !== 'superadmin')) {
+    return res.status(401).json({ ok: false, error: '🔒 Sesión no válida. Ingrese la contraseña del local.' });
+  }
+
+  // Un local nunca puede operar sobre otro local
+  const localPedido = ((req.body && req.body.local) || (req.query && req.query.local) || '').toLowerCase().trim();
+  if (sesion.tipo === 'local' && localPedido && sesion.local !== localPedido) {
+    return res.status(403).json({ ok: false, error: '⛔ Este token no corresponde a ese local.' });
+  }
+
+  req.usuarioSesion = sesion;
   next();
 }
 
@@ -271,7 +311,7 @@ app.get('/api/licencia', async (req, res) => {
 });
 
 // 4. OBTENER TODOS LOS LOCALES (ADMIN GENERAL)
-app.get('/api/locales', async (req, res) => {
+app.get('/api/locales', requerirSuperAdmin, async (req, res) => {
   try {
     const locales = await Local.find().sort({ fechaCreacion: -1 });
     const localesFormateados = locales.map(l => ({
@@ -294,7 +334,7 @@ app.get('/api/locales', async (req, res) => {
 });
 
 // CREAR/REGISTRAR DEMO
-app.post('/api/locales/demo', async (req, res) => {
+app.post('/api/locales/demo', requerirSuperAdmin, async (req, res) => {
   try {
     const { local, rut, correo, fechaCreacion, fechaVencimiento } = req.body;
     const nombreLimpio = limpiarTexto(nombre, 60);
@@ -341,7 +381,7 @@ app.post('/api/locales/demo', async (req, res) => {
 
 // LOGIN LOCAL / VERIFICACIÓN DE CONTRASEÑA
 // 5. BLOQUEAR / ACTIVAR UN LOCAL
-app.put('/api/locales/estado', async (req, res) => {
+app.put('/api/locales/estado', requerirSuperAdmin, async (req, res) => {
   try {
     const { local, activo } = req.body;
     const localId = (local || '').toLowerCase().trim();
@@ -366,7 +406,7 @@ app.put('/api/locales/estado', async (req, res) => {
 });
 
 // 6. RENOVAR LICENCIA (+N DÍAS)
-app.put('/api/locales/renovar', async (req, res) => {
+app.put('/api/locales/renovar', requerirSuperAdmin, async (req, res) => {
   try {
     const { local, dias } = req.body;
     const localId = (local || '').toLowerCase().trim();
@@ -442,7 +482,7 @@ app.get('/api/avisos', async (req, res) => {
   }
 });
 
-app.post('/api/avisos', async (req, res) => {
+app.post('/api/avisos', requerirSuperAdmin, async (req, res) => {
   try {
     const { destinatario, asunto, texto } = req.body;
     const textoLimpio = limpiarTexto(texto, 500);
@@ -468,7 +508,7 @@ app.post('/api/avisos', async (req, res) => {
   }
 });
 
-app.delete('/api/avisos/:id', async (req, res) => {
+app.delete('/api/avisos/:id', requerirSuperAdmin, async (req, res) => {
   try {
     const eliminado = await Aviso.findByIdAndDelete(req.params.id);
     if (!eliminado) {
@@ -517,7 +557,7 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
-app.post('/api/menu/categoria', async (req, res) => {
+app.post('/api/menu/categoria', requerirSesionLocal, async (req, res) => {
   try {
     const { local, categoria } = req.body;
     const localId = (local || '').toLowerCase().trim();
@@ -539,7 +579,7 @@ app.post('/api/menu/categoria', async (req, res) => {
   }
 });
 
-app.delete('/api/menu/categoria', async (req, res) => {
+app.delete('/api/menu/categoria', requerirSesionLocal, async (req, res) => {
   try {
     const localId = (req.query.local || '').toLowerCase().trim();
     const categoria = req.query.categoria;
@@ -556,7 +596,7 @@ app.delete('/api/menu/categoria', async (req, res) => {
   }
 });
 
-app.post('/api/menu', async (req, res) => {
+app.post('/api/menu', requerirSesionLocal, async (req, res) => {
   try {
     const { local, categoria, nombre, precio } = req.body;
     const localId = (local || '').toLowerCase().trim();
@@ -578,7 +618,7 @@ app.post('/api/menu', async (req, res) => {
   }
 });
 
-app.delete('/api/menu/del', async (req, res) => {
+app.delete('/api/menu/del', requerirSesionLocal, async (req, res) => {
   try {
     const localId = (req.query.local || '').toLowerCase().trim();
     const categoria = req.query.categoria;
@@ -600,7 +640,7 @@ app.delete('/api/menu/del', async (req, res) => {
   }
 });
 
-app.put('/api/menu/edit', async (req, res) => {
+app.put('/api/menu/edit', requerirSesionLocal, async (req, res) => {
   try {
     const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio } = req.body;
     const localId = (local || '').toLowerCase().trim();
