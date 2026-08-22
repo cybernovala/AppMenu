@@ -3,8 +3,11 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const Brevo = require('@getbrevo/brevo');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 
 const app = express();
+// Necesario detrás de proxies (Render) para que req.ip refleje la IP real del cliente
+app.set('trust proxy', 1);
 
 // --- MIDDLEWARES ---
 app.use(cors());
@@ -26,25 +29,60 @@ mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log('🟢 Conectado exitosamente a MongoDB');
     
-    // --- AUTO-INICIALIZAR CONTRASEÑA ADMIN EN MONGO DB ---
+    // --- CONTRASEÑA SUPERADMIN ---
+    // Se toma de la variable de entorno SUPERADMIN_PASSWORD. Nunca se sobreescribe
+    // la clave guardada en Mongo salvo que esa variable esté definida y sea distinta.
     try {
       const configExistente = await ConfigGlobal.findOne({ tipo: 'superadmin' });
+
       if (!configExistente) {
+        // Primera instalación: usa SUPERADMIN_PASSWORD del entorno o genera una provisional aleatoria
+        const inicial = process.env.SUPERADMIN_PASSWORD || crypto.randomBytes(6).toString('hex');
         await ConfigGlobal.create({
           tipo: 'superadmin',
-          password: '@Juan20737373'
+          password: await bcrypt.hash(inicial, 10)
         });
         console.log('🔑 Credencial SuperAdmin creada con éxito en MongoDB.');
-      } else if (configExistente.password !== '@Juan20737373') {
-        configExistente.password = '@Juan20737373';
-        await configExistente.save();
-        console.log('🔑 Credencial SuperAdmin actualizada en MongoDB.');
+        if (!process.env.SUPERADMIN_PASSWORD) {
+          console.log('⚠️ Contraseña SuperAdmin provisional: ' + inicial + ' (defina SUPERADMIN_PASSWORD en las variables de entorno)');
+        }
+      } else if (process.env.SUPERADMIN_PASSWORD) {
+        const almacenada = configExistente.password;
+        const coincide = esHashBcrypt(almacenada)
+          ? await bcrypt.compare(process.env.SUPERADMIN_PASSWORD, almacenada)
+          : process.env.SUPERADMIN_PASSWORD === almacenada;
+
+        if (!coincide || !esHashBcrypt(almacenada)) {
+          configExistente.password = await bcrypt.hash(process.env.SUPERADMIN_PASSWORD, 10);
+          await configExistente.save();
+          console.log('🔑 Credencial SuperAdmin actualizada desde variable de entorno.');
+        }
       }
     } catch (err) {
       console.error('🔴 Error al inicializar credencial en MongoDB:', err);
     }
+
+    // Purga inicial del historial antiguo y luego una vez al día
+    await purgarHistorialAntiguo();
   })
   .catch((err) => console.error('🔴 Error de conexión a MongoDB:', err));
+
+// --- PURGA AUTOMÁTICA DEL HISTORIAL (>12 MESES) ---
+const RETENCION_HISTORIAL_MS = 365 * 24 * 60 * 60 * 1000;
+
+async function purgarHistorialAntiguo() {
+  try {
+    const limite = new Date(Date.now() - RETENCION_HISTORIAL_MS);
+    const resultado = await Historial.deleteMany({ createdAt: { $lt: limite } });
+    if (resultado.deletedCount > 0) {
+      console.log(`🧹 Historial: ${resultado.deletedCount} registro(s) con más de 12 meses eliminados.`);
+    }
+  } catch (error) {
+    console.error('Error al purgar el historial antiguo:', error.message);
+  }
+}
+
+setInterval(purgarHistorialAntiguo, 24 * 60 * 60 * 1000).unref();
 
 // --- ESQUEMAS Y MODELOS DE MONGOOSE ---
 
@@ -68,6 +106,8 @@ const localSchema = new mongoose.Schema({
   menu: Array,
   anuncio: { type: String, default: "ok" }
 }, { collection: 'locales' });
+// Búsqueda de locales por nombre en /api/locales/verificar
+localSchema.index({ nombre: 1 });
 
 const Local = mongoose.model('Local', localSchema);
 
@@ -84,6 +124,8 @@ const avisoSchema = new mongoose.Schema({
   fecha: { type: Date, default: Date.now },
   respuestas: [respuestaAvisoSchema]
 }, { collection: 'avisos' });
+// Listado de avisos por destinatario ordenado por fecha
+avisoSchema.index({ destinatario: 1, fecha: -1 });
 
 const Aviso = mongoose.model('Aviso', avisoSchema);
 
@@ -101,6 +143,8 @@ const pedidoSchema = new mongoose.Schema({
   numeroCajaPago: { type: Number, default: null },
   fecha: { type: Date, default: Date.now }
 }, { collection: 'pedidos', timestamps: true });
+// Panel de pedidos: siempre se consulta por local
+pedidoSchema.index({ local: 1, fecha: -1 });
 
 const Pedido = mongoose.model('Pedido', pedidoSchema);
 
@@ -117,6 +161,8 @@ const historialSchema = new mongoose.Schema({
   horaEntrega: String,
   fechaEntrega: String
 }, { collection: 'historials', timestamps: true });
+// Historial: consulta por local, del más reciente al más antiguo
+historialSchema.index({ local: 1, createdAt: -1 });
 
 const Historial = mongoose.model('Historial', historialSchema);
 
@@ -128,6 +174,8 @@ const cajaSchema = new mongoose.Schema({
   horaApertura: { type: Date, default: null },
   horaCierre: { type: Date, default: null }
 }, { collection: 'cajas', timestamps: true });
+// Evita duplicados de una misma caja por carrera de peticiones simultáneas
+cajaSchema.index({ local: 1, numero: 1 }, { unique: true });
 
 const Caja = mongoose.model('Caja', cajaSchema);
 
@@ -140,6 +188,11 @@ function limpiarTexto(texto, maxLen = 120) {
   if (typeof texto !== 'string') return null;
   const limpio = texto.replace(/[<>"'`]/g, '').replace(/\s+/g, ' ').trim();
   return limpio ? limpio.slice(0, maxLen) : null;
+}
+
+// Detecta si una contraseña almacenada ya está hasheada con bcrypt
+function esHashBcrypt(texto) {
+  return typeof texto === 'string' && texto.startsWith('$2');
 }
 
 // Sanitiza el arreglo de ítems de un pedido (cantidad/precio acotados, nombre limpio)
@@ -202,6 +255,58 @@ function requerirSesionLocal(req, res, next) {
   next();
 }
 
+// --- RATE LIMIT ANTI FUERZA BRUTA PARA LOGINS ---
+// Máximo de intentos fallidos por IP dentro de la ventana; al superarlos, bloqueo temporal
+const MAX_INTENTOS_LOGIN = 5;
+const VENTANA_LOGIN_MS = 10 * 60 * 1000;   // ventana de 10 minutos
+const BLOQUEO_LOGIN_MS = 10 * 60 * 1000;   // bloqueo de 10 minutos
+const intentosFallidos = new Map(); // ip -> { intentos, primerIntento, bloqueadoHasta }
+
+function obtenerIpCliente(req) {
+  return (req.ip || req.socket?.remoteAddress || 'desconocida').toString();
+}
+
+// Limpia entradas viejas del Map para que no crezca indefinidamente
+setInterval(() => {
+  const ahora = Date.now();
+  for (const [ip, r] of intentosFallidos) {
+    if (ahora - r.primerIntento > VENTANA_LOGIN_MS && (!r.bloqueadoHasta || r.bloqueadoHasta < ahora)) {
+      intentosFallidos.delete(ip);
+    }
+  }
+}, VENTANA_LOGIN_MS).unref();
+
+function limiteLogin(req, res, next) {
+  const ip = obtenerIpCliente(req);
+  const registro = intentosFallidos.get(ip);
+  if (registro && registro.bloqueadoHasta > Date.now()) {
+    const segundos = Math.ceil((registro.bloqueadoHasta - Date.now()) / 1000);
+    return res.status(429).json({
+      ok: false,
+      error: `⛔ Demasiados intentos fallidos. Espera ${segundos} segundos e inténtalo de nuevo.`
+    });
+  }
+  next();
+}
+
+function registrarFalloLogin(req) {
+  const ip = obtenerIpCliente(req);
+  const ahora = Date.now();
+  let r = intentosFallidos.get(ip);
+  if (!r || ahora - r.primerIntento > VENTANA_LOGIN_MS) {
+    r = { intentos: 0, primerIntento: ahora, bloqueadoHasta: 0 };
+  }
+  r.intentos += 1;
+  if (r.intentos >= MAX_INTENTOS_LOGIN) {
+    r.bloqueadoHasta = ahora + BLOQUEO_LOGIN_MS;
+  }
+  intentosFallidos.set(ip, r);
+}
+
+function limpiarFallosLogin(req) {
+  intentosFallidos.delete(obtenerIpCliente(req));
+}
+
 // --- RUTAS DE LA API ---
 
 // VERIFICAR ESTADO DE SESIÓN
@@ -218,7 +323,7 @@ app.post('/api/auth/verificar-sesion', (req, res) => {
 });
 
 // 1. LOGIN DE ADMINISTRADOR GENERAL
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', limiteLogin, async (req, res) => {
   try {
     const { password } = req.body;
     if (!password) return res.status(400).json({ ok: false, error: 'Debe ingresar una contraseña' });
@@ -229,11 +334,24 @@ app.post('/api/admin/login', async (req, res) => {
       return res.status(500).json({ ok: false, error: 'Configuración de Administrador no encontrada' });
     }
 
-    if (password === configAdmin.password) {
+    const almacenada = configAdmin.password;
+    const coincide = esHashBcrypt(almacenada)
+      ? await bcrypt.compare(password, almacenada)
+      : password === almacenada;
+
+    if (coincide) {
+      // Migración automática: si estaba en texto plano, la convierte a hash
+      if (!esHashBcrypt(almacenada)) {
+        configAdmin.password = await bcrypt.hash(password, 10);
+        await configAdmin.save();
+      }
+
+      limpiarFallosLogin(req);
       const token = crypto.randomBytes(32).toString('hex');
       sesionesActivas.set(token, { tipo: 'superadmin', fecha: new Date() });
       return res.json({ ok: true, mensaje: 'Acceso concedido como Administrador General', token });
     } else {
+      registrarFalloLogin(req);
       return res.status(401).json({ ok: false, error: 'Contraseña incorrecta' });
     }
   } catch (error) {
@@ -359,7 +477,7 @@ app.post('/api/locales/demo', requerirSuperAdmin, async (req, res) => {
         nombre: nombreLimpio,
         rut: rut || 'DEMO-30DIAS',
         correo: correo || 'demo@appmenu.cl',
-        password: '123',
+        password: await bcrypt.hash('123', 10),
         activo: true,
         fechaCreacion: ahora,
         fechaVencimiento: venc,
@@ -439,7 +557,7 @@ app.put('/api/locales/renovar', requerirSuperAdmin, async (req, res) => {
   }
 });
 
-app.post('/api/locales/login', async (req, res) => {
+app.post('/api/locales/login', limiteLogin, async (req, res) => {
   try {
     const { local, password } = req.body;
     const localId = (local || '').toLowerCase().trim();
@@ -453,12 +571,24 @@ app.post('/api/locales/login', async (req, res) => {
       return res.status(404).json({ ok: false, error: 'Local no encontrado' });
     }
 
-    const passwordValida = reg.password || '123';
-    if (password === passwordValida) {
+    const almacenada = reg.password || '123';
+    const coincide = esHashBcrypt(almacenada)
+      ? await bcrypt.compare(password, almacenada)
+      : password === almacenada;
+
+    if (coincide) {
+      // Migración automática de texto plano a hash en el primer login
+      if (!esHashBcrypt(almacenada)) {
+        reg.password = await bcrypt.hash(password, 10);
+        await reg.save();
+      }
+
+      limpiarFallosLogin(req);
       const token = crypto.randomBytes(32).toString('hex');
       sesionesActivas.set(token, { tipo: 'local', local: reg.local, fecha: new Date() });
       return res.json({ ok: true, mensaje: 'Acceso autorizado', token, local: reg.local });
     } else {
+      registrarFalloLogin(req);
       return res.status(401).json({ ok: false, error: 'Contraseña incorrecta' });
     }
   } catch (error) {
@@ -719,17 +849,27 @@ app.put('/api/pedidos/:id/pagar', async (req, res) => {
       }
     }
 
-    pedido.pagado = true;
-    pedido.prioridadPriorizada = Date.now();
-
+    // Actualización atómica solo si aún no está pagado (protege contra doble clic)
+    const cambios = { pagado: true, prioridadPriorizada: Date.now() };
     if (cajaActiva) {
-      pedido.rutCajeroPago = String(rutCajera).trim();
-      pedido.numeroCajaPago = cajaActiva.numero;
+      cambios.rutCajeroPago = String(rutCajera).trim();
+      cambios.numeroCajaPago = cajaActiva.numero;
     }
 
-    await pedido.save();
+    const actualizado = await Pedido.findOneAndUpdate(
+      { _id: req.params.id, pagado: false },
+      { $set: cambios },
+      { new: true }
+    );
 
-    res.json({ ok: true, pedido });
+    if (!actualizado) {
+      const existente = await Pedido.findById(req.params.id);
+      if (!existente) return res.status(404).json({ error: 'Pedido no encontrado' });
+      // Ya estaba pagado (reintento de red): respuesta idempotente
+      return res.json({ ok: true, pedido: existente });
+    }
+
+    res.json({ ok: true, pedido: actualizado });
   } catch (error) {
     res.status(500).json({ error: 'Error al marcar pago' });
   }
@@ -738,16 +878,19 @@ app.put('/api/pedidos/:id/pagar', async (req, res) => {
 app.put('/api/pedidos/:id/asignar-garzon', async (req, res) => {
   try {
     const { rutGarzon } = req.body;
-    const pedido = await Pedido.findById(req.params.id);
 
-    if (!pedido) return res.status(404).json({ ok: false, error: 'Pedido no encontrado' });
+    // Actualización atómica: solo gana el primer garzón que llegue
+    const pedido = await Pedido.findOneAndUpdate(
+      { _id: req.params.id, $or: [{ rutGarzon: null }, { rutGarzon: '' }, { rutGarzon: rutGarzon }] },
+      { rutGarzon },
+      { new: true }
+    );
 
-    if (pedido.rutGarzon && pedido.rutGarzon !== rutGarzon) {
-      return res.status(409).json({ ok: false, error: 'El pedido ya se encuentra atendido por otro garzón.' });
+    if (!pedido) {
+      const existente = await Pedido.findById(req.params.id);
+      if (!existente) return res.status(404).json({ ok: false, error: 'Pedido no encontrado' });
+      return res.status(409).json({ ok: false, error: `El pedido ya se encuentra atendido por otro garzón (${existente.rutGarzon}).` });
     }
-
-    pedido.rutGarzon = rutGarzon;
-    await pedido.save();
 
     res.json({ ok: true, pedido });
   } catch (error) {
@@ -808,18 +951,31 @@ app.post('/api/cajas/abrir', async (req, res) => {
       return res.status(409).json({ ok: false, error: `⛔ Ya tienes la Caja N° ${yaAbiertaPorRut.numero} abierta con este RUT. Ciérrala antes de abrir otra.` });
     }
 
-    let caja = await Caja.findOne({ local: localId, numero: num });
-    if (!caja) caja = await Caja.create({ local: localId, numero: num });
+    // Reclamo atómico: solo gana quien encuentre la caja libre o abierta por su mismo RUT
+    const cambiosApertura = { abierto: true, rutCajera: rutLimpio, horaApertura: new Date(), horaCierre: null };
+    const filtroLibre = { local: localId, numero: num, $or: [{ abierto: false }, { abierto: true, rutCajera: rutLimpio }] };
 
-    if (caja.abierto && caja.rutCajera && caja.rutCajera !== rutLimpio) {
-      return res.status(409).json({ ok: false, error: `⛔ IMPOSIBLE ABRIR: La Caja N° ${num} está abierta por otro RUT (${caja.rutCajera}).` });
+    let caja = await Caja.findOneAndUpdate(filtroLibre, { $set: cambiosApertura }, { new: true });
+
+    if (!caja) {
+      const existente = await Caja.findOne({ local: localId, numero: num });
+
+      if (existente) {
+        return res.status(409).json({ ok: false, error: `⛔ IMPOSIBLE ABRIR: La Caja N° ${num} está abierta por otro RUT (${existente.rutCajera}).` });
+      }
+
+      // No existía: crearla (si otra petición la creó a la vez, el índice único lo evita y se reintenta)
+      try {
+        await Caja.create({ local: localId, numero: num });
+      } catch (e) {
+        // Carrera de creación: continuar con el reintento del reclamo
+      }
+      caja = await Caja.findOneAndUpdate(filtroLibre, { $set: cambiosApertura }, { new: true });
+
+      if (!caja) {
+        return res.status(409).json({ ok: false, error: `⛔ IMPOSIBLE ABRIR: La Caja N° ${num} está abierta por otro RUT.` });
+      }
     }
-
-    caja.abierto = true;
-    caja.rutCajera = rutLimpio;
-    caja.horaApertura = new Date();
-    caja.horaCierre = null;
-    await caja.save();
 
     res.json({ ok: true, caja });
   } catch (error) {
@@ -840,22 +996,20 @@ app.post('/api/cajas/cerrar', async (req, res) => {
     }
 
     const rutLimpio = rut.trim();
-    const caja = await Caja.findOne({ local: localId, numero: num });
 
-    if (!caja) return res.status(404).json({ ok: false, error: 'Caja no encontrada' });
+    // Cierre atómico: solo el titular puede cerrar y solo si sigue abierta
+    const caja = await Caja.findOneAndUpdate(
+      { local: localId, numero: num, abierto: true, $or: [{ rutCajera: rutLimpio }, { rutCajera: null }] },
+      { $set: { abierto: false, rutCajera: null, horaCierre: new Date() } },
+      { new: true }
+    );
 
-    if (!caja.abierto) {
-      return res.status(400).json({ ok: false, error: 'La caja ya se encuentra cerrada.' });
+    if (!caja) {
+      const existente = await Caja.findOne({ local: localId, numero: num });
+      if (!existente) return res.status(404).json({ ok: false, error: 'Caja no encontrada' });
+      if (!existente.abierto) return res.status(400).json({ ok: false, error: 'La caja ya se encuentra cerrada.' });
+      return res.status(409).json({ ok: false, error: `⛔ SOLO EL TITULAR: La Caja N° ${num} la abrió el RUT ${existente.rutCajera}. Solo ese RUT puede cerrarla.` });
     }
-
-    if (caja.rutCajera && caja.rutCajera !== rutLimpio) {
-      return res.status(409).json({ ok: false, error: `⛔ SOLO EL TITULAR: La Caja N° ${num} la abrió el RUT ${caja.rutCajera}. Solo ese RUT puede cerrarla.` });
-    }
-
-    caja.abierto = false;
-    caja.rutCajera = null;
-    caja.horaCierre = new Date();
-    await caja.save();
 
     res.json({ ok: true, caja });
   } catch (error) {
