@@ -370,6 +370,8 @@ app.put('/api/locales/renovar', async (req, res) => {
     base.setTime(base.getTime() + (diasNum * 24 * 60 * 60 * 1000));
 
     reg.fechaVencimiento = base.toISOString();
+    // Renovar implica reactivar el acceso (estuviera bloqueado por vencimiento o manualmente)
+    if (!reg.activo) reg.activo = true;
     await reg.save();
 
     res.json({ ok: true, mensaje: `Licencia de ${localId} renovada por ${diasNum} días`, fechaVencimiento: reg.fechaVencimiento });
