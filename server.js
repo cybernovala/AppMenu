@@ -195,6 +195,36 @@ function esHashBcrypt(texto) {
   return typeof texto === 'string' && texto.startsWith('$2');
 }
 
+// --- ENVÍO DE CORREOS TRANSACCIONALES (BREVO) ---
+const REMITENTE_CORREO = process.env.REMITENTE_CORREO || 'appmenu26@gmail.com';
+
+function escaparHtmlCorreo(texto) {
+  return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Devuelve true si el correo partió; nunca lanza (los envíos son best-effort)
+async function enviarCorreo(destinatario, asunto, html) {
+  if (!process.env.BREVO_API_KEY) {
+    console.log(`⚠️ BREVO_API_KEY no definida: correo NO enviado a ${destinatario} (${asunto})`);
+    return false;
+  }
+  try {
+    const api = new Brevo.TransactionalEmailsApi();
+    api.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+    await api.sendTransacEmail({
+      sender: { name: 'AppMenu', email: REMITENTE_CORREO },
+      to: [{ email: destinatario }],
+      subject: asunto,
+      htmlContent: html
+    });
+    console.log(`📧 Correo enviado a ${destinatario}: ${asunto}`);
+    return true;
+  } catch (error) {
+    console.error('Error al enviar correo con Brevo:', error.response?.text || error.message);
+    return false;
+  }
+}
+
 // Sanitiza el arreglo de ítems de un pedido (cantidad/precio acotados, nombre limpio)
 function limpiarItems(items) {
   if (!Array.isArray(items)) return [];
@@ -593,6 +623,146 @@ app.post('/api/locales/login', limiteLogin, async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ ok: false, error: 'Error al validar contraseña del local' });
+  }
+});
+
+// ALTA DE LOCAL (auto-registro público desde index.html)
+app.post('/api/locales/alta', limiteLogin, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const nombre = limpiarTexto(b.nombre, 40);
+    const rut = limpiarTexto(b.rut, 15);
+    const correo = limpiarTexto(b.correo, 60);
+    const password = typeof b.password === 'string' ? b.password.trim() : '';
+    let fechaVencimiento = b.fechaVencimiento ? new Date(b.fechaVencimiento) : null;
+
+    if (!nombre || !rut || !correo || !password) {
+      return res.status(400).json({ ok: false, error: 'Faltan datos obligatorios para registrar el local.' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      return res.status(400).json({ ok: false, error: 'El correo ingresado no es válido.' });
+    }
+    if (password.length < 4 || password.length > 40) {
+      return res.status(400).json({ ok: false, error: 'La contraseña debe tener entre 4 y 40 caracteres.' });
+    }
+
+    const slug = nombre.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!slug) {
+      return res.status(400).json({ ok: false, error: 'El nombre del local no es válido.' });
+    }
+
+    // Evitar duplicados (nombre, RUT y correo son identificadores únicos del sistema)
+    const existenteNombre = await Local.findOne({ $or: [{ local: slug }, { nombre }] });
+    if (existenteNombre) {
+      return res.status(409).json({ ok: false, error: `El local "${nombre}" ya se encuentra registrado.` });
+    }
+    const existenteRut = await Local.findOne({ rut });
+    if (existenteRut) {
+      return res.status(409).json({ ok: false, error: 'Ese RUT ya tiene un local registrado.' });
+    }
+    const existenteCorreo = await Local.findOne({ correo: correo.toLowerCase() });
+    if (existenteCorreo) {
+      return res.status(409).json({ ok: false, error: 'Ya existe un local registrado con ese correo.' });
+    }
+
+    const vencimientoValido = fechaVencimiento && !isNaN(fechaVencimiento.getTime())
+      ? fechaVencimiento.toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const nuevoLocal = new Local({
+      id: Date.now(),
+      local: slug,
+      nombre,
+      rut,
+      correo: correo.toLowerCase(),
+      password: await bcrypt.hash(password, 10),
+      activo: true,
+      fechaCreacion: new Date(),
+      fechaVencimiento: vencimientoValido,
+      menu: [],
+      anuncio: 'ok'
+    });
+    await nuevoLocal.save();
+
+    // Correo de bienvenida (best-effort: si falla no bloquea el registro)
+    await enviarCorreo(
+      correo.toLowerCase(),
+      '🎉 Bienvenido a AppMenu',
+      `<h2>¡Hola ${escaparHtmlCorreo(nombre)}!</h2>
+       <p>Tu local fue registrado con éxito en <b>AppMenu</b>.</p>
+       <ul>
+         <li><b>Nombre del local:</b> ${escaparHtmlCorreo(nombre)}</li>
+         <li><b>ID de acceso:</b> ${slug}</li>
+         <li><b>Licencia de prueba:</b> 30 días</li>
+       </ul>
+       <p>Inicia sesión con tu contraseña desde la página principal.</p>`
+    );
+
+    // Sesión automática para entrar directo al panel
+    const token = crypto.randomBytes(32).toString('hex');
+    sesionesActivas.set(token, { tipo: 'local', local: slug, fecha: new Date() });
+
+    res.status(201).json({
+      ok: true,
+      mensaje: 'Local registrado con éxito',
+      token,
+      local: slug
+    });
+  } catch (error) {
+    console.error('Error al dar de alta el local:', error);
+    res.status(500).json({ ok: false, error: 'Error al registrar el local' });
+  }
+});
+
+// RECUPERAR CONTRASEÑA DE LOCAL (envía nueva clave temporal por correo)
+app.post('/api/locales/recuperar-password', limiteLogin, async (req, res) => {
+  try {
+    const busqueda = limpiarTexto(req.body ? req.body.local : null, 60);
+    if (!busqueda) {
+      return res.status(400).json({ ok: false, error: 'Ingresa el nombre o ID de tu local.' });
+    }
+
+    const slugBusqueda = busqueda.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const regexBusqueda = new RegExp(`^${escapeRegex(busqueda)}$`, 'i');
+    const reg = await Local.findOne({
+      $or: [
+        { local: busqueda },
+        { local: slugBusqueda },
+        { nombre: { $regex: regexBusqueda } }
+      ]
+    });
+
+    if (!reg) {
+      return res.status(404).json({ ok: false, error: 'No se encontró un local con ese nombre o ID.' });
+    }
+    if (!reg.correo) {
+      return res.status(400).json({ ok: false, error: 'Este local no tiene correo registrado. Contacta al Administrador General.' });
+    }
+
+    // Las contraseñas están hasheadas: no se puede reenviar la original.
+    // Se genera una nueva temporal y pasa a ser la clave vigente.
+    const temporal = 'AM-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+    reg.password = await bcrypt.hash(temporal, 10);
+    await reg.save();
+
+    const enviado = await enviarCorreo(
+      reg.correo,
+      '🔑 AppMenu - Recuperación de contraseña',
+      `<h2>Hola ${escaparHtmlCorreo(reg.nombre || reg.local)}</h2>
+       <p>Solicitaste recuperar el acceso a tu local en <b>AppMenu</b>.</p>
+       <p>Tu nueva contraseña temporal es:</p>
+       <p style="font-size:22px;"><b>${temporal}</b></p>
+       <p>Úsala para iniciar sesión normalmente.</p>`
+    );
+
+    if (!enviado) {
+      return res.status(500).json({ ok: false, error: 'No se pudo enviar el correo de recuperación. Intenta más tarde.' });
+    }
+
+    res.json({ ok: true, mensaje: `📩 Enviamos una nueva contraseña temporal a ${reg.correo}` });
+  } catch (error) {
+    console.error('Error al recuperar contraseña:', error);
+    res.status(500).json({ ok: false, error: 'Error al procesar la recuperación' });
   }
 });
 
