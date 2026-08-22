@@ -135,6 +135,23 @@ function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
 
+// Limpia texto ingresado por usuarios para prevenir XSS y desbordes de longitud
+function limpiarTexto(texto, maxLen = 120) {
+  if (typeof texto !== 'string') return null;
+  const limpio = texto.replace(/[<>"'`]/g, '').replace(/\s+/g, ' ').trim();
+  return limpio ? limpio.slice(0, maxLen) : null;
+}
+
+// Sanitiza el arreglo de ítems de un pedido (cantidad/precio acotados, nombre limpio)
+function limpiarItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items.slice(0, 50).map(i => ({
+    nombre: limpiarTexto(i && i.nombre, 60) || 'Producto',
+    precio: Number(i && i.precio) || 0,
+    cantidad: Math.max(1, Math.min(99, Number(i && i.cantidad) || 1))
+  }));
+}
+
 // Helper para validar token de sesión
 function verificarAutenticacion(req, res, next) {
   const token = req.headers['authorization'];
@@ -279,17 +296,18 @@ app.get('/api/locales', async (req, res) => {
 // CREAR/REGISTRAR DEMO
 app.post('/api/locales/demo', async (req, res) => {
   try {
-    const { local, nombre, rut, correo, fechaCreacion, fechaVencimiento } = req.body;
-    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es requerido' });
+    const { local, rut, correo, fechaCreacion, fechaVencimiento } = req.body;
+    const nombreLimpio = limpiarTexto(nombre, 60);
+    if (!nombreLimpio) return res.status(400).json({ error: 'El nombre es requerido' });
 
-    const localSlug = (local || nombre).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const localSlug = (local || nombreLimpio).toLowerCase().replace(/[^a-z0-9]/g, '');
     let reg = await Local.findOne({ local: localSlug });
 
     const ahora = fechaCreacion ? new Date(fechaCreacion) : new Date();
     const venc = fechaVencimiento ? new Date(fechaVencimiento) : new Date(ahora.getTime() + (30 * 24 * 60 * 60 * 1000));
 
     if (reg) {
-      reg.nombre = nombre;
+      reg.nombre = nombreLimpio;
       reg.activo = true;
       reg.fechaCreacion = ahora;
       reg.fechaVencimiento = venc;
@@ -298,7 +316,7 @@ app.post('/api/locales/demo', async (req, res) => {
       reg = new Local({
         id: Date.now(),
         local: localSlug,
-        nombre: nombre.trim(),
+        nombre: nombreLimpio,
         rut: rut || 'DEMO-30DIAS',
         correo: correo || 'demo@appmenu.cl',
         password: '123',
@@ -427,15 +445,16 @@ app.get('/api/avisos', async (req, res) => {
 app.post('/api/avisos', async (req, res) => {
   try {
     const { destinatario, asunto, texto } = req.body;
+    const textoLimpio = limpiarTexto(texto, 500);
 
-    if (!texto || !texto.trim()) {
+    if (!textoLimpio) {
       return res.status(400).json({ error: 'El texto del mensaje es requerido' });
     }
 
     const nuevoAviso = new Aviso({
-      destinatario: (destinatario && destinatario.trim()) ? destinatario.toLowerCase().trim() : 'todos',
-      asunto: (asunto && asunto.trim()) ? asunto.trim() : 'Aviso del Sistema',
-      texto: texto.trim(),
+      destinatario: (destinatario && destinatario.trim()) ? destinatario.toLowerCase().trim().slice(0, 40) : 'todos',
+      asunto: limpiarTexto(asunto, 80) || 'Aviso del Sistema',
+      texto: textoLimpio,
       fecha: new Date(),
       respuestas: []
     });
@@ -465,14 +484,20 @@ app.delete('/api/avisos/:id', async (req, res) => {
 app.post('/api/avisos/responder', async (req, res) => {
   try {
     const { local, avisoId, respuesta } = req.body;
-    if (!local || !avisoId || !respuesta) {
+    const respuestaLimpia = limpiarTexto(respuesta, 300);
+
+    if (!local || !avisoId || !respuestaLimpia) {
       return res.status(400).json({ error: 'Faltan datos requeridos' });
     }
 
     const aviso = await Aviso.findById(avisoId);
     if (!aviso) return res.status(404).json({ error: 'Aviso no encontrado' });
 
-    aviso.respuestas.push({ local, texto: respuesta, fecha: new Date() });
+    aviso.respuestas.push({
+      local: String(local).toLowerCase().trim().slice(0, 40),
+      texto: respuestaLimpia,
+      fecha: new Date()
+    });
     await aviso.save();
 
     res.json({ ok: true, mensaje: 'Respuesta guardada con éxito' });
@@ -542,7 +567,7 @@ app.post('/api/menu', async (req, res) => {
     const catObj = (reg.menu || []).find(c => c.categoria === categoria);
     if (catObj) {
       if (!catObj.productos) catObj.productos = [];
-      catObj.productos.push({ nombre, precio: Number(precio) });
+      catObj.productos.push({ nombre: limpiarTexto(nombre, 60) || 'Producto', precio: Number(precio) });
       reg.markModified('menu');
       await reg.save();
     }
@@ -586,7 +611,7 @@ app.put('/api/menu/edit', async (req, res) => {
     const catObj = (reg.menu || []).find(c => c.categoria === categoriaOriginal);
     if (catObj && catObj.productos && catObj.productos[indexOriginal] !== undefined) {
       catObj.productos[indexOriginal] = {
-        nombre: nuevoNombre,
+        nombre: limpiarTexto(nuevoNombre, 60) || 'Producto',
         precio: Number(nuevoPrecio)
       };
       reg.markModified('menu');
@@ -617,10 +642,10 @@ app.post('/api/pedidos', async (req, res) => {
 
     const nuevoPedido = new Pedido({
       local: localId,
-      mesa: mesa || 'GENERAL',
-      nombreCliente: nombreCliente || null,
-      items: items || [],
-      total: Number(total) || 0,
+      mesa: limpiarTexto(mesa, 10) || 'GENERAL',
+      nombreCliente: limpiarTexto(nombreCliente, 40),
+      items: limpiarItems(items),
+      total: Math.max(0, Number(total) || 0),
       pagado: false,
       prioridadPriorizada: 0
     });
@@ -812,7 +837,20 @@ app.get('/api/historials', async (req, res) => {
 
 app.post('/api/historials', async (req, res) => {
   try {
-    const registro = new Historial(req.body);
+    const b = req.body || {};
+    const registro = new Historial({
+      id: typeof b.id === 'string' ? b.id.slice(0, 60) : undefined,
+      local: (b.local || '').toLowerCase().trim(),
+      mesa: limpiarTexto(b.mesa, 10),
+      nombreCliente: limpiarTexto(b.nombreCliente, 40),
+      items: limpiarItems(b.items),
+      total: Math.max(0, Number(b.total) || 0),
+      estado: 'entregado',
+      hora: limpiarTexto(b.hora, 15),
+      rutGarzon: limpiarTexto(b.rutGarzon, 15),
+      horaEntrega: limpiarTexto(b.horaEntrega, 15),
+      fechaEntrega: limpiarTexto(b.fechaEntrega, 12)
+    });
     await registro.save();
     res.status(201).json({ ok: true, registro });
   } catch (error) {
