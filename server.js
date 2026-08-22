@@ -322,6 +322,63 @@ app.post('/api/locales/demo', async (req, res) => {
 });
 
 // LOGIN LOCAL / VERIFICACIÓN DE CONTRASEÑA
+// 5. BLOQUEAR / ACTIVAR UN LOCAL
+app.put('/api/locales/estado', async (req, res) => {
+  try {
+    const { local, activo } = req.body;
+    const localId = (local || '').toLowerCase().trim();
+
+    if (!localId || typeof activo !== 'boolean') {
+      return res.status(400).json({ ok: false, error: 'Local y estado requeridos' });
+    }
+
+    const reg = await Local.findOne({ local: localId });
+    if (!reg) {
+      return res.status(404).json({ ok: false, error: 'Local no encontrado' });
+    }
+
+    reg.activo = activo;
+    await reg.save();
+
+    res.json({ ok: true, mensaje: `Local ${localId} ${activo ? 'activado' : 'bloqueado'}` });
+  } catch (error) {
+    console.error("Error al cambiar estado del local:", error);
+    res.status(500).json({ ok: false, error: 'Error al actualizar estado del local' });
+  }
+});
+
+// 6. RENOVAR LICENCIA (+N DÍAS)
+app.put('/api/locales/renovar', async (req, res) => {
+  try {
+    const { local, dias } = req.body;
+    const localId = (local || '').toLowerCase().trim();
+    const diasNum = parseInt(dias, 10);
+
+    if (!localId || !diasNum || diasNum <= 0) {
+      return res.status(400).json({ ok: false, error: 'Local y cantidad de días requeridos' });
+    }
+
+    const reg = await Local.findOne({ local: localId });
+    if (!reg) {
+      return res.status(404).json({ ok: false, error: 'Local no encontrado' });
+    }
+
+    // Se suma desde la fecha de vencimiento si aún no vence; si ya venció, desde hoy
+    const ahoraServidor = new Date();
+    let base = reg.fechaVencimiento ? new Date(reg.fechaVencimiento) : new Date(ahoraServidor);
+    if (base < ahoraServidor) base = new Date(ahoraServidor);
+    base.setTime(base.getTime() + (diasNum * 24 * 60 * 60 * 1000));
+
+    reg.fechaVencimiento = base.toISOString();
+    await reg.save();
+
+    res.json({ ok: true, mensaje: `Licencia de ${localId} renovada por ${diasNum} días`, fechaVencimiento: reg.fechaVencimiento });
+  } catch (error) {
+    console.error("Error al renovar licencia:", error);
+    res.status(500).json({ ok: false, error: 'Error al renovar la licencia' });
+  }
+});
+
 app.post('/api/locales/login', async (req, res) => {
   try {
     const { local, password } = req.body;
