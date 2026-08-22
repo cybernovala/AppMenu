@@ -410,13 +410,53 @@ app.post('/api/locales/login', async (req, res) => {
 app.get('/api/avisos', async (req, res) => {
   try {
     const localId = (req.query.local || '').toLowerCase().trim();
-    const avisos = await Aviso.find({
-      $or: [{ destinatario: 'todos' }, { destinatario: localId }]
-    }).sort({ fecha: -1 });
+    // Sin parámetro local (SuperAdmin) se devuelven todos; con local, los suyos + globales
+    const filtro = localId
+      ? { $or: [{ destinatario: 'todos' }, { destinatario: localId }] }
+      : {};
+    const avisos = await Aviso.find(filtro).sort({ fecha: -1 });
 
     res.json(avisos);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener avisos' });
+  }
+});
+
+app.post('/api/avisos', async (req, res) => {
+  try {
+    const { destinatario, asunto, texto } = req.body;
+
+    if (!texto || !texto.trim()) {
+      return res.status(400).json({ error: 'El texto del mensaje es requerido' });
+    }
+
+    const nuevoAviso = new Aviso({
+      destinatario: (destinatario && destinatario.trim()) ? destinatario.toLowerCase().trim() : 'todos',
+      asunto: (asunto && asunto.trim()) ? asunto.trim() : 'Aviso del Sistema',
+      texto: texto.trim(),
+      fecha: new Date(),
+      respuestas: []
+    });
+
+    await nuevoAviso.save();
+
+    res.status(201).json({ ok: true, mensaje: 'Aviso publicado con éxito', aviso: nuevoAviso });
+  } catch (error) {
+    console.error("Error al publicar aviso:", error);
+    res.status(500).json({ error: 'Error al publicar el aviso' });
+  }
+});
+
+app.delete('/api/avisos/:id', async (req, res) => {
+  try {
+    const eliminado = await Aviso.findByIdAndDelete(req.params.id);
+    if (!eliminado) {
+      return res.status(404).json({ error: 'Aviso no encontrado' });
+    }
+
+    res.json({ ok: true, mensaje: 'Aviso eliminado con éxito' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar el aviso' });
   }
 });
 
