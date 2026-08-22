@@ -622,6 +622,7 @@
       <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Gestor de QR</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
       <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
+      <button class="tab-btn" id="btn-tab-control-meson" onclick="cambiarPestana('tab-control-meson', this)">🏪 Control Mesón</button>
       <button class="tab-btn" id="btn-tab-historial" onclick="cambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
     </div>
 
@@ -644,16 +645,36 @@
       <div class="section-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div>
+            <h3>🔐 Apertura de Cajas (Máx. 5)</h3>
+            <p style="color: var(--text-muted); font-size: 13px;">
+              Cada cajera/o debe ingresar su RUT y abrir una caja. La caja abierta queda bloqueada para otras personas y solo quien la abrió puede cobrar y cerrarla.
+            </p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="cargarPanelCajas()">🔄 Refrescar Cajas</button>
+        </div>
+
+        <div class="form-inline" style="margin-top: 12px; margin-bottom: 5px;">
+          <input type="text" id="caja-rut" placeholder="RUT Cajera/o (Ej: 12345678-9)" oninput="guardarCajaRutMemoria()">
+        </div>
+
+        <div id="contenedor-cajas" class="grid-pedidos" style="margin-top: 10px;">
+          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando cajas...</p>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
             <h3>💰 Control de Caja y Pagos</h3>
             <p style="color: var(--neon-yellow); font-size: 14px; margin-top: 4px;">
-              Marca los pedidos como PAGADOS para darles máxima prioridad en la cocina (Fila Virtual).
+              Marca los pedidos como PAGADOS para darles máxima prioridad en la cocina (Fila Virtual). Debes tener tu caja abierta para habilitar los cobros.
             </p>
           </div>
           <button class="btn btn-secondary btn-sm" onclick="cargarPedidosCaja()">🔄 Actualizar Caja</button>
         </div>
 
-        <div id="contenedor-pedidos-caja" class="grid-pedidos" style="margin-top: 20px;">
-          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando pedidos en caja...</p>
+        <div id="contenedor-pedidos-caja" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+          <p style="color: var(--text-muted); text-align: center;">Cargando pedidos en caja...</p>
         </div>
       </div>
     </div>
@@ -844,9 +865,36 @@
       </div>
 
       <div class="section-card">
-        <h3>🚚 Pedidos Listos para Entrega</h3>
+        <h3>🚚 Pedidos Listos para Entrega (Solo Mesas)</h3>
         <div id="contenedor-pedidos-garzon" class="grid-pedidos" style="margin-top: 15px;">
           <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando lista de entregas...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- NUEVA PESTAÑA CONTROL MESÓN -->
+    <div id="tab-control-meson" class="tab-content">
+      <div class="garzon-top-grid">
+        <div class="section-card" style="margin-bottom: 0;">
+          <h3>👤 Datos Encargado Mesón</h3>
+          <div class="form-group">
+            <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:5px;">RUT Encargado Responsable</label>
+            <input type="text" id="meson-rut" placeholder="Ej: 12345678-9" oninput="guardarMesonRutMemoria()">
+          </div>
+        </div>
+        <div class="section-card" style="margin-bottom: 0;">
+          <h3>🏪 Control de Entregas Mesón</h3>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">
+            Muestra solo los pedidos ingresados por Cliente General.
+          </p>
+          <button class="btn btn-secondary btn-sm" onclick="cargarPedidosMeson()">🔄 Refrescar Pedidos Mesón</button>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h3>🛍️ Pedidos Cliente General (Mesón)</h3>
+        <div id="contenedor-pedidos-meson" class="grid-pedidos" style="margin-top: 15px;">
+          <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Cargando lista de pedidos mesón...</p>
         </div>
       </div>
     </div>
@@ -1018,6 +1066,16 @@
         document.getElementById('garzon-rut').value = rutGuardado;
       }
 
+      const rutMesonGuardado = localStorage.getItem('meson_rut_activo');
+      if (rutMesonGuardado && document.getElementById('meson-rut')) {
+        document.getElementById('meson-rut').value = rutMesonGuardado;
+      }
+
+      const rutCajaGuardado = localStorage.getItem('caja_rut_activo');
+      if (rutCajaGuardado && document.getElementById('caja-rut')) {
+        document.getElementById('caja-rut').value = rutCajaGuardado;
+      }
+
       const viewParam = urlParams.get('view');
       if (viewParam === 'cliente') {
         document.body.classList.add('is-cliente');
@@ -1036,6 +1094,8 @@
       await cargarPedidosCaja();
       await cargarPedidosCocina();
       await cargarPedidosGarzon();
+      await cargarPedidosMeson();
+      await cargarPanelCajas();
       await cargarHistorial();
       await verificarEstadoPedidoCliente();
       generarQRGarzonDefault();
@@ -1054,10 +1114,26 @@
       }
     }
 
+    function guardarMesonRutMemoria() {
+      const val = document.getElementById('meson-rut').value.trim();
+      if (val) {
+        localStorage.setItem('meson_rut_activo', val);
+      }
+    }
+
+    function guardarCajaRutMemoria() {
+      const val = document.getElementById('caja-rut').value.trim();
+      if (val) {
+        localStorage.setItem('caja_rut_activo', val);
+      }
+    }
+
     async function sincronizarTodoSilencioso() {
+      await cargarPanelCajas();
       await cargarPedidosCaja();
       await cargarPedidosCocina();
       await cargarPedidosGarzon();
+      await cargarPedidosMeson();
       await verificarEstadoPedidoCliente();
     }
 
@@ -1083,9 +1159,11 @@
       await verificarLicencia();
       await cargarAvisosSistema();
       await cargarMenu();
+      await cargarPanelCajas();
       await cargarPedidosCaja();
       await cargarPedidosCocina();
       await cargarPedidosGarzon();
+      await cargarPedidosMeson();
       await cargarHistorial();
       await verificarEstadoPedidoCliente();
       actualizarEtiquetaMesActual();
@@ -1583,6 +1661,7 @@
           await cargarPedidosCaja();
           await cargarPedidosCocina();
           await cargarPedidosGarzon();
+          await cargarPedidosMeson();
           await verificarEstadoPedidoCliente();
         } else {
           alert("❌ Ocurrió un error al registrar el pedido.");
@@ -1593,26 +1672,163 @@
     }
 
     // --- PESTAÑA CAJA & PAGOS ---
+    function obtenerRutCajaActiva() {
+      const inputRut = document.getElementById('caja-rut');
+      return localStorage.getItem('caja_rut_activo') || (inputRut ? inputRut.value.trim() : '');
+    }
+
+    async function cargarPanelCajas() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/cajas?local=${encodeURIComponent(localActual)}`);
+        if (!res.ok) return;
+
+        const lista = await res.json();
+        const contenedor = document.getElementById('contenedor-cajas');
+        if (!contenedor || !Array.isArray(lista)) return;
+        contenedor.innerHTML = '';
+
+        const rutSesion = obtenerRutCajaActiva();
+
+        lista.sort((a, b) => a.numero - b.numero).forEach(c => {
+          const ocupadaPorOtro = c.abierto && c.rutCajera && c.rutCajera !== rutSesion;
+          const mia = c.abierto && c.rutCajera && c.rutCajera === rutSesion;
+
+          let estadoTexto = '🔴 Libre (Sin Asignar)';
+          let botonAccion = `<button class="btn btn-sm" style="width:100%;" onclick="abrirCaja(${c.numero})">🔓 Abrir Caja ${c.numero}</button>`;
+
+          if (mia) {
+            estadoTexto = `🟢 Abierta por Ti`;
+            botonAccion = `<button class="btn btn-danger btn-sm" style="width:100%;" onclick="cerrarCaja(${c.numero})">🔒 Cerrar Mi Caja</button>`;
+          } else if (ocupadaPorOtro) {
+            estadoTexto = `🔒 Ocupada por RUT: ${c.rutCajera}`;
+            botonAccion = `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.5; cursor:not-allowed;" disabled>🔒 Ocupada por otra persona</button>`;
+          }
+
+          let infoHora = '';
+          if (c.abierto && c.horaApertura) {
+            infoHora = `<div style="font-size:11px; color:var(--text-muted); margin-top:6px;">Abierta desde: ${new Date(c.horaApertura).toLocaleTimeString()}</div>`;
+          }
+
+          const card = document.createElement('div');
+          card.className = 'card-pedido';
+          card.style.borderColor = mia ? 'var(--neon-green)' : (ocupadaPorOtro ? '#444' : 'var(--neon-orange)');
+          card.innerHTML = `
+            <div>
+              <div class="card-pedido-header">
+                <span class="card-pedido-mesa">🏦 CAJA N° ${c.numero}</span>
+                <span style="font-size:11px; color:var(--neon-yellow);">${estadoTexto}</span>
+              </div>
+              ${infoHora}
+              ${mia ? '<div style="font-size:12px; color:var(--neon-green); margin-top:4px;">✅ Puedes cobrar en esta caja</div>' : ''}
+            </div>
+            <div style="border-top:1px dashed #333; padding-top:10px; margin-top:10px;">
+              ${botonAccion}
+            </div>
+          `;
+          contenedor.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Error al cargar panel de cajas:", err);
+      }
+    }
+
+    async function abrirCaja(numero) {
+      const inputRut = document.getElementById('caja-rut');
+      const rutIngresado = inputRut ? inputRut.value.trim() : '';
+
+      if (!rutIngresado) {
+        alert("⚠️ ATENCIÓN: Debe ingresar su RUT en la casilla superior antes de abrir una caja.");
+        if (inputRut) inputRut.focus();
+        return;
+      }
+
+      if (!confirm(`¿Confirmas abrir la Caja N° ${numero} con el RUT ${rutIngresado}? Quedará bloqueada para otras personas.`)) return;
+
+      localStorage.setItem('caja_rut_activo', rutIngresado);
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/cajas/abrir`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localActual, numero, rut: rutIngresado })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          alert(`✅ Caja N° ${numero} abierta a nombre del RUT ${rutIngresado}. Ya puedes registrar cobros.`);
+          notificarSincronizacion();
+          await cargarPanelCajas();
+          await cargarPedidosCaja();
+        } else {
+          alert(`❌ ${data.error || 'No se pudo abrir la caja.'}`);
+          await cargarPanelCajas();
+        }
+      } catch (err) {
+        alert("❌ Error de servidor al intentar abrir la caja.");
+      }
+    }
+
+    async function cerrarCaja(numero) {
+      const inputRut = document.getElementById('caja-rut');
+      const rutIngresado = inputRut ? inputRut.value.trim() : '';
+
+      if (!rutIngresado) {
+        alert("⚠️ ATENCIÓN: Debe tener su RUT en la casilla superior para cerrar la caja.");
+        if (inputRut) inputRut.focus();
+        return;
+      }
+
+      if (!confirm(`¿Confirmas cerrar la Caja N° ${numero} con el RUT ${rutIngresado}? Deberás abrirla nuevamente para seguir cobrando.`)) return;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/cajas/cerrar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localActual, numero, rut: rutIngresado })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          alert(`🔒 Caja N° ${numero} cerrada correctamente.`);
+          notificarSincronizacion();
+          await cargarPanelCajas();
+          await cargarPedidosCaja();
+        } else {
+          alert(`❌ ${data.error || 'No se pudo cerrar la caja.'}`);
+          await cargarPanelCajas();
+        }
+      } catch (err) {
+        alert("❌ Error de servidor al intentar cerrar la caja.");
+      }
+    }
+
     async function cargarPedidosCaja() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        const [res, resCajas] = await Promise.all([
+          fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`),
+          fetch(`${BACKEND_URL}/api/cajas?local=${encodeURIComponent(localActual)}`)
+        ]);
         const pedidos = await res.json();
+
+        let tieneCajaAbierta = false;
+        if (resCajas.ok) {
+          const listaCajas = await resCajas.json();
+          const rutSesion = obtenerRutCajaActiva();
+          tieneCajaAbierta = Array.isArray(listaCajas) && listaCajas.some(c => c.abierto && c.rutCajera && c.rutCajera === rutSesion);
+        }
 
         const contenedor = document.getElementById('contenedor-pedidos-caja');
         if (!contenedor) return;
         contenedor.innerHTML = '';
 
         if (!res.ok || !Array.isArray(pedidos) || pedidos.length === 0) {
-          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos registrados en caja.</p>';
+          contenedor.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay pedidos registrados en caja.</p>';
           return;
         }
 
         pedidos.forEach(p => {
-          let itemsHTML = '';
-          (p.items || []).forEach(i => {
-            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre} ($${i.precio})</div>`;
-          });
-
           const tituloUbicacion = (p.mesa === 'GENERAL' || p.nombreCliente) 
             ? `CLIENTE: ${(p.nombreCliente || 'GENERAL').toUpperCase()}`
             : `MESA N° ${p.mesa}`;
@@ -1623,25 +1839,23 @@
             : `<span class="badge-pendiente">PENDIENTE</span>`;
 
           const botonPago = esPagado 
-            ? `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.6;" disabled>✅ Pedido Ya Pagado</button>`
-            : `<button class="btn btn-success btn-sm" style="width:100%;" onclick="marcarPedidoPagado('${p._id}')">💳 Marcar como Pagado & Priorizar</button>`;
+            ? `<button class="btn btn-secondary btn-sm" style="opacity:0.6;" disabled>✅ Pedido Ya Pagado</button>`
+            : (tieneCajaAbierta
+              ? `<button class="btn btn-success btn-sm" onclick="marcarPedidoPagado('${p._id}')">💳 Marcar como Pagado & Priorizar</button>`
+              : `<button class="btn btn-secondary btn-sm" style="opacity:0.6; cursor:not-allowed;" disabled title="Abre una caja con tu RUT para habilitar los cobros">🔒 Abre tu Caja para Cobrar</button>`);
 
-          const card = document.createElement('div');
-          card.className = `card-pedido ${esPagado ? 'pagado' : ''}`;
-          card.innerHTML = `
-            <div>
-              <div class="card-pedido-header">
-                <span class="card-pedido-mesa">${tituloUbicacion}</span>
-                ${badge}
-              </div>
-              <div style="margin-bottom:10px;">${itemsHTML}</div>
+          const fila = document.createElement('div');
+          fila.className = `card-pedido ${esPagado ? 'pagado' : ''}`;
+          fila.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;';
+          fila.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <span class="card-pedido-mesa">${tituloUbicacion}</span>
+              ${badge}
             </div>
-            <div style="border-top:1px dashed #333; padding-top:10px; margin-top:10px;">
-              <div style="font-weight:bold; color:var(--neon-yellow); font-size:16px; margin-bottom:8px;">Total: $${p.total}</div>
-              ${botonPago}
-            </div>
+            <div style="font-weight:bold; color:var(--neon-yellow); font-size:16px;">Total: $${p.total}</div>
+            ${botonPago}
           `;
-          contenedor.appendChild(card);
+          contenedor.appendChild(fila);
         });
       } catch (err) {
         console.error("Error al cargar caja:", err);
@@ -1649,12 +1863,22 @@
     }
 
     async function marcarPedidoPagado(pedidoId) {
-      if (!confirm("¿Confirmas marcar este pedido como PAGADO y enviarlo con prioridad a Cocina?")) return;
+      const rutCajera = obtenerRutCajaActiva();
+
+      if (!rutCajera) {
+        alert("⚠️ Debe ingresar su RUT de cajera/o y abrir una caja antes de marcar pagos.");
+        const inputRut = document.getElementById('caja-rut');
+        if (inputRut) inputRut.focus();
+        return;
+      }
+
+      if (!confirm(`¿Confirmas marcar este pedido como PAGADO desde el RUT ${rutCajera}? Se enviará con prioridad a Cocina.`)) return;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}/pagar`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rutCajera })
         });
 
         if (res.ok) {
@@ -1663,7 +1887,10 @@
           await cargarPedidosCaja();
           await cargarPedidosCocina();
         } else {
-          alert("❌ Error al procesar el pago del pedido.");
+          const data = await res.json().catch(() => ({}));
+          alert(`❌ ${data.error || 'Error al procesar el pago del pedido.'}`);
+          await cargarPanelCajas();
+          await cargarPedidosCaja();
         }
       } catch (err) {
         alert("❌ Error de comunicación con el servidor.");
@@ -1738,6 +1965,7 @@
           await cargarPedidosCaja();
           await cargarPedidosCocina();
           await cargarPedidosGarzon();
+          await cargarPedidosMeson();
         }
       } catch (err) {
         alert("❌ Error al cancelar pedido.");
@@ -1747,13 +1975,21 @@
     async function cargarPedidosGarzon() {
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
-        const pedidos = await res.json();
+        const todosPedidos = await res.json();
 
         const contenedor = document.getElementById('contenedor-pedidos-garzon');
         contenedor.innerHTML = '';
 
-        if (!res.ok || !Array.isArray(pedidos) || pedidos.length === 0) {
+        if (!res.ok || !Array.isArray(todosPedidos) || todosPedidos.length === 0) {
           contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos pendientes para entregar.</p>';
+          return;
+        }
+
+        // MOSTRAR SOLO MESAS EN CONTROL GARZÓN
+        const pedidos = todosPedidos.filter(p => p.mesa !== 'GENERAL' && !p.nombreCliente);
+
+        if (pedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos de mesas pendientes para entregar.</p>';
           return;
         }
 
@@ -1779,9 +2015,11 @@
             botonAccion = `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.5; cursor:not-allowed;" disabled>🔒 Atendido por otro Garzón</button>`;
           }
 
-          const tituloUbicacion = (p.mesa === 'GENERAL' || p.nombreCliente) 
-            ? `CLIENTE: ${(p.nombreCliente || 'GENERAL').toUpperCase()}`
-            : `MESA N° ${p.mesa}`;
+          const tituloUbicacion = `MESA N° ${p.mesa}`;
+
+          const badgePago = p.pagado
+            ? `<span class="badge-pagado">💰 PAGADO</span>`
+            : `<span class="badge-pendiente">💵 POR COBRAR</span>`;
 
           const card = document.createElement('div');
           card.className = 'card-pedido';
@@ -1790,7 +2028,10 @@
             <div>
               <div class="card-pedido-header">
                 <span class="card-pedido-mesa">${tituloUbicacion}</span>
-                <span style="font-size:11px; color:var(--neon-yellow);">${estadoTexto}</span>
+                <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  ${badgePago}
+                  <span style="font-size:11px; color:var(--neon-yellow);">${estadoTexto}</span>
+                </span>
               </div>
               <div style="margin-bottom:10px;">${itemsHTML}</div>
             </div>
@@ -1803,6 +2044,164 @@
         });
       } catch (err) {
         console.error("Error al cargar entregas garzón:", err);
+      }
+    }
+
+    async function cargarPedidosMeson() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        const todosPedidos = await res.json();
+
+        const contenedor = document.getElementById('contenedor-pedidos-meson');
+        if (!contenedor) return;
+        contenedor.innerHTML = '';
+
+        if (!res.ok || !Array.isArray(todosPedidos) || todosPedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos de mesón ingresados.</p>';
+          return;
+        }
+
+        // MOSTRAR SOLO CLIENTE GENERAL EN CONTROL MESÓN
+        const pedidos = todosPedidos.filter(p => p.mesa === 'GENERAL' || p.nombreCliente);
+
+        if (pedidos.length === 0) {
+          contenedor.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No hay pedidos de mesón (cliente general) pendientes.</p>';
+          return;
+        }
+
+        const rutSesion = localStorage.getItem('meson_rut_activo') || (document.getElementById('meson-rut') ? document.getElementById('meson-rut').value.trim() : '');
+
+        pedidos.forEach(p => {
+          let itemsHTML = '';
+          (p.items || []).forEach(i => {
+            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre}</div>`;
+          });
+
+          const asignadoAOtro = p.rutGarzon && p.rutGarzon !== rutSesion;
+          const asignadoAMi = p.rutGarzon && p.rutGarzon === rutSesion;
+
+          let estadoTexto = '🔴 Pedido Libre (Sin Asignar)';
+          let botonAccion = `<button class="btn btn-sm" style="width:100%;" onclick="tomarOEntregarPedidoMeson('${p._id}', '${p.rutGarzon || ''}')">👁️ Atender Mesón</button>`;
+
+          if (asignadoAMi) {
+            estadoTexto = `🟢 Atendido por Ti (RUT: ${p.rutGarzon})`;
+            botonAccion = `<button class="btn btn-success btn-sm" style="width:100%;" onclick="tomarOEntregarPedidoMeson('${p._id}', '${p.rutGarzon}')">✅ Entregar Cliente</button>`;
+          } else if (asignadoAOtro) {
+            estadoTexto = `🔒 Ocupado por: ${p.rutGarzon}`;
+            botonAccion = `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.5; cursor:not-allowed;" disabled>🔒 Atendido por otro Encargado</button>`;
+          }
+
+          const nombreCli = p.nombreCliente ? p.nombreCliente.toUpperCase() : 'GENERAL';
+          const tituloUbicacion = `CLIENTE: ${nombreCli}`;
+
+          const badgePagoMeson = p.pagado
+            ? `<span class="badge-pagado">💰 PAGADO</span>`
+            : `<span class="badge-pendiente">💵 POR COBRAR</span>`;
+
+          const card = document.createElement('div');
+          card.className = 'card-pedido';
+          card.style.borderColor = asignadoAMi ? 'var(--neon-green)' : (asignadoAOtro ? '#444' : 'var(--neon-blue)');
+          card.innerHTML = `
+            <div>
+              <div class="card-pedido-header">
+                <span class="card-pedido-mesa">${tituloUbicacion}</span>
+                <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  ${badgePagoMeson}
+                  <span style="font-size:11px; color:var(--neon-yellow);">${estadoTexto}</span>
+                </span>
+              </div>
+              <div style="margin-bottom:10px;">${itemsHTML}</div>
+            </div>
+            <div style="border-top:1px dashed #333; padding-top:10px; margin-top:10px;">
+              <div style="font-weight:bold; color:var(--neon-yellow); font-size:15px; margin-bottom:8px;">Total: $${p.total}</div>
+              ${botonAccion}
+            </div>
+          `;
+          contenedor.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Error al cargar entregas mesón:", err);
+      }
+    }
+
+    async function tomarOEntregarPedidoMeson(pedidoId, rutAsignadoActualmente) {
+      const inputRut = document.getElementById('meson-rut');
+      const rutIngresado = inputRut ? inputRut.value.trim() : '';
+
+      if (!rutIngresado) {
+        alert("⚠️ ATENCIÓN: Debe ingresar su RUT en la casilla superior de Mesón antes de atender o entregar.");
+        if (inputRut) inputRut.focus();
+        return;
+      }
+
+      localStorage.setItem('meson_rut_activo', rutIngresado);
+
+      if (rutAsignadoActualmente === rutIngresado) {
+        if (!confirm(`¿Confirmas la entrega final de este pedido de mesón con el RUT ${rutIngresado}?`)) return;
+
+        try {
+          const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+          const listaP = await resPedido.json();
+          const p = listaP.find(item => item._id === pedidoId);
+
+          if (!p) return alert("❌ El pedido ya no existe o fue entregado.");
+
+          const ahora = new Date();
+          const resHistorial = await fetch(`${BACKEND_URL}/api/historials`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: p._id,
+              local: localActual,
+              mesa: p.mesa,
+              nombreCliente: p.nombreCliente || null,
+              items: p.items,
+              total: p.total,
+              estado: 'entregado',
+              hora: new Date(p.createdAt).toLocaleTimeString(),
+              rutGarzon: rutIngresado,
+              horaEntrega: ahora.toLocaleTimeString(),
+              fechaEntrega: ahora.toISOString().split('T')[0]
+            })
+          });
+
+          if (resHistorial.ok) {
+            await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}`, { method: 'DELETE' });
+            alert("✅ Pedido entregado y registrado exitosamente.");
+            notificarSincronizacion();
+            await cargarPedidosCaja();
+            await cargarPedidosGarzon();
+            await cargarPedidosMeson();
+            await cargarPedidosCocina();
+            await cargarHistorial();
+          }
+        } catch (err) {
+          alert("❌ Error al finalizar la entrega.");
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}/asignar-garzon`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rutGarzon: rutIngresado })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          alert(`✅ Pedido asignado exitosamente a tu RUT (${rutIngresado}).`);
+          notificarSincronizacion();
+          await cargarPedidosMeson();
+        } else if (res.status === 409) {
+          alert(`⛔ IMPOSIBLE INGRESAR: ${data.error || 'Otro usuario ya atiende este pedido.'}`);
+          await cargarPedidosMeson();
+        } else {
+          alert(`❌ ${data.error || 'No se pudo asignar el pedido.'}`);
+        }
+      } catch (err) {
+        alert("❌ Error de servidor al intentar tomar el pedido.");
       }
     }
 
@@ -1853,6 +2252,7 @@
             notificarSincronizacion();
             await cargarPedidosCaja();
             await cargarPedidosGarzon();
+            await cargarPedidosMeson();
             await cargarPedidosCocina();
             await cargarHistorial();
           }

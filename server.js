@@ -118,6 +118,17 @@ const historialSchema = new mongoose.Schema({
 
 const Historial = mongoose.model('Historial', historialSchema);
 
+const cajaSchema = new mongoose.Schema({
+  local: { type: String, required: true },
+  numero: { type: Number, required: true },
+  rutCajera: { type: String, default: null },
+  abierto: { type: Boolean, default: false },
+  horaApertura: { type: Date, default: null },
+  horaCierre: { type: Date, default: null }
+}, { collection: 'cajas', timestamps: true });
+
+const Caja = mongoose.model('Caja', cajaSchema);
+
 function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
@@ -520,11 +531,25 @@ app.post('/api/pedidos', async (req, res) => {
   }
 });
 
-// MARCAR PEDIDO COMO PAGADO Y PRIORIZAR
+// MARCAR PEDIDO COMO PAGADO Y PRIORIZAR (requiere caja abierta por el RUT que cobra)
 app.put('/api/pedidos/:id/pagar', async (req, res) => {
   try {
     const pedido = await Pedido.findById(req.params.id);
     if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    const rutCajera = req.body ? req.body.rutCajera : null;
+
+    if (rutCajera) {
+      const cajaActiva = await Caja.findOne({
+        local: pedido.local,
+        abierto: true,
+        rutCajera: String(rutCajera).trim()
+      });
+
+      if (!cajaActiva) {
+        return res.status(403).json({ ok: false, error: '⛔ No tienes ninguna caja abierta con ese RUT. Debes abrir tu caja antes de cobrar.' });
+      }
+    }
 
     pedido.pagado = true;
     pedido.prioridadPriorizada = Date.now();
@@ -562,6 +587,106 @@ app.delete('/api/pedidos/:id', async (req, res) => {
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar pedido' });
+  }
+});
+
+// CAJAS (SESIONES DE CAJERA - MÁXIMO 5 POR LOCAL)
+app.get('/api/cajas', async (req, res) => {
+  try {
+    const localId = (req.query.local || '').toLowerCase().trim();
+    if (!localId) return res.status(400).json({ error: 'Parámetro local requerido' });
+
+    let lista = await Caja.find({ local: localId }).sort({ numero: 1 });
+
+    // Auto-inicializar las 5 cajas del local la primera vez
+    const faltantes = [];
+    for (let n = 1; n <= 5; n++) {
+      if (!lista.some(c => c.numero === n)) faltantes.push({ local: localId, numero: n });
+    }
+    if (faltantes.length > 0) {
+      await Caja.insertMany(faltantes);
+      lista = await Caja.find({ local: localId }).sort({ numero: 1 });
+    }
+
+    res.json(lista.slice(0, 5));
+  } catch (error) {
+    console.error("Error al consultar cajas:", error);
+    res.status(500).json({ error: 'Error al consultar cajas' });
+  }
+});
+
+// ABRIR CAJA (bloqueo por RUT, igual que Control Garzón)
+app.post('/api/cajas/abrir', async (req, res) => {
+  try {
+    const { local, numero, rut } = req.body;
+    const localId = (local || '').toLowerCase().trim();
+    const num = Number(numero);
+
+    if (!localId || !num || num < 1 || num > 5 || !rut || !rut.trim()) {
+      return res.status(400).json({ ok: false, error: 'Datos incompletos para abrir la caja (local, número 1-5 y RUT del cajero/a).' });
+    }
+
+    const rutLimpio = rut.trim();
+
+    // Un mismo RUT no puede tener dos cajas abiertas a la vez
+    const yaAbiertaPorRut = await Caja.findOne({ local: localId, abierto: true, rutCajera: rutLimpio });
+    if (yaAbiertaPorRut && yaAbiertaPorRut.numero !== num) {
+      return res.status(409).json({ ok: false, error: `⛔ Ya tienes la Caja N° ${yaAbiertaPorRut.numero} abierta con este RUT. Ciérrala antes de abrir otra.` });
+    }
+
+    let caja = await Caja.findOne({ local: localId, numero: num });
+    if (!caja) caja = await Caja.create({ local: localId, numero: num });
+
+    if (caja.abierto && caja.rutCajera && caja.rutCajera !== rutLimpio) {
+      return res.status(409).json({ ok: false, error: `⛔ IMPOSIBLE ABRIR: La Caja N° ${num} está abierta por otro RUT (${caja.rutCajera}).` });
+    }
+
+    caja.abierto = true;
+    caja.rutCajera = rutLimpio;
+    caja.horaApertura = new Date();
+    caja.horaCierre = null;
+    await caja.save();
+
+    res.json({ ok: true, caja });
+  } catch (error) {
+    console.error("Error al abrir caja:", error);
+    res.status(500).json({ ok: false, error: 'Error al abrir la caja' });
+  }
+});
+
+// CERRAR CAJA (solo el RUT que la abrió)
+app.post('/api/cajas/cerrar', async (req, res) => {
+  try {
+    const { local, numero, rut } = req.body;
+    const localId = (local || '').toLowerCase().trim();
+    const num = Number(numero);
+
+    if (!localId || !num || !rut || !rut.trim()) {
+      return res.status(400).json({ ok: false, error: 'Datos incompletos para cerrar la caja (local, número y RUT del cajero/a).' });
+    }
+
+    const rutLimpio = rut.trim();
+    const caja = await Caja.findOne({ local: localId, numero: num });
+
+    if (!caja) return res.status(404).json({ ok: false, error: 'Caja no encontrada' });
+
+    if (!caja.abierto) {
+      return res.status(400).json({ ok: false, error: 'La caja ya se encuentra cerrada.' });
+    }
+
+    if (caja.rutCajera && caja.rutCajera !== rutLimpio) {
+      return res.status(409).json({ ok: false, error: `⛔ SOLO EL TITULAR: La Caja N° ${num} la abrió el RUT ${caja.rutCajera}. Solo ese RUT puede cerrarla.` });
+    }
+
+    caja.abierto = false;
+    caja.rutCajera = null;
+    caja.horaCierre = new Date();
+    await caja.save();
+
+    res.json({ ok: true, caja });
+  } catch (error) {
+    console.error("Error al cerrar caja:", error);
+    res.status(500).json({ ok: false, error: 'Error al cerrar la caja' });
   }
 });
 
