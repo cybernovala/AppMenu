@@ -210,7 +210,7 @@ async function enviarCorreo(destinatario, asunto, html) {
   }
   try {
     const api = new Brevo.TransactionalEmailsApi();
-    api.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+    api.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
     await api.sendTransacEmail({
       sender: { name: 'AppMenu', email: REMITENTE_CORREO },
       to: [{ email: destinatario }],
