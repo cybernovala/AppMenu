@@ -67,6 +67,37 @@
       box-shadow: 0 0 10px rgba(255, 238, 0, 0.2);
     }
 
+    .overlay-bloqueo-total {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 4, 10, 0.97);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 25px;
+      gap: 12px;
+    }
+    .overlay-bloqueo-total h2 {
+      font-size: 26px;
+      color: #ff0055;
+      text-transform: uppercase;
+    }
+    .overlay-bloqueo-total p {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 420px;
+      line-height: 1.5;
+    }
+    .overlay-bloqueo-total .contacto-bloqueo {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--neon-yellow);
+      font-weight: bold;
+    }
+
     .banner-bloqueo {
       text-align: center;
       padding: 12px 15px;
@@ -615,15 +646,15 @@
     </div>
 
     <div class="nav-tabs" id="admin-nav-tabs">
-      <button class="tab-btn active" id="btn-tab-admin" onclick="cambiarPestana('tab-admin', this)">⚙️ Menú</button>
+      <button class="tab-btn active" id="btn-tab-admin" onclick="intentarAbrirPestanaProtegida('tab-admin', this)">⚙️ Menú</button>
       <button class="tab-btn" id="btn-tab-caja" onclick="cambiarPestana('tab-caja', this)">💰 Caja & Pagos</button>
-      <button class="tab-btn" id="btn-tab-cliente" onclick="cambiarPestana('tab-cliente', this)">📱 Vista Previa Cliente</button>
-      <button class="tab-btn" id="btn-tab-cliente-general" onclick="cambiarPestana('tab-cliente-general', this)">📱 Vista Previa Cliente General</button>
-      <button class="tab-btn" id="btn-tab-qr" onclick="cambiarPestana('tab-qr', this)">🔲 Gestor de QR</button>
+      <button class="tab-btn" id="btn-tab-cliente" onclick="intentarAbrirPestanaProtegida('tab-cliente', this)">📱 Vista Previa Cliente</button>
+      <button class="tab-btn" id="btn-tab-cliente-general" onclick="intentarAbrirPestanaProtegida('tab-cliente-general', this)">📱 Vista Previa Cliente General</button>
+      <button class="tab-btn" id="btn-tab-qr" onclick="intentarAbrirPestanaProtegida('tab-qr', this)">🔲 Gestor de QR</button>
       <button class="tab-btn" id="btn-tab-cocina" onclick="cambiarPestana('tab-cocina', this)">📋 Cocina / Pedidos</button>
-      <button class="tab-btn" id="btn-tab-garzon" onclick="cambiarPestana('tab-garzon', this)">🤵 Control Garzón</button>
+      <button class="tab-btn" id="btn-tab-garzon" onclick="intentarAbrirPestanaProtegida('tab-garzon', this)">🤵 Control Garzón</button>
       <button class="tab-btn" id="btn-tab-control-meson" onclick="cambiarPestana('tab-control-meson', this)">🏪 Control Mesón</button>
-      <button class="tab-btn" id="btn-tab-historial" onclick="cambiarPestana('tab-historial', this)">📊 Historial & Métricas</button>
+      <button class="tab-btn" id="btn-tab-historial" onclick="intentarAbrirPestanaProtegida('tab-historial', this)">📊 Historial & Métricas</button>
     </div>
 
     <div id="tab-admin" class="tab-content active">
@@ -970,6 +1001,25 @@
       ? 'http://localhost:3000'
       : 'https://appmenu-tavr.onrender.com';
 
+    // Escapa texto para renderizarlo con innerHTML sin riesgo de XSS
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // Token de sesión del local para las mutaciones de menú
+    function authHeaders() {
+      const t = sessionStorage.getItem('token_local_' + localActual);
+      return t ? { 'Authorization': t } : {};
+    }
+
+    function manejarNoAutorizado() {
+      if (typeof pestanasProtegidas !== 'undefined') pestanasProtegidas['tab-admin'].autorizada = false;
+      sessionStorage.removeItem('token_local_' + localActual);
+      alert("🔒 Su sesión expiró. Vuelva a entrar a la pestaña Menú e ingrese la contraseña.");
+    }
+
     const canalSincronizacion = ('BroadcastChannel' in window) ? new BroadcastChannel('sincronizacion_pedidos') : null;
 
     if (canalSincronizacion) {
@@ -1026,6 +1076,22 @@
     let historialGlobalLocal = [];
     let historialFiltradoActual = [];
 
+    // Nombre real del local (con espacios), ej: "El sushi completon". Si aún no cargó, usa el ID.
+    let nombreLocalMostrar = '';
+
+    function obtenerNombreMostrar() {
+      return (nombreLocalMostrar || localActual || '').toUpperCase();
+    }
+
+    function actualizarNombresLocal() {
+      const n = obtenerNombreMostrar();
+      const ids = ['lbl-local-nombre', 'txt-local-cliente', 'txt-local-cliente-gen', 'lbl-qr-meson-nombre-local', 'lbl-qr-single-nombre-local'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = n;
+      });
+    }
+
     function obtenerMesAnoActual() {
       const ahora = new Date();
       const meses = [
@@ -1054,10 +1120,21 @@
       localActual = (urlParams.get('local') || 'demo').toLowerCase().trim();
       mesaActual = urlParams.get('mesa') || '1';
 
-      document.getElementById('lbl-local-nombre').innerText = localActual.toUpperCase();
-      document.getElementById('txt-local-cliente').innerText = localActual.toUpperCase();
-      document.getElementById('txt-local-cliente-gen').innerText = localActual.toUpperCase();
+      document.getElementById('lbl-local-nombre').innerText = obtenerNombreMostrar();
+      document.getElementById('txt-local-cliente').innerText = obtenerNombreMostrar();
+      document.getElementById('txt-local-cliente-gen').innerText = obtenerNombreMostrar();
       document.getElementById('txt-mesa-cliente').innerText = `Mesa N° ${mesaActual}`;
+
+      // Carga el nombre real del local (con espacios) y refresca títulos y etiquetas de QR
+      fetch(`${BACKEND_URL}/api/locales/verificar/${encodeURIComponent(localActual)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data && data.existe && data.nombre) {
+            nombreLocalMostrar = data.nombre;
+            actualizarNombresLocal();
+          }
+        })
+        .catch(() => {});
 
       actualizarEtiquetaMesActual();
 
@@ -1102,6 +1179,14 @@
       generarQRMesonDefault();
       generarQRUnico();
 
+      // Menú protegido: si no hay clave ingresada, partir en una pestaña neutra
+      if (!pestanasProtegidas['tab-admin'].autorizada &&
+          !document.body.classList.contains('is-cliente') &&
+          !document.body.classList.contains('is-garzon')) {
+        const btnCajaInicial = document.getElementById('btn-tab-caja');
+        if (btnCajaInicial) cambiarPestana('tab-caja', btnCajaInicial);
+      }
+
       setInterval(() => {
         sincronizarTodoSilencioso();
       }, 3000);
@@ -1135,6 +1220,29 @@
       await cargarPedidosGarzon();
       await cargarPedidosMeson();
       await verificarEstadoPedidoCliente();
+      await cargarAvisosSistema();
+      verificarLicencia().catch(() => {});
+    }
+
+    function activarBloqueoTotal() {
+      if (document.getElementById('overlay-bloqueo-total')) return;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'overlay-bloqueo-total';
+      overlay.className = 'overlay-bloqueo-total';
+      overlay.innerHTML = `
+        <div style="font-size: 56px; line-height: 1;">🚫</div>
+        <h2>Sistema Bloqueado</h2>
+        <p>La licencia de este local está vencida o la cuenta fue bloqueada por el administrador.</p>
+        <p>Contacta a soporte para reactivar tu acceso.</p>
+        <div class="contacto-bloqueo">📱 WhatsApp: +56966648585 · ✉️ appmenu26@gmail.com</div>
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    function desactivarBloqueoTotal() {
+      const overlay = document.getElementById('overlay-bloqueo-total');
+      if (overlay) overlay.remove();
     }
 
     function activarPestanaDirecta(tabId) {
@@ -1152,6 +1260,82 @@
 
       if (tabId === 'tab-historial') {
         actualizarEtiquetaMesActual();
+      }
+    }
+
+    const pestanasProtegidas = {
+      'tab-admin': { autorizada: false },
+      'tab-historial': { autorizada: false },
+      'tab-qr': { autorizada: false },
+      'tab-cliente': { autorizada: false, libreEnMovil: true },
+      'tab-cliente-general': { autorizada: false, libreEnMovil: true },
+      'tab-garzon': { autorizada: false, libreEnMovil: true }
+    };
+
+    // Detecta móvil/tablet: en esos dispositivos las pestañas de cliente y garzón quedan libres (flujo QR)
+    function esDispositivoMovil() {
+      return /Android|iPhone|iPad|iPod|Mobile|Silk/i.test(navigator.userAgent || '') ||
+             (navigator.maxTouchPoints > 1 && window.innerWidth <= 820);
+    }
+
+    function intentarAbrirPestanaProtegida(tabId, btn) {
+      const conf = pestanasProtegidas[tabId];
+      if (!conf || conf.autorizada || (conf.libreEnMovil && esDispositivoMovil())) {
+        cambiarPestana(tabId, btn);
+        return;
+      }
+
+      abrirModalGeneral(`
+        <div style="text-align: center;">
+          <div style="font-size: 46px; line-height: 1;">🔒</div>
+          <h3 style="font-size: 21px; color: var(--neon-yellow); margin-top: 8px;">ACCESO RESTRINGIDO</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Ingrese la contraseña del local <strong>${localActual.toUpperCase()}</strong> para continuar.</p>
+          <input type="password" id="input-pass-protegida" placeholder="Contraseña del local" autocomplete="off" onkeydown="if(event.key==='Enter'){validarPasswordPestana('${tabId}');}">
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn btn-secondary" style="flex: 1;" onclick="cerrarModalGeneral()">Cancelar</button>
+            <button class="btn" style="flex: 1; font-weight: 900;" onclick="validarPasswordPestana('${tabId}')">🔓 INGRESAR</button>
+          </div>
+        </div>
+      `);
+
+      const inputPass = document.getElementById('input-pass-protegida');
+      if (inputPass) inputPass.focus();
+    }
+
+    async function validarPasswordPestana(tabId) {
+      const inputPass = document.getElementById('input-pass-protegida');
+      const pass = inputPass ? inputPass.value.trim() : '';
+
+      if (!pass) {
+        alert("⚠️ Ingrese la contraseña del local.");
+        if (inputPass) inputPass.focus();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localActual, password: pass })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.ok) {
+          pestanasProtegidas[tabId].autorizada = true;
+          if (data.token) sessionStorage.setItem('token_local_' + localActual, data.token);
+          cerrarModalGeneral();
+          const btnTab = document.getElementById(`btn-${tabId}`);
+          if (btnTab) cambiarPestana(tabId, btnTab);
+        } else {
+          alert(`⛔ ${data.error || 'Contraseña incorrecta.'}`);
+          const inputReintentar = document.getElementById('input-pass-protegida');
+          if (inputReintentar) {
+            inputReintentar.value = '';
+            inputReintentar.focus();
+          }
+        }
+      } catch (err) {
+        alert("❌ Error de comunicación con el servidor.");
       }
     }
 
@@ -1182,9 +1366,11 @@
           if (!data.activo) {
             bannerBloqueo.className = 'banner-bloqueo estado-bloqueado';
             txtBloqueo.innerText = '🚫 LICENCIA VENCIDA O CUENTA BLOQUEADA';
+            activarBloqueoTotal();
           } else {
             bannerBloqueo.className = 'banner-bloqueo estado-desbloqueado';
             txtBloqueo.innerText = '✅ Sistema Activo y Desbloqueado';
+            desactivarBloqueoTotal();
           }
         }
       } catch (err) {
@@ -1194,6 +1380,11 @@
 
     async function cargarAvisosSistema() {
       try {
+        // No recargar si el usuario está escribiendo una respuesta (evita borrar lo tipeado)
+        const escribiendo = Array.from(document.querySelectorAll('[id^="resp-aviso-"]'))
+          .some(input => input.value.trim() !== '');
+        if (escribiendo) return;
+
         const res = await fetch(`${BACKEND_URL}/api/avisos?local=${encodeURIComponent(localActual)}`);
         const data = await res.json();
 
@@ -1202,12 +1393,26 @@
 
         if (res.ok && Array.isArray(data) && data.length > 0) {
           data.forEach(aviso => {
+            const respuestas = Array.isArray(aviso.respuestas) ? aviso.respuestas : [];
+            const htmlRespuestas = respuestas.length > 0
+              ? `
+                <div style="margin-top: 8px; border-top: 1px dashed #333; padding-top: 6px;">
+                  <div style="font-size: 11px; color: var(--text-muted); font-weight: bold;">💬 Respuestas enviadas:</div>
+                  ${respuestas.map(r => `
+                    <div style="font-size: 12px; color: #e0e0e0; margin-top: 4px;">
+                      <b style="color: var(--neon-green);">↪ ${esc((r.local || localActual).toUpperCase())} (${r.fecha ? new Date(r.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}):</b> ${esc(r.texto)}
+                    </div>
+                  `).join('')}
+                </div>`
+              : '';
+
             const box = document.createElement('div');
             box.className = 'banner-aviso-sistema';
             box.innerHTML = `
               <div>
-                <strong>📢 ${aviso.asunto || 'Aviso del Sistema'}:</strong> ${aviso.texto}
+                <strong>📢 ${esc(aviso.asunto || 'Aviso del Sistema')}:</strong> ${esc(aviso.texto)}
               </div>
+              ${htmlRespuestas}
               <div class="form-inline" style="margin-top: 5px;">
                 <input type="text" id="resp-aviso-${aviso._id}" placeholder="Escribir respuesta al administrador..." style="background: #101018;">
                 <button class="btn btn-sm btn-blue" onclick="responderAviso('${aviso._id}')">Enviar Respuesta</button>
@@ -1235,10 +1440,11 @@
         });
 
         if (res.ok) {
-          alert("✅ Respuesta enviada con éxito.");
+          // Refresca de inmediato para que la respuesta quede anotada bajo el aviso
           await cargarAvisosSistema();
         } else {
-          alert("❌ No se pudo enviar la respuesta.");
+          const data = await res.json().catch(() => ({}));
+          alert(`❌ ${data.error || 'No se pudo enviar la respuesta.'}`);
         }
       } catch (err) {
         alert("❌ Error de comunicación al responder aviso.");
@@ -1323,13 +1529,15 @@
       try {
         const res = await fetch(`${BACKEND_URL}/api/menu/categoria`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ local: localActual, categoria })
         });
 
         if (res.ok) {
           input.value = '';
           await cargarMenu();
+        } else if (res.status === 401 || res.status === 403) {
+          manejarNoAutorizado();
         } else {
           alert("❌ Error al crear la categoría.");
         }
@@ -1343,11 +1551,14 @@
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/menu/categoria?local=${encodeURIComponent(localActual)}&categoria=${encodeURIComponent(categoria)}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: { ...authHeaders() }
         });
 
         if (res.ok) {
           await cargarMenu();
+        } else if (res.status === 401 || res.status === 403) {
+          manejarNoAutorizado();
         } else {
           alert("❌ Error al eliminar categoría.");
         }
@@ -1369,7 +1580,7 @@
       try {
         const res = await fetch(`${BACKEND_URL}/api/menu`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({
             local: localActual,
             categoria: catObj.categoria,
@@ -1382,6 +1593,8 @@
           nombreInput.value = '';
           precioInput.value = '';
           await cargarMenu();
+        } else if (res.status === 401 || res.status === 403) {
+          manejarNoAutorizado();
         } else {
           alert("❌ Error al guardar producto.");
         }
@@ -1395,11 +1608,14 @@
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/menu/del?local=${encodeURIComponent(localActual)}&categoria=${encodeURIComponent(categoria)}&index=${index}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: { ...authHeaders() }
         });
 
         if (res.ok) {
           await cargarMenu();
+        } else if (res.status === 401 || res.status === 403) {
+          manejarNoAutorizado();
         } else {
           alert("❌ Error al eliminar el producto.");
         }
@@ -1423,7 +1639,7 @@
       try {
         const res = await fetch(`${BACKEND_URL}/api/menu/edit`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({
             local: localActual,
             categoriaOriginal,
@@ -1436,6 +1652,8 @@
 
         if (res.ok) {
           await cargarMenu();
+        } else if (res.status === 401 || res.status === 403) {
+          manejarNoAutorizado();
         } else {
           alert("❌ Error al editar producto.");
         }
@@ -1603,7 +1821,7 @@
         </div>
         <div style="display: flex; gap: 10px; margin-top: 20px;">
           <button class="btn btn-secondary" style="flex: 1;" onclick="cerrarModalGeneral()">Seguir pidiendo</button>
-          <button class="btn btn-success" style="flex: 1;" onclick="enviarPedidoACocina(${esClienteGeneral})">🚀 Enviar a Cocina</button>
+          <button class="btn btn-success" id="btn-enviar-cocina" style="flex: 1;" onclick="enviarPedidoACocina(${esClienteGeneral})">🚀 Enviar a Cocina</button>
         </div>
       `;
 
@@ -1639,6 +1857,12 @@
 
       const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
+      const btnEnviar = document.getElementById('btn-enviar-cocina');
+      if (btnEnviar) {
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = '⏳ ENVIANDO...';
+      }
+
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos`, {
           method: 'POST',
@@ -1653,20 +1877,46 @@
         });
 
         if (res.ok) {
-          alert("🚀 ¡Pedido enviado a cocina!");
           carrito = [];
           actualizarBarraCarrito();
           cerrarModalGeneral();
+
+          // Mensaje flotante INMEDIATO (antes de refrescar listas)
+          const mensajePago = esClienteGeneral
+            ? '💵 PAGUE EN LA CAJA PARA TERMINAR DE PROCESAR SU PEDIDO'
+            : '💵 PAGUE EN CAJA PARA PRIORIZAR SU PEDIDO EN LA FILA VIRTUAL';
+
+          abrirModalGeneral(`
+            <div style="text-align: center;">
+              <div style="font-size: 54px; line-height: 1;">🚀</div>
+              <h3 style="font-size: 24px; color: var(--neon-green); margin: 10px 0;">¡PEDIDO ENVIADO A COCINA!</h3>
+              <div style="background: rgba(255, 238, 0, 0.12); border: 2px solid var(--neon-yellow); border-radius: 10px; padding: 16px 12px; margin: 14px 0;">
+                <p style="font-size: 20px; font-weight: 900; color: var(--neon-yellow); line-height: 1.4; text-transform: uppercase;">
+                  ${mensajePago}
+                </p>
+              </div>
+              <button class="btn btn-success" style="width: 100%; padding: 15px; font-size: 17px; font-weight: 900;" onclick="cerrarModalGeneral()">✅ ENTENDIDO</button>
+            </div>
+          `);
+
           notificarSincronizacion();
-          await cargarPedidosCaja();
-          await cargarPedidosCocina();
-          await cargarPedidosGarzon();
-          await cargarPedidosMeson();
-          await verificarEstadoPedidoCliente();
+          cargarPedidosCaja().catch(() => {});
+          cargarPedidosCocina().catch(() => {});
+          cargarPedidosGarzon().catch(() => {});
+          cargarPedidosMeson().catch(() => {});
+          verificarEstadoPedidoCliente().catch(() => {});
         } else {
+          if (btnEnviar) {
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = '🚀 Enviar a Cocina';
+          }
           alert("❌ Ocurrió un error al registrar el pedido.");
         }
       } catch (err) {
+        if (btnEnviar) {
+          btnEnviar.disabled = false;
+          btnEnviar.innerHTML = '🚀 Enviar a Cocina';
+        }
         alert("❌ Error de comunicación al enviar pedido.");
       }
     }
@@ -1842,8 +2092,8 @@
 
         pedidos.forEach(p => {
           const tituloUbicacion = (p.mesa === 'GENERAL' || p.nombreCliente) 
-            ? `CLIENTE: ${(p.nombreCliente || 'GENERAL').toUpperCase()}`
-            : `MESA N° ${p.mesa}`;
+            ? `CLIENTE: ${esc((p.nombreCliente || 'GENERAL').toUpperCase())}`
+            : `MESA N° ${esc(p.mesa)}`;
 
           const esPagado = p.pagado || false;
           const badge = esPagado 
@@ -1857,7 +2107,7 @@
           const botonPago = esPagado 
             ? `<button class="btn btn-secondary btn-sm" style="opacity:0.6;" disabled>✅ Pedido Ya Pagado</button>`
             : (tieneCajaAbierta
-              ? `<button class="btn btn-success btn-sm" onclick="marcarPedidoPagado('${p._id}')">💳 Marcar como Pagado & Priorizar</button>`
+              ? `<button class="btn btn-success btn-sm" onclick="marcarPedidoPagado('${p._id}', ${p.mesa === 'GENERAL' || !!p.nombreCliente})">💳 Marcar como Pagado & Priorizar</button>`
               : `<button class="btn btn-secondary btn-sm" style="opacity:0.6; cursor:not-allowed;" disabled title="Abre una caja con tu RUT para habilitar los cobros">🔒 Abre tu Caja para Cobrar</button>`);
 
           const fila = document.createElement('div');
@@ -1881,7 +2131,7 @@
       }
     }
 
-    async function marcarPedidoPagado(pedidoId) {
+    async function marcarPedidoPagado(pedidoId, esClienteGeneral) {
       const rutCajera = obtenerRutCajaActiva();
 
       if (!rutCajera) {
@@ -1891,7 +2141,56 @@
         return;
       }
 
-      if (!confirm(`¿Confirmas marcar este pedido como PAGADO desde el RUT ${rutCajera}? Se enviará con prioridad a Cocina.`)) return;
+      let pedido = null;
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        const lista = await res.json();
+        pedido = Array.isArray(lista) ? lista.find(item => item._id === pedidoId) : null;
+      } catch (err) {
+        return alert("❌ Error al consultar el pedido.");
+      }
+
+      if (!pedido) return alert("❌ El pedido ya no existe o fue entregado.");
+      if (pedido.pagado) {
+        await cargarPedidosCaja();
+        return alert("ℹ️ Este pedido ya se encuentra pagado.");
+      }
+
+      const tituloUbicacion = (pedido.mesa === 'GENERAL' || pedido.nombreCliente)
+        ? `CLIENTE: ${esc((pedido.nombreCliente || 'GENERAL').toUpperCase())}`
+        : `MESA N° ${esc(pedido.mesa)}`;
+
+      let itemsHTML = '';
+      (pedido.items || []).forEach(i => {
+        itemsHTML += `<div style="font-size:14px; padding:3px 0;">• ${i.cantidad}x ${esc(i.nombre)}</div>`;
+      });
+
+      // Confirmación de cobro grande y destacada
+      abrirModalGeneral(`
+        <div style="text-align: center;">
+          <div style="font-size: 46px; line-height: 1;">💳</div>
+          <h3 style="font-size: 22px; color: var(--neon-yellow); margin-top: 8px;">¿CONFIRMAR PAGO?</h3>
+          <p style="font-size: 17px; font-weight: bold; color: #ffffff;">${tituloUbicacion}</p>
+          <div style="background: #111118; border: 1px solid #333; border-radius: 8px; padding: 10px; margin: 10px 0; text-align: left;">
+            ${itemsHTML}
+          </div>
+          <p style="font-size: 26px; font-weight: 900; color: var(--neon-green);">TOTAL: $${pedido.total}</p>
+          <p style="font-size: 12px; color: var(--text-muted);">Cobra: RUT ${rutCajera} · Irá al TOPE de la fila de Cocina</p>
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn btn-secondary" style="flex: 1;" onclick="cerrarModalGeneral()">❌ CANCELAR</button>
+            <button class="btn btn-success" style="flex: 1; font-size: 16px; font-weight: 900;" onclick="confirmarPagoCaja('${pedidoId}', ${!!esClienteGeneral})">✅ SÍ, PAGADO</button>
+          </div>
+        </div>
+      `);
+    }
+
+    async function confirmarPagoCaja(pedidoId, esClienteGeneral) {
+      const rutCajera = obtenerRutCajaActiva();
+
+      if (!rutCajera) {
+        cerrarModalGeneral();
+        return alert("⚠️ Su caja ya no está activa. Ábrala nuevamente para poder cobrar.");
+      }
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}/pagar`, {
@@ -1901,17 +2200,36 @@
         });
 
         if (res.ok) {
-          alert("✅ Pedido pagado y enviado al tope de la fila de Cocina.");
           notificarSincronizacion();
-          await cargarPedidosCaja();
-          await cargarPedidosCocina();
+          cargarPedidosCaja().catch(() => {});
+          cargarPedidosCocina().catch(() => {});
+
+          const textoBoleta = esClienteGeneral
+            ? '🧾 NO OLVIDES ENTREGAR LA BOLETA DE PAGO AL CLIENTE GENERAL PARA ENTREGAR EN MESÓN'
+            : '🧾 NO OLVIDES ENTREGAR LA BOLETA DE PAGO AL CLIENTE';
+
+          abrirModalGeneral(`
+            <div style="text-align: center;">
+              <div style="font-size: 50px; line-height: 1;">🎉</div>
+              <h3 style="font-size: 24px; color: var(--neon-green); margin-top: 8px;">¡PAGO REGISTRADO!</h3>
+              <p style="font-size: 15px; color: #ffffff; margin-top: 4px;">Pedido enviado al <strong>TOPE</strong> de la fila de Cocina.</p>
+              <div style="background: rgba(255, 238, 0, 0.12); border: 2px solid var(--neon-yellow); border-radius: 10px; padding: 14px 12px; margin: 14px 0;">
+                <p style="font-size: 17px; font-weight: 900; color: var(--neon-yellow); line-height: 1.4;">
+                  ${textoBoleta}
+                </p>
+              </div>
+              <button class="btn btn-blue" style="width: 100%; padding: 13px; font-size: 16px; font-weight: 900;" onclick="cerrarModalGeneral()">✔️ LISTO</button>
+            </div>
+          `);
         } else {
           const data = await res.json().catch(() => ({}));
+          cerrarModalGeneral();
           alert(`❌ ${data.error || 'Error al procesar el pago del pedido.'}`);
           await cargarPanelCajas();
           await cargarPedidosCaja();
         }
       } catch (err) {
+        cerrarModalGeneral();
         alert("❌ Error de comunicación con el servidor.");
       }
     }
@@ -1940,12 +2258,12 @@
         pedidos.forEach(p => {
           let itemsHTML = '';
           (p.items || []).forEach(i => {
-            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre} ($${i.precio})</div>`;
+            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${esc(i.nombre)} ($${i.precio})</div>`;
           });
 
           const tituloUbicacion = (p.mesa === 'GENERAL' || p.nombreCliente) 
-            ? `CLIENTE: ${(p.nombreCliente || 'GENERAL').toUpperCase()}`
-            : `MESA N° ${p.mesa}`;
+            ? `CLIENTE: ${esc((p.nombreCliente || 'GENERAL').toUpperCase())}`
+            : `MESA N° ${esc(p.mesa)}`;
 
           const tagPrioridad = p.pagado 
             ? `<span class="badge-pagado">⭐ PRIORITARIO (PAGADO)</span>`
@@ -1978,7 +2296,7 @@
       if (!confirm("¿Deseas eliminar este pedido de la cocina?")) return;
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${BACKEND_URL}/api/pedidos/${id}?local=${encodeURIComponent(localActual)}`, { method: 'DELETE' });
         if (res.ok) {
           notificarSincronizacion();
           await cargarPedidosCaja();
@@ -2017,7 +2335,7 @@
         pedidos.forEach(p => {
           let itemsHTML = '';
           (p.items || []).forEach(i => {
-            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre}</div>`;
+            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${esc(i.nombre)}</div>`;
           });
 
           const asignadoAOtro = p.rutGarzon && p.rutGarzon !== rutSesion;
@@ -2093,7 +2411,7 @@
         pedidos.forEach(p => {
           let itemsHTML = '';
           (p.items || []).forEach(i => {
-            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${i.nombre}</div>`;
+            itemsHTML += `<div style="font-size:13px; color:#fff;">• ${i.cantidad}x ${esc(i.nombre)}</div>`;
           });
 
           const asignadoAOtro = p.rutGarzon && p.rutGarzon !== rutSesion;
@@ -2110,7 +2428,7 @@
             botonAccion = `<button class="btn btn-secondary btn-sm" style="width:100%; opacity:0.5; cursor:not-allowed;" disabled>🔒 Atendido por otro Encargado</button>`;
           }
 
-          const nombreCli = p.nombreCliente ? p.nombreCliente.toUpperCase() : 'GENERAL';
+          const nombreCli = p.nombreCliente ? esc(p.nombreCliente.toUpperCase()) : 'GENERAL';
           const tituloUbicacion = `CLIENTE: ${nombreCli}`;
 
           const badgePagoMeson = p.pagado
@@ -2155,72 +2473,124 @@
 
       localStorage.setItem('meson_rut_activo', rutIngresado);
 
-      if (rutAsignadoActualmente === rutIngresado) {
-        if (!confirm(`¿Confirmas la entrega final de este pedido de mesón con el RUT ${rutIngresado}?`)) return;
+      // Obtener los datos actualizados del pedido
+      let pedido = null;
+      try {
+        const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        const listaP = await resPedido.json();
+        pedido = Array.isArray(listaP) ? listaP.find(item => item._id === pedidoId) : null;
+      } catch (err) {
+        return alert("❌ Error al consultar el pedido.");
+      }
 
-        try {
-          const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
-          const listaP = await resPedido.json();
-          const p = listaP.find(item => item._id === pedidoId);
+      if (!pedido) return alert("❌ El pedido ya no existe o fue entregado.");
 
-          if (!p) return alert("❌ El pedido ya no existe o fue entregado.");
-
-          const ahora = new Date();
-          const resHistorial = await fetch(`${BACKEND_URL}/api/historials`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: p._id,
-              local: localActual,
-              mesa: p.mesa,
-              nombreCliente: p.nombreCliente || null,
-              items: p.items,
-              total: p.total,
-              estado: 'entregado',
-              hora: new Date(p.createdAt).toLocaleTimeString(),
-              rutGarzon: rutIngresado,
-              horaEntrega: ahora.toLocaleTimeString(),
-              fechaEntrega: ahora.toISOString().split('T')[0]
-            })
-          });
-
-          if (resHistorial.ok) {
-            await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}`, { method: 'DELETE' });
-            alert("✅ Pedido entregado y registrado exitosamente.");
-            notificarSincronizacion();
-            await cargarPedidosCaja();
-            await cargarPedidosGarzon();
-            await cargarPedidosMeson();
-            await cargarPedidosCocina();
-            await cargarHistorial();
-          }
-        } catch (err) {
-          alert("❌ Error al finalizar la entrega.");
-        }
+      if (pedido.rutGarzon && pedido.rutGarzon !== rutIngresado) {
+        alert(`⛔ IMPOSIBLE INGRESAR: Otro encargado ya atiende este pedido (RUT ${pedido.rutGarzon}).`);
+        await cargarPedidosMeson();
         return;
       }
 
+      const nombreCli = pedido.nombreCliente ? esc(pedido.nombreCliente.toUpperCase()) : 'GENERAL';
+      let itemsHTML = '';
+      (pedido.items || []).forEach(i => {
+        itemsHTML += `<div style="font-size:14px; padding:3px 0;">• ${i.cantidad}x ${esc(i.nombre)}</div>`;
+      });
+
+      // UN SOLO TOQUE: modal visible y persuasivo con el detalle del pedido
+      abrirModalGeneral(`
+        <div style="text-align: center;">
+          <div style="font-size: 46px; line-height: 1;">🛍️</div>
+          <h3 style="font-size: 21px; color: var(--neon-yellow); margin-top: 8px;">¿ENTREGAR A CLIENTE?</h3>
+          <p style="font-size: 16px; font-weight: bold; color: var(--neon-green); margin-bottom: 8px;">CLIENTE: ${nombreCli}</p>
+          <div style="background: #111118; border: 1px solid #333; border-radius: 8px; padding: 10px; margin: 10px 0; text-align: left;">
+            ${itemsHTML}
+          </div>
+          <p style="font-size: 20px; font-weight: 900; color: var(--neon-green);">Total: $${pedido.total}</p>
+          <p style="font-size: 14px; font-weight: 900; color: var(--neon-yellow); margin-top: 8px;">🧾 Recuerde pedir la CONTRABOLETA de pago al cliente</p>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">La entrega quedará registrada a nombre del RUT ${rutIngresado}</p>
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn btn-secondary" style="flex: 1;" onclick="cerrarModalGeneral()">❌ NO, CANCELAR</button>
+            <button class="btn btn-success" style="flex: 1; font-size: 16px; font-weight: 900;" onclick="confirmarEntregaMeson('${pedidoId}', '${rutIngresado}')">✅ SÍ, ENTREGAR</button>
+          </div>
+        </div>
+      `);
+    }
+
+    async function confirmarEntregaMeson(pedidoId, rutIngresado) {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}/asignar-garzon`, {
-          method: 'PUT',
+        const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        const listaP = await resPedido.json();
+        const p = Array.isArray(listaP) ? listaP.find(item => item._id === pedidoId) : null;
+
+        if (!p) {
+          cerrarModalGeneral();
+          return alert("❌ El pedido ya no existe o fue entregado.");
+        }
+
+        // Si estaba libre, se asigna al RUT en este mismo paso (un solo toque)
+        if (!p.rutGarzon) {
+          const resAsig = await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}/asignar-garzon`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rutGarzon: rutIngresado })
+          });
+          const dataAsig = await resAsig.json().catch(() => ({}));
+          if (!resAsig.ok || !dataAsig.ok) {
+            cerrarModalGeneral();
+            alert(`⛔ ${dataAsig.error || 'Otro encargado tomó el pedido mientras decidías.'}`);
+            await cargarPedidosMeson();
+            return;
+          }
+        } else if (p.rutGarzon !== rutIngresado) {
+          cerrarModalGeneral();
+          alert(`⛔ El pedido fue tomado por otro encargado (${p.rutGarzon}) mientras decidías.`);
+          await cargarPedidosMeson();
+          return;
+        }
+
+        const ahora = new Date();
+        const resHistorial = await fetch(`${BACKEND_URL}/api/historials`, {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rutGarzon: rutIngresado })
+          body: JSON.stringify({
+            id: p._id,
+            local: localActual,
+            mesa: p.mesa,
+            nombreCliente: p.nombreCliente || null,
+            items: p.items,
+            total: p.total,
+            estado: 'entregado',
+            hora: new Date(p.createdAt).toLocaleTimeString(),
+            rutGarzon: rutIngresado,
+            horaEntrega: ahora.toLocaleTimeString(),
+            fechaEntrega: ahora.toISOString().split('T')[0]
+          })
         });
 
-        const data = await res.json();
-
-        if (res.ok && data.ok) {
-          alert(`✅ Pedido asignado exitosamente a tu RUT (${rutIngresado}).`);
+        if (resHistorial.ok) {
+          await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}?local=${encodeURIComponent(localActual)}`, { method: 'DELETE' });
+          cerrarModalGeneral();
           notificarSincronizacion();
-          await cargarPedidosMeson();
-        } else if (res.status === 409) {
-          alert(`⛔ IMPOSIBLE INGRESAR: ${data.error || 'Otro usuario ya atiende este pedido.'}`);
-          await cargarPedidosMeson();
+          cargarPedidosCaja().catch(() => {});
+          cargarPedidosGarzon().catch(() => {});
+          cargarPedidosMeson().catch(() => {});
+          cargarPedidosCocina().catch(() => {});
+          cargarHistorial().catch(() => {});
+
+          abrirModalGeneral(`
+            <div style="text-align: center;">
+              <div style="font-size: 52px; line-height: 1;">🎉</div>
+              <h3 style="font-size: 24px; color: var(--neon-green); margin-top: 8px;">¡PEDIDO ENTREGADO!</h3>
+              <p style="color: var(--text-muted); font-size: 14px; margin-top: 6px;">Registrado en el historial con el RUT ${rutIngresado}</p>
+              <button class="btn btn-blue" style="width: 100%; margin-top: 15px; padding: 13px; font-size: 16px; font-weight: 900;" onclick="cerrarModalGeneral()">✔️ LISTO</button>
+            </div>
+          `);
         } else {
-          alert(`❌ ${data.error || 'No se pudo asignar el pedido.'}`);
+          alert("❌ Error al registrar la entrega en el historial.");
         }
       } catch (err) {
-        alert("❌ Error de servidor al intentar tomar el pedido.");
+        alert("❌ Error al finalizar la entrega.");
       }
     }
 
@@ -2236,72 +2606,124 @@
 
       localStorage.setItem('garzon_rut_activo', rutIngresado);
 
-      if (rutAsignadoActualmente === rutIngresado) {
-        if (!confirm(`¿Confirmas la entrega final de este pedido con el RUT ${rutIngresado}?`)) return;
+      // UN SOLO TOQUE: siempre abre la confirmación de entrega; la asignación ocurre al confirmar
+      let pedido = null;
+      try {
+        const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        const listaP = await resPedido.json();
+        pedido = Array.isArray(listaP) ? listaP.find(item => item._id === pedidoId) : null;
+      } catch (err) {
+        return alert("❌ Error al consultar el pedido.");
+      }
 
-        try {
-          const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
-          const listaP = await resPedido.json();
-          const p = listaP.find(item => item._id === pedidoId);
+      if (!pedido) return alert("❌ El pedido ya no existe o fue entregado.");
 
-          if (!p) return alert("❌ El pedido ya no existe o fue entregado.");
+      const tituloUbicacion = pedido.nombreCliente
+        ? `CLIENTE: ${esc(pedido.nombreCliente.toUpperCase())}`
+        : `MESA N° ${esc(pedido.mesa)}`;
 
-          const ahora = new Date();
-          const resHistorial = await fetch(`${BACKEND_URL}/api/historials`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: p._id,
-              local: localActual,
-              mesa: p.mesa,
-              nombreCliente: p.nombreCliente || null,
-              items: p.items,
-              total: p.total,
-              estado: 'entregado',
-              hora: new Date(p.createdAt).toLocaleTimeString(),
-              rutGarzon: rutIngresado,
-              horaEntrega: ahora.toLocaleTimeString(),
-              fechaEntrega: ahora.toISOString().split('T')[0]
-            })
-          });
+      let itemsHTML = '';
+      (pedido.items || []).forEach(i => {
+        itemsHTML += `<div style="font-size:14px; padding:3px 0;">• ${i.cantidad}x ${esc(i.nombre)}</div>`;
+      });
 
-          if (resHistorial.ok) {
-            await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}`, { method: 'DELETE' });
-            alert("✅ Pedido entregado y registrado exitosamente en el historial.");
-            notificarSincronizacion();
-            await cargarPedidosCaja();
-            await cargarPedidosGarzon();
-            await cargarPedidosMeson();
-            await cargarPedidosCocina();
-            await cargarHistorial();
-          }
-        } catch (err) {
-          alert("❌ Error al finalizar la entrega.");
-        }
-        return;
+      abrirModalGeneral(`
+        <div style="text-align: center;">
+          <div style="font-size: 46px; line-height: 1;">🛍️</div>
+          <h3 style="font-size: 21px; color: var(--neon-yellow); margin-top: 8px;">¿ENTREGAR A CLIENTE?</h3>
+          <p style="font-size: 16px; font-weight: bold; color: var(--neon-green); margin-bottom: 8px;">${tituloUbicacion}</p>
+          <div style="background: #111118; border: 1px solid #333; border-radius: 8px; padding: 10px; margin: 10px 0; text-align: left;">
+            ${itemsHTML}
+          </div>
+          <p style="font-size: 20px; font-weight: 900; color: var(--neon-green);">Total: $${pedido.total}</p>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">La entrega quedará registrada a nombre del RUT ${rutIngresado}</p>
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn btn-secondary" style="flex: 1;" onclick="cerrarModalGeneral()">❌ NO, CANCELAR</button>
+            <button class="btn btn-success" style="flex: 1; font-size: 16px; font-weight: 900;" onclick="confirmarEntregaGarzon('${pedidoId}')">✅ SÍ, ENTREGAR</button>
+          </div>
+        </div>
+      `);
+    }
+
+    async function confirmarEntregaGarzon(pedidoId) {
+      const inputRut = document.getElementById('garzon-rut');
+      const rutIngresado = inputRut ? inputRut.value.trim() : '';
+
+      if (!rutIngresado) {
+        cerrarModalGeneral();
+        return alert("⚠️ ATENCIÓN: Debe ingresar su RUT de garzón antes de confirmar la entrega.");
       }
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}/asignar-garzon`, {
-          method: 'PUT',
+        const resPedido = await fetch(`${BACKEND_URL}/api/pedidos?local=${encodeURIComponent(localActual)}`);
+        const listaP = await resPedido.json();
+        const p = Array.isArray(listaP) ? listaP.find(item => item._id === pedidoId) : null;
+
+        if (!p) {
+          cerrarModalGeneral();
+          return alert("❌ El pedido ya no existe o fue entregado.");
+        }
+
+        // Asignación en el mismo toque si el pedido aún no es mío (con anti-colisión)
+        if (p.rutGarzon !== rutIngresado) {
+          const resAsignar = await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}/asignar-garzon`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rutGarzon: rutIngresado })
+          });
+          const dataAsignar = await resAsignar.json().catch(() => ({}));
+
+          if (!resAsignar.ok || !dataAsignar.ok) {
+            cerrarModalGeneral();
+            alert(`⛔ IMPOSIBLE INGRESAR: ${dataAsignar.error || 'Otro garzón ya ha ingresado a este pedido.'}`);
+            cargarPedidosGarzon().catch(() => {});
+            return;
+          }
+        }
+
+        const ahora = new Date();
+        const resHistorial = await fetch(`${BACKEND_URL}/api/historials`, {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rutGarzon: rutIngresado })
+          body: JSON.stringify({
+            id: p._id,
+            local: localActual,
+            mesa: p.mesa,
+            nombreCliente: p.nombreCliente || null,
+            items: p.items,
+            total: p.total,
+            estado: 'entregado',
+            hora: new Date(p.createdAt).toLocaleTimeString(),
+            rutGarzon: rutIngresado,
+            horaEntrega: ahora.toLocaleTimeString(),
+            fechaEntrega: ahora.toISOString().split('T')[0]
+          })
         });
 
-        const data = await res.json();
-
-        if (res.ok && data.ok) {
-          alert(`✅ Pedido asignado exitosamente a tu RUT (${rutIngresado}). Ahora puedes gestionarlo.`);
+        if (resHistorial.ok) {
+          await fetch(`${BACKEND_URL}/api/pedidos/${pedidoId}?local=${encodeURIComponent(localActual)}`, { method: 'DELETE' });
           notificarSincronizacion();
-          await cargarPedidosGarzon();
-        } else if (res.status === 409) {
-          alert(`⛔ IMPOSIBLE INGRESAR: ${data.error || 'Otro garzón ya ha ingresado a este pedido.'}`);
-          await cargarPedidosGarzon();
+
+          // Modal de éxito vistoso; refrescos en segundo plano
+          abrirModalGeneral(`
+            <div style="text-align: center;">
+              <div style="font-size: 50px; line-height: 1;">🎉</div>
+              <h3 style="font-size: 24px; color: var(--neon-green); margin-top: 8px;">¡PEDIDO ENTREGADO!</h3>
+              <p style="font-size: 15px; color: #ffffff; margin-top: 4px;">Registrado en el historial a nombre del RUT ${rutIngresado}.</p>
+              <button class="btn btn-blue" style="width: 100%; padding: 13px; font-size: 16px; font-weight: 900; margin-top: 14px;" onclick="cerrarModalGeneral()">✔️ LISTO</button>
+            </div>
+          `);
+
+          cargarPedidosCaja().catch(() => {});
+          cargarPedidosGarzon().catch(() => {});
+          cargarPedidosMeson().catch(() => {});
+          cargarPedidosCocina().catch(() => {});
+          cargarHistorial().catch(() => {});
         } else {
-          alert(`❌ ${data.error || 'No se pudo asignar el pedido.'}`);
+          alert("❌ Error al registrar la entrega en el historial.");
         }
       } catch (err) {
-        alert("❌ Error de servidor al intentar tomar el pedido.");
+        alert("❌ Error al finalizar la entrega.");
       }
     }
 
@@ -2325,7 +2747,7 @@
 
           misPedidosMesa.forEach((p, idx) => {
             acumulado += (p.total || 0);
-            let subItems = (p.items || []).map(i => `• ${i.cantidad}x ${i.nombre} ($${i.precio * i.cantidad})`).join('<br>');
+            let subItems = (p.items || []).map(i => `• ${i.cantidad}x ${esc(i.nombre)} ($${i.precio * i.cantidad})`).join('<br>');
             contenedorItems.innerHTML += `
               <div style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
                 <strong>Orden #${idx + 1}</strong> (${p.rutGarzon ? 'Atendido por: ' + p.rutGarzon : 'Esperando Garzón'}):<br>
@@ -2356,7 +2778,7 @@
 
             misPedidosGen.forEach((p, idx) => {
               acumuladoGen += (p.total || 0);
-              let subItems = (p.items || []).map(i => `• ${i.cantidad}x ${i.nombre} ($${i.precio * i.cantidad})`).join('<br>');
+              let subItems = (p.items || []).map(i => `• ${i.cantidad}x ${esc(i.nombre)} ($${i.precio * i.cantidad})`).join('<br>');
               contenedorItemsGen.innerHTML += `
                 <div style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
                   <strong>Orden General #${idx + 1}</strong> (${p.rutGarzon ? 'Atendido por: ' + p.rutGarzon : 'En cocina'}):<br>
@@ -2400,7 +2822,7 @@
 
       registros.forEach(r => {
         const tr = document.createElement('tr');
-        const ubicacionStr = r.nombreCliente ? `Cliente: ${r.nombreCliente}` : `Mesa ${r.mesa || '--'}`;
+        const ubicacionStr = r.nombreCliente ? `Cliente: ${esc(r.nombreCliente)}` : `Mesa ${esc(r.mesa || '--')}`;
         tr.innerHTML = `
           <td>${r.fechaEntrega || ''} ${r.horaEntrega || ''}</td>
           <td>${ubicacionStr}</td>
@@ -2540,7 +2962,7 @@
           }
 
           const fechaHora = `${r.fechaEntrega || ''} ${r.horaEntrega || ''}`.trim() || 'N/A';
-          const mesaStr = r.nombreCliente ? `Cli: ${r.nombreCliente}` : `Mesa ${r.mesa || '--'}`;
+          const mesaStr = r.nombreCliente ? `Cli: ${esc(r.nombreCliente)}` : `Mesa ${esc(r.mesa || '--')}`;
           const totalStr = `$${r.total || 0}`;
           const rutStr = r.rutGarzon || 'N/A';
 
@@ -2583,7 +3005,7 @@
       if (!target) return;
 
       target.innerHTML = '';
-      if (lblLocal) lblLocal.innerText = localActual.toUpperCase();
+      if (lblLocal) lblLocal.innerText = obtenerNombreMostrar();
 
       const urlAccesoGen = `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localActual)}&view=clientegeneral`;
       new QRCode(target, {
@@ -2609,7 +3031,7 @@
       if (!render) return;
 
       render.innerHTML = '';
-      document.getElementById('lbl-qr-single-nombre-local').innerText = localActual;
+      document.getElementById('lbl-qr-single-nombre-local').innerText = obtenerNombreMostrar();
       document.getElementById('lbl-qr-single-mesa').innerText = `MESA N° ${numMesa}`;
 
       const urlMesa = `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localActual)}&mesa=${numMesa}&view=cliente`;
@@ -2642,22 +3064,48 @@
       const doc = new jsPDF();
       let x = 10, y = 10;
       const ancho = 50, alto = 50;
+      const nombreLocal = obtenerNombreMostrar();
+
+      // Tamaño de fuente del nombre: se reduce hasta que quepa dentro de la tarjeta
+      doc.setFont('helvetica', 'bold');
+      let fuenteNombre = 10;
+      doc.setFontSize(fuenteNombre);
+      while (fuenteNombre > 5.5 && doc.getTextWidth(nombreLocal) > (ancho - 6)) {
+        fuenteNombre -= 0.5;
+        doc.setFontSize(fuenteNombre);
+      }
 
       for (let m = desde; m <= hasta; m++) {
         const tempDiv = document.createElement('div');
         const urlMesa = `${window.location.origin}${window.location.pathname}?local=${encodeURIComponent(localActual)}&mesa=${m}&view=cliente`;
 
-        new QRCode(tempDiv, { text: urlMesa, width: 100, height: 100 });
+        // Resolución alta para impresión nítida
+        new QRCode(tempDiv, { text: urlMesa, width: 300, height: 300 });
 
         setTimeout(() => {
           const canvas = tempDiv.querySelector('canvas');
           if (canvas) {
             const imgData = canvas.toDataURL('image/png');
+
+            // Tarjeta de 5 x 5 cm
             doc.rect(x, y, ancho, alto);
-            doc.setFontSize(8);
-            doc.text(localActual.toUpperCase(), x + 5, y + 6);
-            doc.addImage(imgData, 'PNG', x + 5, y + 8, 35, 35);
-            doc.text(`MESA N° ${m}`, x + 15, y + 47);
+
+            // Nombre del local (negrita, centrado)
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(fuenteNombre);
+            doc.text(nombreLocal, x + ancho / 2, y + 6, { align: 'center' });
+
+            // Código QR centrado
+            doc.addImage(imgData, 'PNG', x + ((ancho - 29) / 2), y + 8, 29, 29);
+
+            // Número de mesa (negrita, destacado)
+            doc.setFontSize(12);
+            doc.text(`MESA N° ${m}`, x + ancho / 2, y + 42.2, { align: 'center' });
+
+            // Llamado a la acción (negrita, dos líneas)
+            doc.setFontSize(6.5);
+            doc.text('ESCANEA EL QR PARA', x + ancho / 2, y + 45.8, { align: 'center' });
+            doc.text('HACER TU PEDIDO DIRECTAMENTE', x + ancho / 2, y + 48.4, { align: 'center' });
 
             x += 55;
             if (x > 150) {
@@ -2665,6 +3113,7 @@
               y += 55;
               if (y > 230) {
                 doc.addPage();
+                x = 10;
                 y = 10;
               }
             }
@@ -2672,7 +3121,7 @@
           if (m === hasta) {
             doc.save(`Planilla_QR_${localActual}_Mesas_${desde}_a_${hasta}.pdf`);
           }
-        }, 100);
+        }, 120);
       }
     }
 

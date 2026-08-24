@@ -351,6 +351,38 @@ function limpiarFallosLogin(req) {
   intentosFallidos.delete(obtenerIpCliente(req));
 }
 
+// --- RATE LIMIT GENERAL PARA ACCIONES PÚBLICAS FRECUENTES ---
+const contadoresPeticiones = new Map(); // ip -> { count, ventanaInicio }
+
+function limitePeticiones(maxPorVentana, ventanaMs = 60 * 1000) {
+  const limpieza = setInterval(() => {
+    const ahora = Date.now();
+    for (const [ip, r] of contadoresPeticiones) {
+      if (ahora - r.ventanaInicio > ventanaMs * 2) contadoresPeticiones.delete(ip);
+    }
+  }, 5 * 60 * 1000);
+  limpieza.unref();
+
+  return (req, res, next) => {
+    const ip = obtenerIpCliente(req);
+    const ahora = Date.now();
+    let r = contadoresPeticiones.get(ip);
+    if (!r || ahora - r.ventanaInicio > ventanaMs) {
+      r = { count: 0, ventanaInicio: ahora };
+    }
+    r.count += 1;
+    contadoresPeticiones.set(ip, r);
+
+    if (r.count > maxPorVentana) {
+      return res.status(429).json({
+        ok: false,
+        error: '⛔ Demasiadas peticiones seguidas. Espera un momento e inténtalo de nuevo.'
+      });
+    }
+    next();
+  };
+}
+
 // --- RUTAS DE LA API ---
 
 // VERIFICAR ESTADO DE SESIÓN
@@ -1037,7 +1069,8 @@ app.get('/api/pedidos', async (req, res) => {
   }
 });
 
-app.post('/api/pedidos', async (req, res) => {
+// NUEVO PEDIDO (rate limit: evita inundación de pedidos falsos desde una misma IP)
+app.post('/api/pedidos', limitePeticiones(8), async (req, res) => {
   try {
     const { local, mesa, nombreCliente, items, total } = req.body;
     const localId = (local || '').toLowerCase().trim();
@@ -1132,6 +1165,21 @@ app.put('/api/pedidos/:id/asignar-garzon', async (req, res) => {
 
 app.delete('/api/pedidos/:id', async (req, res) => {
   try {
+    // Solo se permite borrar pedidos del local que lo solicita (evita borrados cruzados)
+    const localPedido = (req.query.local || '').toLowerCase().trim();
+    if (!localPedido) {
+      return res.status(400).json({ ok: false, error: 'Parámetro local requerido' });
+    }
+
+    const pedido = await Pedido.findById(req.params.id);
+    if (!pedido) {
+      return res.json({ ok: true });
+    }
+
+    if (pedido.local !== localPedido) {
+      return res.status(403).json({ ok: false, error: '⛔ Este pedido no pertenece a ese local.' });
+    }
+
     await Pedido.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (error) {
