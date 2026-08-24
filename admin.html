@@ -2303,6 +2303,9 @@
           await cargarPedidosCocina();
           await cargarPedidosGarzon();
           await cargarPedidosMeson();
+        } else {
+          const detalle = await res.json().catch(() => ({}));
+          alert(`❌ No se pudo cancelar el pedido: ${detalle.error || 'error inesperado'}. Si estás en el celular, actualiza la página (caché viejo).`);
         }
       } catch (err) {
         alert("❌ Error al cancelar pedido.");

@@ -1171,6 +1171,11 @@ app.delete('/api/pedidos/:id', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Parámetro local requerido' });
     }
 
+    // ID con formato inválido: se responde como inexistente (sin error 500)
+    if (!/^[0-9a-fA-F]{24}$/.test(String(req.params.id))) {
+      return res.json({ ok: true });
+    }
+
     const pedido = await Pedido.findById(req.params.id);
     if (!pedido) {
       return res.json({ ok: true });
