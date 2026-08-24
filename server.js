@@ -648,7 +648,8 @@ app.post('/api/locales/alta', limiteLogin, async (req, res) => {
     const rut = limpiarTexto(b.rut, 15);
     const correo = limpiarTexto(b.correo, 60);
     const password = typeof b.password === 'string' ? b.password.trim() : '';
-    let fechaVencimiento = b.fechaVencimiento ? new Date(b.fechaVencimiento) : null;
+    // La licencia la fija SIEMPRE el servidor: se ignora cualquier fecha enviada por el cliente
+    const fechaVencimiento = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     if (!nombre || !rut || !correo || !password) {
       return res.status(400).json({ ok: false, error: 'Faltan datos obligatorios para registrar el local.' });
@@ -679,10 +680,6 @@ app.post('/api/locales/alta', limiteLogin, async (req, res) => {
       return res.status(409).json({ ok: false, error: 'Ya existe un local registrado con ese correo.' });
     }
 
-    const vencimientoValido = fechaVencimiento && !isNaN(fechaVencimiento.getTime())
-      ? fechaVencimiento.toISOString()
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
     const nuevoLocal = new Local({
       id: Date.now(),
       local: slug,
@@ -692,7 +689,7 @@ app.post('/api/locales/alta', limiteLogin, async (req, res) => {
       password: await bcrypt.hash(password, 10),
       activo: true,
       fechaCreacion: new Date(),
-      fechaVencimiento: vencimientoValido,
+      fechaVencimiento: fechaVencimiento.toISOString(),
       menu: [],
       anuncio: 'ok'
     });
@@ -728,7 +725,11 @@ app.post('/api/locales/alta', limiteLogin, async (req, res) => {
   }
 });
 
-// RECUPERAR CONTRASEÑA DE LOCAL (envía nueva clave temporal por correo)
+// RECUPERAR CONTRASEÑA DE LOCAL (envía enlace de un solo uso al correo registrado)
+// Por seguridad la respuesta es SIEMPRE idéntica: no revela si el local existe
+// ni muestra el correo del dueño (evita enumeración y phishing dirigido).
+const MENSAJE_RECUPERACION = '📩 Si tu local está registrado, enviamos un enlace para establecer una nueva contraseña al correo vinculado. Revisa también tu carpeta de spam.';
+
 app.post('/api/locales/recuperar-password', limiteLogin, async (req, res) => {
   try {
     const busqueda = limpiarTexto(req.body ? req.body.local : null, 60);
@@ -746,45 +747,36 @@ app.post('/api/locales/recuperar-password', limiteLogin, async (req, res) => {
       ]
     });
 
-    if (!reg) {
-      return res.status(404).json({ ok: false, error: 'No se encontró un local con ese nombre o ID.' });
-    }
-    if (!reg.correo) {
-      return res.status(400).json({ ok: false, error: 'Este local no tiene correo registrado. Contacta al Administrador General.' });
-    }
+    if (reg && reg.correo) {
+      // Token de un solo uso válido por 30 minutos (se guarda hasheado en Mongo)
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    // Token de un solo uso válido por 30 minutos (se guarda hasheado en Mongo)
-    const token = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      await ResetPassword.deleteMany({ local: reg.local });
+      await ResetPassword.create({
+        local: reg.local,
+        tokenHash,
+        expira: new Date(Date.now() + 30 * 60 * 1000)
+      });
 
-    await ResetPassword.deleteMany({ local: reg.local });
-    await ResetPassword.create({
-      local: reg.local,
-      tokenHash,
-      expira: new Date(Date.now() + 30 * 60 * 1000)
-    });
+      const enlace = `${FRONTEND_URL}/index.html?recuperar=${token}&local=${encodeURIComponent(reg.local)}`;
 
-    const enlace = `${FRONTEND_URL}/index.html?recuperar=${token}&local=${encodeURIComponent(reg.local)}`;
-
-    const enviado = await enviarCorreo(
-      reg.correo,
-      '🔑 AppMenu - Establecer nueva contraseña',
-      `<h2>Hola ${escaparHtmlCorreo(reg.nombre || reg.local)}</h2>
-       <p>Recibimos una solicitud para establecer una nueva contraseña de tu local <b>${escaparHtmlCorreo(reg.nombre || reg.local)}</b> en AppMenu.</p>
-       <p style="margin:24px 0;">
-         <a href="${enlace}" style="background:#00d2ff;color:#0a0e17;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">ESTABLECER NUEVA CONTRASEÑA</a>
-       </p>
-       <p>O copia este enlace en tu navegador:</p>
-       <p style="word-break:break-all;font-size:12px;color:#555;">${enlace}</p>
-       <p><b>El enlace es válido por 30 minutos y solo puede usarse una vez.</b></p>
-       <p>Si no solicitaste este cambio, ignora este correo.</p>`
-    );
-
-    if (!enviado) {
-      return res.status(500).json({ ok: false, error: 'No se pudo enviar el correo de recuperación. Intenta más tarde.' });
+      await enviarCorreo(
+        reg.correo,
+        '🔑 AppMenu - Establecer nueva contraseña',
+        `<h2>Hola ${escaparHtmlCorreo(reg.nombre || reg.local)}</h2>
+         <p>Recibimos una solicitud para establecer una nueva contraseña de tu local <b>${escaparHtmlCorreo(reg.nombre || reg.local)}</b> en AppMenu.</p>
+         <p style="margin:24px 0;">
+           <a href="${enlace}" style="background:#00d2ff;color:#0a0e17;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">ESTABLECER NUEVA CONTRASEÑA</a>
+         </p>
+         <p>O copia este enlace en tu navegador:</p>
+         <p style="word-break:break-all;font-size:12px;color:#555;">${enlace}</p>
+         <p><b>El enlace es válido por 30 minutos y solo puede usarse una vez.</b></p>
+         <p>Si no solicitaste este cambio, ignora este correo.</p>`
+      );
     }
 
-    res.json({ ok: true, mensaje: `📩 Enviamos un enlace a ${reg.correo} para que establezcas tu nueva contraseña` });
+    res.json({ ok: true, mensaje: MENSAJE_RECUPERACION });
   } catch (error) {
     console.error('Error al recuperar contraseña:', error);
     res.status(500).json({ ok: false, error: 'Error al procesar la recuperación' });
