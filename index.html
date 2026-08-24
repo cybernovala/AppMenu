@@ -264,6 +264,17 @@
 
     .btn:hover { opacity: 0.95; transform: translateY(-2px); }
 
+    .promo-text {
+      font-size: 11px;
+      font-weight: 500;
+      color: #00d2ff;
+      margin-top: 10px;
+      text-align: center;
+      text-transform: none;
+      letter-spacing: 0.3px;
+      line-height: 1.4;
+    }
+
     /* MODAL DE ALTA DE NEGOCO Y RECUPERACIÓN */
     .modal {
       display: none;
@@ -392,16 +403,19 @@
       <div class="brand-subtitle">Gestión e ingreso para tu local o prueba gratuita</div>
 
       <div class="cards-grid">
-        <!-- CREAR DEMO GRATIS -->
+        <!-- CREAR NUEVO NEGOCIO -->
         <div class="section-box featured-demo">
           <div class="section-box-content">
-            <h3>Crear Nuevo Negocio / Demo</h3>
+            <h3>Crear Nuevo Negocio</h3>
             <div class="form-group">
               <label>Nombre de tu Local / Negocio</label>
-              <input type="text" id="demo-local-nombre" placeholder="Ej: Resto Bar Demo">
+              <input type="text" id="demo-local-nombre" placeholder="Ej: Hambursushi papapletos bar">
             </div>
           </div>
-          <button class="btn btn-demo" onclick="abrirModalAlta()">Crear y Probar Demo</button>
+          <div style="width: 100%;">
+            <button class="btn btn-demo" onclick="abrirModalAlta()">Crear</button>
+            <p class="promo-text">Promoción a solo $12.990 mensual x 12 meses , primer mes gratis.</p>
+          </div>
         </div>
 
         <!-- LOCAL EXISTENTE -->
@@ -469,7 +483,7 @@
     <div class="modal-content" style="border-color: var(--neon-blue); box-shadow: 0 0 25px rgba(0, 210, 255, 0.3);">
       <h3 style="color: var(--neon-blue);">🔑 Recuperar Contraseña</h3>
       <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 12px; text-align: center;">
-        Ingresa el nombre o ID de tu local registrado. Te enviaremos tus datos de acceso al correo vinculado.
+        Ingresa el nombre o ID de tu local registrado. Te enviaremos un enlace para establecer una nueva contraseña al correo vinculado.
       </p>
 
       <label>Nombre de tu Local Registrado</label>
@@ -478,6 +492,25 @@
       <div style="display: flex; gap: 10px; margin-top: 20px;">
         <button class="btn btn-existente" style="flex:1;" onclick="enviarRecuperacion()">Enviar Correo</button>
         <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalRecuperar()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PARA ESTABLECER NUEVA CONTRASEÑA (se abre desde el enlace del correo) -->
+  <div class="modal" id="modal-nueva-password">
+    <div class="modal-content" style="border-color: var(--neon-blue); box-shadow: 0 0 25px rgba(0, 210, 255, 0.3);">
+      <h3 style="color: var(--neon-blue);">🔒 Establecer Nueva Contraseña</h3>
+      <p id="nueva-password-local-info" style="color: var(--text-muted); font-size: 12px; margin-bottom: 12px; text-align: center;"></p>
+
+      <label>Nueva Contraseña</label>
+      <input type="password" id="nueva-password-1" placeholder="Mínimo 4 caracteres">
+
+      <label>Confirmar Nueva Contraseña</label>
+      <input type="password" id="nueva-password-2" placeholder="Repite la nueva contraseña">
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-existente" style="flex:1;" onclick="guardarNuevaPassword()">Guardar Contraseña</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="cancelarNuevaPassword()">Cancelar</button>
       </div>
     </div>
   </div>
@@ -524,6 +557,8 @@
         if (res.ok && data.ok) {
           if (data.token) {
             localStorage.setItem('auth_token', data.token);
+            // Misma clave que usan mensajes.html y demo.html para no pedir la contraseña dos veces
+            sessionStorage.setItem('token_superadmin', data.token);
           }
           window.location.href = 'https://appmenu-990c3.web.app/mensajes.html';
         } else {
@@ -653,6 +688,67 @@
         alert("❌ Error de comunicación con el servidor");
       }
     }
+
+    // ===== ESTABLECER NUEVA CONTRASEÑA (enlace del correo: index.html?recuperar=TOKEN&local=SLUG) =====
+    let tokenRecuperacion = '';
+    let localRecuperacion = '';
+
+    function abrirModalNuevaPassword(nombreLocal) {
+      document.getElementById('nueva-password-local-info').textContent = `Local: ${nombreLocal}`;
+      document.getElementById('nueva-password-1').value = '';
+      document.getElementById('nueva-password-2').value = '';
+      document.getElementById('modal-nueva-password').style.display = 'flex';
+    }
+
+    function cancelarNuevaPassword() {
+      tokenRecuperacion = '';
+      localRecuperacion = '';
+      document.getElementById('modal-nueva-password').style.display = 'none';
+    }
+
+    async function guardarNuevaPassword() {
+      const p1 = document.getElementById('nueva-password-1').value;
+      const p2 = document.getElementById('nueva-password-2').value;
+
+      if (!p1 || !p2) return alert("⚠️ Completa ambas contraseñas.");
+      if (p1 !== p2) return alert("⚠️ Las contraseñas no coinciden.");
+      if (p1.length < 4 || p1.length > 40) return alert("⚠️ La contraseña debe tener entre 4 y 40 caracteres.");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/locales/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ local: localRecuperacion, token: tokenRecuperacion, nuevaPassword: p1 })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          alert(`✅ ${data.mensaje}`);
+          cancelarNuevaPassword();
+          // Precarga el nombre del local en el login para facilitar el reingreso
+          const campoLocal = document.getElementById('existente-local-nombre');
+          if (campoLocal && localRecuperacion) campoLocal.value = localRecuperacion;
+        } else {
+          alert(`❌ ${data.error || 'No se pudo actualizar la contraseña.'}`);
+        }
+      } catch (err) {
+        console.error("Error al establecer nueva contraseña:", err);
+        alert("❌ Error de comunicación con el servidor");
+      }
+    }
+
+    // Si la página se abre desde el enlace del correo, muestra el modal directo
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const tokenUrl = params.get('recuperar');
+      const localUrl = params.get('local');
+      if (tokenUrl && localUrl) {
+        tokenRecuperacion = tokenUrl;
+        localRecuperacion = localUrl;
+        abrirModalNuevaPassword(localUrl);
+        history.replaceState(null, '', window.location.pathname);
+      }
+    });
   </script>
 </body>
 </html>

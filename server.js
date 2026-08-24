@@ -179,6 +179,18 @@ cajaSchema.index({ local: 1, numero: 1 }, { unique: true });
 
 const Caja = mongoose.model('Caja', cajaSchema);
 
+// Tokens de un solo uso para "establecer nueva contraseña" (enlace del correo)
+const resetPasswordSchema = new mongoose.Schema({
+  local: { type: String, required: true },
+  tokenHash: { type: String, required: true },
+  expira: { type: Date, required: true }
+}, { collection: 'resetpasswords' });
+// Mongo elimina solos los documentos una vez pasada su fecha de expiración
+resetPasswordSchema.index({ expira: 1 }, { expireAfterSeconds: 0 });
+resetPasswordSchema.index({ local: 1 });
+
+const ResetPassword = mongoose.model('ResetPassword', resetPasswordSchema);
+
 function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
@@ -197,6 +209,8 @@ function esHashBcrypt(texto) {
 
 // --- ENVÍO DE CORREOS TRANSACCIONALES (BREVO) ---
 const REMITENTE_CORREO = process.env.REMITENTE_CORREO || 'appmenu26@gmail.com';
+// Frontend donde vive index.html (para los enlaces dentro de los correos)
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://appmenu-990c3.web.app';
 
 function escaparHtmlCorreo(texto) {
   return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -739,30 +753,86 @@ app.post('/api/locales/recuperar-password', limiteLogin, async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Este local no tiene correo registrado. Contacta al Administrador General.' });
     }
 
-    // Las contraseñas están hasheadas: no se puede reenviar la original.
-    // Se genera una nueva temporal y pasa a ser la clave vigente.
-    const temporal = 'AM-' + crypto.randomBytes(3).toString('hex').toUpperCase();
-    reg.password = await bcrypt.hash(temporal, 10);
-    await reg.save();
+    // Token de un solo uso válido por 30 minutos (se guarda hasheado en Mongo)
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    await ResetPassword.deleteMany({ local: reg.local });
+    await ResetPassword.create({
+      local: reg.local,
+      tokenHash,
+      expira: new Date(Date.now() + 30 * 60 * 1000)
+    });
+
+    const enlace = `${FRONTEND_URL}/index.html?recuperar=${token}&local=${encodeURIComponent(reg.local)}`;
 
     const enviado = await enviarCorreo(
       reg.correo,
-      '🔑 AppMenu - Recuperación de contraseña',
+      '🔑 AppMenu - Establecer nueva contraseña',
       `<h2>Hola ${escaparHtmlCorreo(reg.nombre || reg.local)}</h2>
-       <p>Solicitaste recuperar el acceso a tu local en <b>AppMenu</b>.</p>
-       <p>Tu nueva contraseña temporal es:</p>
-       <p style="font-size:22px;"><b>${temporal}</b></p>
-       <p>Úsala para iniciar sesión normalmente.</p>`
+       <p>Recibimos una solicitud para establecer una nueva contraseña de tu local <b>${escaparHtmlCorreo(reg.nombre || reg.local)}</b> en AppMenu.</p>
+       <p style="margin:24px 0;">
+         <a href="${enlace}" style="background:#00d2ff;color:#0a0e17;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">ESTABLECER NUEVA CONTRASEÑA</a>
+       </p>
+       <p>O copia este enlace en tu navegador:</p>
+       <p style="word-break:break-all;font-size:12px;color:#555;">${enlace}</p>
+       <p><b>El enlace es válido por 30 minutos y solo puede usarse una vez.</b></p>
+       <p>Si no solicitaste este cambio, ignora este correo.</p>`
     );
 
     if (!enviado) {
       return res.status(500).json({ ok: false, error: 'No se pudo enviar el correo de recuperación. Intenta más tarde.' });
     }
 
-    res.json({ ok: true, mensaje: `📩 Enviamos una nueva contraseña temporal a ${reg.correo}` });
+    res.json({ ok: true, mensaje: `📩 Enviamos un enlace a ${reg.correo} para que establezcas tu nueva contraseña` });
   } catch (error) {
     console.error('Error al recuperar contraseña:', error);
     res.status(500).json({ ok: false, error: 'Error al procesar la recuperación' });
+  }
+});
+
+// ESTABLECER NUEVA CONTRASEÑA CON TOKEN DEL CORREO
+app.post('/api/locales/reset-password', limiteLogin, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const localId = limpiarTexto(b.local, 60);
+    const token = typeof b.token === 'string' ? b.token.trim() : '';
+    const nuevaPassword = typeof b.nuevaPassword === 'string' ? b.nuevaPassword.trim() : '';
+
+    if (!localId || !token || !nuevaPassword) {
+      return res.status(400).json({ ok: false, error: 'Faltan datos para establecer la nueva contraseña.' });
+    }
+    if (nuevaPassword.length < 4 || nuevaPassword.length > 40) {
+      return res.status(400).json({ ok: false, error: 'La contraseña debe tener entre 4 y 40 caracteres.' });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const reset = await ResetPassword.findOne({
+      local: localId,
+      tokenHash,
+      expira: { $gt: new Date() }
+    });
+
+    if (!reset) {
+      return res.status(400).json({ ok: false, error: '⛔ El enlace no es válido o ya expiró. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".' });
+    }
+
+    const reg = await Local.findOne({ local: localId });
+    if (!reg) {
+      return res.status(404).json({ ok: false, error: 'Local no encontrado.' });
+    }
+
+    reg.password = await bcrypt.hash(nuevaPassword, 10);
+    await reg.save();
+
+    // El token es de un solo uso: se eliminan todos los pendientes del local
+    await ResetPassword.deleteMany({ local: localId });
+
+    console.log(`🔑 Contraseña actualizada vía enlace de recuperación: ${localId}`);
+    res.json({ ok: true, mensaje: '✅ Contraseña actualizada con éxito. Ya puedes iniciar sesión con ella.' });
+  } catch (error) {
+    console.error('Error al establecer nueva contraseña:', error);
+    res.status(500).json({ ok: false, error: 'Error al actualizar la contraseña' });
   }
 });
 
