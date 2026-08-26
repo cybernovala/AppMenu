@@ -992,7 +992,7 @@ app.delete('/api/menu/categoria', requerirSesionLocal, async (req, res) => {
 
 app.post('/api/menu', requerirSesionLocal, async (req, res) => {
   try {
-    const { local, categoria, nombre, precio, descripcion } = req.body;
+    const { local, categoria, nombre, precio } = req.body;
     const localId = (local || '').toLowerCase().trim();
 
     const reg = await Local.findOne({ local: localId });
@@ -1001,7 +1001,7 @@ app.post('/api/menu', requerirSesionLocal, async (req, res) => {
     const catObj = (reg.menu || []).find(c => c.categoria === categoria);
     if (catObj) {
       if (!catObj.productos) catObj.productos = [];
-      catObj.productos.push({ nombre: limpiarTexto(nombre, 60) || 'Producto', precio: Number(precio), descripcion: limpiarTexto(descripcion, 200) || '' });
+      catObj.productos.push({ nombre: limpiarTexto(nombre, 150) || 'Producto', precio: Number(precio) });
       reg.markModified('menu');
       await reg.save();
     }
@@ -1036,7 +1036,7 @@ app.delete('/api/menu/del', requerirSesionLocal, async (req, res) => {
 
 app.put('/api/menu/edit', requerirSesionLocal, async (req, res) => {
   try {
-    const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio, nuevaDescripcion } = req.body;
+    const { local, categoriaOriginal, indexOriginal, nuevoNombre, nuevoPrecio } = req.body;
     const localId = (local || '').toLowerCase().trim();
 
     const reg = await Local.findOne({ local: localId });
@@ -1045,9 +1045,8 @@ app.put('/api/menu/edit', requerirSesionLocal, async (req, res) => {
     const catObj = (reg.menu || []).find(c => c.categoria === categoriaOriginal);
     if (catObj && catObj.productos && catObj.productos[indexOriginal] !== undefined) {
       catObj.productos[indexOriginal] = {
-        nombre: limpiarTexto(nuevoNombre, 60) || 'Producto',
-        precio: Number(nuevoPrecio),
-        descripcion: limpiarTexto(nuevaDescripcion, 200) || ''
+        nombre: limpiarTexto(nuevoNombre, 150) || 'Producto',
+        precio: Number(nuevoPrecio)
       };
       reg.markModified('menu');
       await reg.save();
