@@ -1001,7 +1001,7 @@ app.post('/api/menu', requerirSesionLocal, async (req, res) => {
     const catObj = (reg.menu || []).find(c => c.categoria === categoria);
     if (catObj) {
       if (!catObj.productos) catObj.productos = [];
-      catObj.productos.push({ nombre: limpiarTexto(nombre, 150) || 'Producto', precio: Number(precio) });
+      catObj.productos.push({ nombre: limpiarTexto(nombre, 300) || 'Producto', precio: Number(precio) });
       reg.markModified('menu');
       await reg.save();
     }
@@ -1045,7 +1045,7 @@ app.put('/api/menu/edit', requerirSesionLocal, async (req, res) => {
     const catObj = (reg.menu || []).find(c => c.categoria === categoriaOriginal);
     if (catObj && catObj.productos && catObj.productos[indexOriginal] !== undefined) {
       catObj.productos[indexOriginal] = {
-        nombre: limpiarTexto(nuevoNombre, 150) || 'Producto',
+        nombre: limpiarTexto(nuevoNombre, 300) || 'Producto',
         precio: Number(nuevoPrecio)
       };
       reg.markModified('menu');
